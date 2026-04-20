@@ -63,7 +63,7 @@ const GAME_CONFIG = {
     flyInMs: 500,                 // 触发源 → 掉落位的飞行时长
     flyToInventoryMs: 400,        // 悬浮物 → 道具栏的拾取飞行时长
     comboTriggerCount: 2,         // combo 达到此次数触发一次掉落
-    coreLevelForGift: 7,          // 核心升到该等级起开始赠送（含本级）
+    coreLevelForGift: 5,          // 核心升到该等级起开始赠送（含本级）
 
     // 清空道具
     clearItemTargetLevel: 1,      // 清除的目标元素等级

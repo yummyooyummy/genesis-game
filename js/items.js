@@ -88,7 +88,9 @@ class Items {
         slot = victim.slot;
         this.drops = this.drops.filter(d => d !== victim);
       } else {
-        return; // 两侧都在 flyIn/floating 且非 blinking，放弃
+        // 两侧都在 flyIn/floating：直接入库，不丢弃
+        this.inventory[type] += 1;
+        return;
       }
     }
 
