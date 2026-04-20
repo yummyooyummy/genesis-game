@@ -62,6 +62,10 @@ let mergeFlowAbsorbProgress = 0;
 let mergeFlowBurstFired = false;
 let lastBurstPos = { x: centerX, y: centerY }; // 最近一次合成爆发中点（供 combo 掉落定位）
 
+// 开局自动吸附状态：初始分裂落地后自动吸附 1 个 Lv.1 → 核心升 Lv.2
+let openingAbsorbPending = true;
+let openingAbsorbActive = false; // 开局吸附流程进行中（recovery 阶段跳过合成后分裂）
+
 // ─── 模块实例化 ───
 
 const board = new Board(boardRadius, centerX, centerY);
@@ -226,11 +230,13 @@ function updateMergeFlow() {
     if (mergeFlowTimer <= 0) {
       mergeFlowAbsorbSlot.mergeAnimating = false;
       const newCoreLevel = board.doAbsorb(mergeFlowAbsorbSlot);
-      score.addAbsorbScore(newCoreLevel);
-      // 核心升级赠送道具（Lv.7+）
-      if (newCoreLevel >= GAME_CONFIG.items.coreLevelForGift) {
-        const type = ITEM_TYPES[Math.floor(Math.random() * ITEM_TYPES.length)];
-        items.spawnDrop(type, centerX, centerY, dropTargetPositions);
+      if (!openingAbsorbActive) {
+        score.addAbsorbScore(newCoreLevel);
+        // 核心升级赠送道具（Lv.7+）
+        if (newCoreLevel >= GAME_CONFIG.items.coreLevelForGift) {
+          const type = ITEM_TYPES[Math.floor(Math.random() * ITEM_TYPES.length)];
+          items.spawnDrop(type, centerX, centerY, dropTargetPositions);
+        }
       }
       mergeFlowAbsorbSlot = null;
       mergeFlowBurstFired = false;
@@ -269,6 +275,12 @@ function updateMergeFlow() {
       mergeFlowState = null;
       board.mergeFlowLocked = false;
       board._recomputeInputLock();
+
+      // 开局吸附完成后不触发合成后分裂
+      if (openingAbsorbActive) {
+        openingAbsorbActive = false;
+        return;
+      }
 
       if (!board.isFull()) {
         // 合成后分裂：使用阶段性偏向算法
@@ -378,6 +390,8 @@ function handleRestart() {
   mergeFlowAbsorbSlot = null;
   mergeFlowAbsorbProgress = 0;
   mergeFlowBurstFired = false;
+  openingAbsorbPending = true;
+  openingAbsorbActive = false;
 }
 
 // ─── 主循环 ───
@@ -409,6 +423,24 @@ function gameLoop() {
         });
       }
     );
+
+    // 开局自动吸附：初始分裂全部落地后，选最近核心的 Lv.1 启动吸附动画
+    if (openingAbsorbPending && board.initialSplitsComplete) {
+      openingAbsorbPending = false;
+      openingAbsorbActive = true;
+      const innerSlots = board.getSlotsByRing('inner').filter(s => s.level === 1);
+      const target = innerSlots.length > 0 ? innerSlots[0] : board.slots.find(s => s.level === 1);
+      if (target) {
+        target.mergeAnimating = true;
+        mergeFlowAbsorbSlot = target;
+        mergeFlowAbsorbProgress = 0;
+        mergeFlowBurstFired = false;
+        mergeFlowState = 'absorb';
+        mergeFlowTimer = msToFrames(GAME_CONFIG.mergeFlow.absorbAnimMs);
+        board.mergeFlowLocked = true;
+        board._recomputeInputLock();
+      }
+    }
 
     // 定时自动分裂（与合成后分裂并行独立运行）
     board.updateTimedSplit(() => {
