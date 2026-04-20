@@ -40,6 +40,13 @@ const GAME_CONFIG = {
     coreUpgradeBurstMs: 500,      // 核心升级爆发
     recoveryMs: 100,              // 恢复过渡
   },
+  // 计分
+  scoring: {
+    baseMultiplier: 5,            // 基础分 = 等级 × 此值
+    comboBase: 1,                 // combo 倍率基数
+    comboIncrement: 0.5,          // 每次连锁增加的倍率
+    absorbMultiplier: 20,         // 吸附奖励 = 新核心等级 × 此值
+  },
 };
 
 /** 秒转帧 */

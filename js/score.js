@@ -4,6 +4,8 @@
  * 持久化：历史最高分使用 wx.setStorageSync 保存
  */
 
+const { GAME_CONFIG } = require('./config');
+
 const HIGH_SCORE_KEY = 'genesis_high_score';
 
 class Score {
@@ -53,9 +55,10 @@ class Score {
    * @returns {number} 本次得分
    */
   addMergeScore(newLevel, comboCount) {
-    const baseScore = newLevel * 10;
-    const multiplier = Math.max(1, comboCount);
-    const points = baseScore * multiplier;
+    const { baseMultiplier, comboBase, comboIncrement } = GAME_CONFIG.scoring;
+    const baseScore = newLevel * baseMultiplier;
+    const multiplier = comboBase + comboIncrement * Math.max(1, comboCount);
+    const points = Math.round(baseScore * multiplier);
     this.total += points;
     this.lastScorePopup = {
       points,
@@ -72,7 +75,7 @@ class Score {
    * @returns {number} 本次奖励分
    */
   addAbsorbScore(newCoreLevel) {
-    const points = newCoreLevel * 100;
+    const points = newCoreLevel * GAME_CONFIG.scoring.absorbMultiplier;
     this.total += points;
     this.lastScorePopup = {
       points,
