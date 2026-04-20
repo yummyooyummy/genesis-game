@@ -9,7 +9,7 @@ const TARGET_FPS = 60;
 const GAME_CONFIG = {
   // 定时自动分裂
   timedSplit: {
-    safePeriodSeconds: 30,        // 游戏开始后的安全期（秒）
+    safePeriodSeconds: 0,         // 游戏开始后的安全期（秒）— 0 表示立即启动定时分裂
     preSplitWarningSeconds: 1.5,  // 分裂前摇动效时长（秒）
     intervalByLevel: {
       '1-3': 20,   // 核心 Lv.1-3 时的定时分裂间隔（秒）
