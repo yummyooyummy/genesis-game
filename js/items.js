@@ -58,6 +58,115 @@ class Items {
     this.inventory[type] += count;
   }
 
+  // ─── 掉落物系统 ───
+
+  /**
+   * 生成一个掉落物（从触发源飞向左/右悬浮位）。
+   * @param {'clear'|'upgrade'|'pause'} type
+   * @param {number} sourceX - 触发源 x（合成中点 / 核心）
+   * @param {number} sourceY - 触发源 y
+   * @param {{left:{x,y}, right:{x,y}}} targetPositions - 左右两个固定悬浮位坐标
+   */
+  spawnDrop(type, sourceX, sourceY, targetPositions) {
+    const leftOccupied = this.drops.find(d => d.slot === 'left');
+    const rightOccupied = this.drops.find(d => d.slot === 'right');
+
+    let slot;
+    if (!leftOccupied && !rightOccupied) {
+      slot = Math.random() < 0.5 ? 'left' : 'right';
+    } else if (!leftOccupied) {
+      slot = 'left';
+    } else if (!rightOccupied) {
+      slot = 'right';
+    } else {
+      // 两侧都有：覆盖 blinking 阶段且 phaseFrame 最大的
+      const blinking = this.drops
+        .filter(d => d.phase === 'blinking')
+        .sort((a, b) => b.phaseFrame - a.phaseFrame);
+      if (blinking.length > 0) {
+        const victim = blinking[0];
+        slot = victim.slot;
+        this.drops = this.drops.filter(d => d !== victim);
+      } else {
+        return; // 两侧都在 flyIn/floating 且非 blinking，放弃
+      }
+    }
+
+    const target = slot === 'left' ? targetPositions.left : targetPositions.right;
+    this.drops.push({
+      type,
+      slot,
+      phase: 'flyIn',
+      phaseFrame: 0,
+      totalFlyInFrames: msToFrames(GAME_CONFIG.items.flyInMs),
+      startX: sourceX,
+      startY: sourceY,
+      targetX: target.x,
+      targetY: target.y,
+      pickingUp: false,
+      pickupFrame: 0,
+      pickupTotalFrames: msToFrames(GAME_CONFIG.items.flyToInventoryMs),
+      pickupTargetX: 0,
+      pickupTargetY: 0,
+    });
+  }
+
+  /**
+   * 玩家点击悬浮掉落物 → 开始飞向道具栏对应槽位。
+   * @param {object} drop
+   * @param {Array<{type,x,y,r}>} itemBarSlots - renderer.itemBarSlots
+   */
+  pickupDrop(drop, itemBarSlots) {
+    if (drop.pickingUp) return;
+    const targetSlot = itemBarSlots.find(s => s.type === drop.type);
+    if (!targetSlot) return;
+    drop.pickingUp = true;
+    drop.pickupFrame = 0;
+    drop.pickupTargetX = targetSlot.x;
+    drop.pickupTargetY = targetSlot.y;
+  }
+
+  /**
+   * 每帧推进所有掉落物的生命周期。
+   */
+  updateDrops() {
+    const cfg = GAME_CONFIG.items;
+    const floatFrames = msToFrames(cfg.dropDurationMs);
+    const blinkFrames = msToFrames(cfg.blinkDurationMs);
+
+    for (let i = this.drops.length - 1; i >= 0; i--) {
+      const drop = this.drops[i];
+
+      // 拾取飞行中
+      if (drop.pickingUp) {
+        drop.pickupFrame += 1;
+        if (drop.pickupFrame >= drop.pickupTotalFrames) {
+          this.inventory[drop.type] += 1;
+          this.drops.splice(i, 1);
+        }
+        continue;
+      }
+
+      drop.phaseFrame += 1;
+
+      if (drop.phase === 'flyIn') {
+        if (drop.phaseFrame >= drop.totalFlyInFrames) {
+          drop.phase = 'floating';
+          drop.phaseFrame = 0;
+        }
+      } else if (drop.phase === 'floating') {
+        if (drop.phaseFrame >= floatFrames) {
+          drop.phase = 'blinking';
+          drop.phaseFrame = 0;
+        }
+      } else if (drop.phase === 'blinking') {
+        if (drop.phaseFrame >= blinkFrames) {
+          this.drops.splice(i, 1);
+        }
+      }
+    }
+  }
+
   /**
    * 通用前置条件：库存 > 0 且无其他动效冲突
    * 合成-吸附锁定 / 合成动画 / 道具自身动画期间禁止再次使用

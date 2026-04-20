@@ -15,20 +15,25 @@ class Input {
    * @param {Function} onRestartTap - 点击重新开始回调 ()
    * @param {Function} [onDebugTap] - 点击调试按钮回调（可选，DEBUG_ITEMS=false 时不注入）
    * @param {Function} [onItemTap] - 点击道具栏图标回调 (type:'clear'|'upgrade'|'pause')
+   * @param {Function} [onDropTap] - 点击悬浮掉落物回调 (drop)
    */
-  constructor(canvas, dpr, onSlotTap, onRestartTap, onDebugTap, onItemTap) {
+  constructor(canvas, dpr, onSlotTap, onRestartTap, onDebugTap, onItemTap, onDropTap) {
     this.canvas = canvas;
     this.dpr = dpr;
     this.onSlotTap = onSlotTap;
     this.onRestartTap = onRestartTap;
     this.onDebugTap = onDebugTap || null;
     this.onItemTap = onItemTap || null;
+    this.onDropTap = onDropTap || null;
 
     /** @type {Board} */
     this.board = null;
 
     /** @type {Renderer} */
     this.renderer = null;
+
+    /** @type {import('./items').Items} */
+    this.items = null;
 
     /** 游戏是否结束 */
     this.isGameOver = false;
@@ -37,11 +42,12 @@ class Input {
   }
 
   /**
-   * 注入 board 和 renderer 引用
+   * 注入 board、renderer、items 引用
    */
-  setReferences(board, renderer) {
+  setReferences(board, renderer, items) {
     this.board = board;
     this.renderer = renderer;
+    this.items = items || null;
   }
 
   /** 绑定触摸事件（微信小游戏 API） */
@@ -73,6 +79,15 @@ class Input {
     if (this.onDebugTap && this.renderer && this.renderer.isDebugBtnHit(x, y)) {
       this.onDebugTap();
       return;
+    }
+
+    // 悬浮掉落物命中（优先于道具栏和棋盘）
+    if (this.onDropTap && this.items) {
+      const drop = this._hitTestDrop(x, y);
+      if (drop) {
+        this.onDropTap(drop);
+        return;
+      }
     }
 
     // 道具栏命中（优先于棋盘格子命中）
@@ -107,6 +122,25 @@ class Input {
       if (dx * dx + dy * dy <= r * r) {
         return slot.type;
       }
+    }
+    return null;
+  }
+
+  /**
+   * 掉落物命中检测：floating/blinking 阶段可点击
+   * @param {number} x
+   * @param {number} y
+   * @returns {object|null}
+   */
+  _hitTestDrop(x, y) {
+    if (!this.items) return null;
+    for (const drop of this.items.drops) {
+      if (drop.pickingUp) continue;
+      if (drop.phase !== 'floating' && drop.phase !== 'blinking') continue;
+      const dx = x - drop.targetX;
+      const dy = y - drop.targetY;
+      const r = 24 + TOUCH_TOLERANCE;
+      if (dx * dx + dy * dy <= r * r) return drop;
     }
     return null;
   }

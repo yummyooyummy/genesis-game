@@ -10,7 +10,7 @@ const Renderer = require('./js/renderer');
 const Particles = require('./js/particles');
 const Input = require('./js/input');
 const Score = require('./js/score');
-const { Items } = require('./js/items');
+const { Items, ITEM_TYPES } = require('./js/items');
 const { GAME_CONFIG, msToFrames } = require('./js/config');
 
 // ─── Canvas 初始化 ───
@@ -38,6 +38,12 @@ const centerY = (110 + (screenHeight - 55)) / 2;
 
 /** 棋盘半径（逻辑像素）— 外圈轨道贴近屏宽，留约 20px 边距 */
 const boardRadius = Math.min(screenWidth * 0.445, (screenHeight - 165) * 0.5);
+
+/** 掉落物左右悬浮位坐标（固定） */
+const dropTargetPositions = {
+  left:  { x: centerX - boardRadius * GAME_CONFIG.items.dropSlotOffsetX, y: centerY + boardRadius * GAME_CONFIG.items.dropSlotOffsetY },
+  right: { x: centerX + boardRadius * GAME_CONFIG.items.dropSlotOffsetX, y: centerY + boardRadius * GAME_CONFIG.items.dropSlotOffsetY },
+};
 
 // ─── 游戏状态 ───
 
@@ -69,9 +75,10 @@ const input = new Input(
   handleSlotTap,
   handleRestart,
   handleDebugTap,
-  handleItemTap
+  handleItemTap,
+  handleDropTap
 );
-input.setReferences(board, renderer);
+input.setReferences(board, renderer, items);
 
 // ─── 游戏逻辑 ───
 
@@ -274,7 +281,7 @@ function updateMergeFlow() {
 }
 
 /**
- * 调试：点击屏幕左下角"+1 ALL"按钮 → 三种道具各 +1
+ * 调试：点击屏幕左下角"+1 ALL"按钮 → 三种道具各 +1 + 生成一个随机掉落物
  * 仅在 DEBUG_ITEMS=true 时生效；上线前置 false
  */
 function handleDebugTap() {
@@ -282,6 +289,9 @@ function handleDebugTap() {
   items.grant('clear', 1);
   items.grant('upgrade', 1);
   items.grant('pause', 1);
+  // 同时生成一个随机掉落物用于测试拾取流程
+  const type = ITEM_TYPES[Math.floor(Math.random() * ITEM_TYPES.length)];
+  items.spawnDrop(type, centerX, centerY, dropTargetPositions);
 }
 
 /**
@@ -291,6 +301,16 @@ function handleDebugTap() {
 function handleItemTap(type) {
   if (gameState !== 'playing') return;
   items.use(type, board, particles);
+}
+
+/**
+ * 点击悬浮掉落物 → 拾取飞向道具栏
+ * @param {object} drop
+ */
+function handleDropTap(drop) {
+  if (gameState !== 'playing') return;
+  if (!renderer.itemBarSlots) return;
+  items.pickupDrop(drop, renderer.itemBarSlots);
 }
 
 /**
@@ -392,6 +412,9 @@ function gameLoop() {
     // 升级道具 useAnim 结束时回调：尝试启动合成连锁
     items.update(board, particles, handleUpgradeComplete);
 
+    // 掉落物生命周期推进（flyIn → floating → blinking → 消失 / 拾取飞行）
+    items.updateDrops();
+
     // 为每个飞行中的元素沿路径撒尾迹粒子
     for (const fly of board.flyingElements) {
       const pos = board.getFlyingPosition(fly);
@@ -480,6 +503,9 @@ function gameLoop() {
 
   // 暂停道具视觉反馈（核心波纹 + 屏幕紫光 + 顶部倒计时）
   renderer.drawPauseOverlay(board, centerX, centerY);
+
+  // 掉落物绘制（flyIn / floating / blinking / pickingUp）
+  renderer.drawDrops(items);
 
   // 绘制 UI
   renderer.drawScoreUI(score.total, score.highScore);

@@ -831,6 +831,67 @@ class Renderer {
   }
 
   /**
+   * 绘制掉落物（flyIn / floating / blinking / pickingUp 四阶段）。
+   * @param {import('./items').Items} items
+   */
+  drawDrops(items) {
+    const { ctx } = this;
+    const iconColors = { clear: '#EF9F27', upgrade: '#5DCAA5', pause: '#7F77DD' };
+
+    for (const drop of items.drops) {
+      let x, y, scale, alpha;
+
+      if (drop.pickingUp) {
+        // 飞向道具栏
+        const t = drop.pickupFrame / drop.pickupTotalFrames;
+        const ease = 1 - Math.pow(1 - t, 3);
+        x = drop.targetX + (drop.pickupTargetX - drop.targetX) * ease;
+        y = drop.targetY + (drop.pickupTargetY - drop.targetY) * ease;
+        scale = 1 - ease * 0.6;
+        alpha = 1;
+      } else if (drop.phase === 'flyIn') {
+        const t = drop.phaseFrame / drop.totalFlyInFrames;
+        const ease = 1 - Math.pow(1 - t, 3);
+        x = drop.startX + (drop.targetX - drop.startX) * ease;
+        y = drop.startY + (drop.targetY - drop.startY) * ease;
+        scale = 0.5 + ease * 0.5;
+        alpha = 0.6 + ease * 0.4;
+      } else if (drop.phase === 'floating') {
+        x = drop.targetX;
+        y = drop.targetY;
+        const breath = Math.sin(drop.phaseFrame * 0.1) * 0.08;
+        scale = 1 + breath;
+        alpha = 1;
+      } else {
+        // blinking
+        x = drop.targetX;
+        y = drop.targetY;
+        scale = 1;
+        alpha = 0.3 + Math.abs(Math.sin(drop.phaseFrame * 0.18)) * 0.7;
+      }
+
+      ctx.save();
+      ctx.globalAlpha = alpha;
+      ctx.translate(x, y);
+      ctx.scale(scale, scale);
+
+      // 外圈光晕
+      ctx.beginPath();
+      ctx.arc(0, 0, 24, 0, Math.PI * 2);
+      ctx.fillStyle = `rgba(255, 255, 255, 0.08)`;
+      ctx.fill();
+      ctx.strokeStyle = iconColors[drop.type];
+      ctx.lineWidth = 2;
+      ctx.stroke();
+
+      // 图标（复用 _drawItemIcon 的逻辑，但以 0,0 为中心）
+      this._drawItemIcon(drop.type, 0, 0, iconColors[drop.type], true);
+
+      ctx.restore();
+    }
+  }
+
+  /**
    * 绘制调试按钮（左下角小按钮，点击给三种道具各 +1）。
    * 仅在 game.js DEBUG_ITEMS=true 时调用。
    */
