@@ -227,6 +227,11 @@ function updateMergeFlow() {
       mergeFlowAbsorbSlot.mergeAnimating = false;
       const newCoreLevel = board.doAbsorb(mergeFlowAbsorbSlot);
       score.addAbsorbScore(newCoreLevel);
+      // 核心升级赠送道具（Lv.7+）
+      if (newCoreLevel >= GAME_CONFIG.items.coreLevelForGift) {
+        const type = ITEM_TYPES[Math.floor(Math.random() * ITEM_TYPES.length)];
+        items.spawnDrop(type, centerX, centerY, dropTargetPositions);
+      }
       mergeFlowAbsorbSlot = null;
       mergeFlowBurstFired = false;
       mergeFlowState = 'coreBurst';
