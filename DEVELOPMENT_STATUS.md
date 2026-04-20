@@ -65,6 +65,7 @@ genesis-game/
 | `interaction.showConnectionLines` | ✅ 完成 | 连接线总开关 |
 | `interaction.selectionPulseEnabled` | ✅ 完成 | 选中态脉冲总开关 |
 | `mergeAnimation.convergeFrames / popFrames` | ✅ 完成 | 合成动画节奏（18 + 6 = 24 帧） |
+| `spawnDistribution` | ✅ 完成 | 合成后分裂的圈层概率（early/mid/late 三阶段，按核心等级切换） |
 | `secondsToFrames / msToFrames` | ✅ 完成 | 时长→帧数辅助 |
 | `getTimedSplitInterval(coreLevel)` | ✅ 完成 | 按核心等级查表返回秒数 |
 
@@ -101,11 +102,11 @@ genesis-game/
 | 跨圈相邻判定 | ✅ 完成 | 实时角度差 < 较大圈层单格角度 × 0.5 |
 | 核心相邻判定 | ✅ 完成 | 内圈始终与核心相邻（内部逻辑用；不用于连接线） |
 | 初始分裂队列 | ✅ 完成 | 开局排队 4 次分裂（可配），每隔 12 帧触发 |
-| 合成后分裂 | ✅ 完成 | `queueSplit(1)` 排入队列；不锁输入 |
+| 合成后分裂 | ✅ 完成 | `_findEmptyForMergeSplit`：按核心等级查 `spawnDistribution` 加权随机选圈层，圈内优先相邻空位；不锁输入 |
 | **定时自动分裂** | ✅ 完成 | `updateTimedSplit` + `_fireTimedSplit`；安全期→前摇→中/外圈随机空位；中/外圈都满则跳过 |
 | **前摇进度 `timedSplitWarningProgress`** | ✅ 完成 | 0..1，渲染器用它画暖色呼吸环 |
 | 死锁保险队列 | ✅ 完成 | `countLevel1Incoming()` 含棋盘+飞行+队列 |
-| 分裂位置算法（合成后） | ✅ 完成 | Step0→P5（内圈种子/P1→外圈种子） |
+| 分裂位置算法（合成后） | ✅ 完成 | `_findEmptyForMergeSplit`：按核心等级查 early/mid/late 阶段 → 加权随机选圈层 → 圈内优先相邻空位 → 空圈层按 rate 降序 fallback |
 | 飞行元素系统 | ✅ 完成 | 所有来源（初始/合成后/定时）共用同一个 `flyingElements[]` |
 | 目标槽位预定 | ✅ 完成 | 飞行期间 `slot.reserved=true` |
 | 核心脉冲状态 | ✅ 完成 | `corePulse` 计时器，分裂瞬间 15 帧 |
@@ -174,7 +175,7 @@ genesis-game/
 
 ---
 
-## 已验证功能（2026-04-19 自测通过）
+## 已验证功能（2026-04-20 自测通过）
 
 | # | 功能 | 验证结果 |
 |---|------|----------|
@@ -197,6 +198,8 @@ genesis-game/
 | 17 | 死锁保险（Lv.1 总数 ≥ 2） | ✅ 通过 |
 | 18 | 历史最高分持久化 | ✅ 通过 |
 | 19 | 游戏结束判定 + "再来一局" | ✅ 通过 |
+| 20 | 合成后分裂按核心等级分阶段分布（early 偏中外圈 / mid 偏外圈 / late 偏内圈） | ✅ 通过 |
+| 21 | 合成后分裂优先落在同圈层相邻空位 | ✅ 通过 |
 
 ---
 
@@ -268,6 +271,9 @@ genesis-game/
 | **选中脉冲总开关** | `true` | ★ `GAME_CONFIG.interaction.selectionPulseEnabled` |
 | **合成动画聚合帧** | 18 帧 | ★ `GAME_CONFIG.mergeAnimation.convergeFrames` |
 | **合成动画弹出帧** | 6 帧 | ★ `GAME_CONFIG.mergeAnimation.popFrames` |
+| **合成后分裂 early 阶段** | Lv.1-3：内 0 / 中 0.7 / 外 0.3 | ★ `GAME_CONFIG.spawnDistribution.early` |
+| **合成后分裂 mid 阶段** | Lv.4-6：内 0.1 / 中 0.4 / 外 0.5 | ★ `GAME_CONFIG.spawnDistribution.mid` |
+| **合成后分裂 late 阶段** | Lv.7+：内 0.5 / 中 0.2 / 外 0.3 | ★ `GAME_CONFIG.spawnDistribution.late` |
 
 ★ = 本轮改动引入的配置项，在 `js/config.js` 中可调。
 
@@ -327,4 +333,4 @@ js/score.js                     → 无依赖
 
 ---
 
-*最后更新：2026-04-19 · 配置化 + 定时分裂 + 两步点击 + 合成动画 全部编码完成并通过自测*
+*最后更新：2026-04-20 · 合成后分裂位置阶段性分布（按核心等级切换圈层偏向 + 优先相邻空位）*
