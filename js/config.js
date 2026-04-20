@@ -21,7 +21,7 @@ const GAME_CONFIG = {
   // 开局连续分裂
   initialSplit: {
     count: 4,                     // 开局分裂数量
-    intervalMs: 200,              // 每个之间间隔（毫秒）
+    intervalMs: 400,              // 每个之间间隔（毫秒）
   },
   // 交互
   interaction: {
