@@ -71,46 +71,56 @@ class Renderer {
     // 脉冲放大：最大 +25% 尺寸
     const radius = baseRadius * (1 + pulse * 0.25);
 
+    // 前摇震动偏移（严格 ≤2px，频率 ~18Hz）
+    let shakeX = 0, shakeY = 0;
+    if (warningProgress > 0) {
+      const t = warningProgress * 90; // 伪帧数（1.5s ≈ 90 帧）
+      const intensity = Math.sin(warningProgress * Math.PI); // 中间最强
+      shakeX = Math.sin(t * 1.2) * 2 * intensity;
+      shakeY = Math.cos(t * 1.7) * 2 * intensity;
+    }
+
+    const cx = centerX + shakeX;
+    const cy = centerY + shakeY;
+
     // 外发光（脉冲时更亮更大）
     const glowRadius = radius * (2 + pulse * 0.8);
     const glowAlphaHex = Math.min(0xFF, Math.floor(0x60 + pulse * 0x80)).toString(16).padStart(2, '0');
-    const glow = ctx.createRadialGradient(centerX, centerY, radius * 0.5, centerX, centerY, glowRadius);
+    const glow = ctx.createRadialGradient(cx, cy, radius * 0.5, cx, cy, glowRadius);
     glow.addColorStop(0, colors.primary + glowAlphaHex);
     glow.addColorStop(1, 'transparent');
     ctx.fillStyle = glow;
     ctx.beginPath();
-    ctx.arc(centerX, centerY, glowRadius, 0, Math.PI * 2);
+    ctx.arc(cx, cy, glowRadius, 0, Math.PI * 2);
     ctx.fill();
 
-    // 前摇呼吸环（醒目但不刺眼；一次完整"吸气-呼气"正好跨越 1.5s 前摇周期）
-    if (warningProgress > 0) {
-      const breath = Math.sin(warningProgress * Math.PI); // 0 → 1 → 0
-      const ringRadius = radius + 6 + breath * 18;
-      const alpha = 0.15 + breath * 0.55;
-      ctx.save();
-      ctx.globalAlpha = alpha;
-      ctx.strokeStyle = '#EF9F27'; // 暖色（金橙，提示即将分裂）
-      ctx.lineWidth = 2 + breath * 2;
-      ctx.beginPath();
-      ctx.arc(centerX, centerY, ringRadius, 0, Math.PI * 2);
-      ctx.stroke();
-      ctx.restore();
-    }
-
     // 核心圆
-    const grad = ctx.createRadialGradient(centerX, centerY, 0, centerX, centerY, radius);
+    const grad = ctx.createRadialGradient(cx, cy, 0, cx, cy, radius);
     grad.addColorStop(0, colors.secondary);
     grad.addColorStop(1, colors.primary);
     ctx.fillStyle = grad;
     ctx.beginPath();
-    ctx.arc(centerX, centerY, radius, 0, Math.PI * 2);
+    ctx.arc(cx, cy, radius, 0, Math.PI * 2);
     ctx.fill();
+
+    // 前摇内部脉冲发光（严格限制在核心范围内）
+    if (warningProgress > 0) {
+      const heartbeat = Math.sin(warningProgress * Math.PI) * (0.5 + 0.5 * Math.sin(warningProgress * 90 * 0.4));
+      const innerGlow = ctx.createRadialGradient(cx, cy, 0, cx, cy, radius * 0.95);
+      innerGlow.addColorStop(0, `rgba(255, 240, 200, ${0.6 * heartbeat})`);
+      innerGlow.addColorStop(0.6, `rgba(239, 159, 39, ${0.4 * heartbeat})`);
+      innerGlow.addColorStop(1, 'transparent');
+      ctx.fillStyle = innerGlow;
+      ctx.beginPath();
+      ctx.arc(cx, cy, radius * 0.95, 0, Math.PI * 2);
+      ctx.fill();
+    }
 
     // 核心边框（脉冲时更亮）
     ctx.strokeStyle = `rgba(255, 255, 255, ${0.3 + pulse * 0.5})`;
     ctx.lineWidth = 2;
     ctx.beginPath();
-    ctx.arc(centerX, centerY, radius, 0, Math.PI * 2);
+    ctx.arc(cx, cy, radius, 0, Math.PI * 2);
     ctx.stroke();
 
     // 等级文字
@@ -118,7 +128,7 @@ class Renderer {
     ctx.font = 'bold 14px Arial';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    ctx.fillText(`Lv.${coreLevel}`, centerX, centerY);
+    ctx.fillText(`Lv.${coreLevel}`, cx, cy);
   }
 
   /**
