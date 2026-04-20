@@ -321,13 +321,15 @@ function gameLoop() {
       particles.spawnTrail(pos.x, pos.y, ELEMENT_COLORS[1].primary);
     }
 
-    // 所有暂态（队列/飞行/合成动画）都清空后若棋盘仍满 → 游戏结束
+    // 所有暂态都清空后若棋盘仍满 → 游戏结束
+    // 不检查 queuedSplits — 棋盘满时队列永远无法消耗
     if (
       board.isFull() &&
-      board.queuedSplits === 0 &&
       board.flyingElements.length === 0 &&
-      board.mergeAnimations.length === 0
+      board.mergeAnimations.length === 0 &&
+      mergeFlowState === null
     ) {
+      board.queuedSplits = 0;
       gameState = 'gameover';
       input.isGameOver = true;
     }
