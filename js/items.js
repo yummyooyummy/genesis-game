@@ -92,7 +92,11 @@ class Items {
       return true;
     }
 
-    // upgrade / pause 在 Task 5、6 实现
+    if (type === 'upgrade') {
+      return this._useUpgrade(board, particles);
+    }
+
+    // pause 在 Task 6 实现
     return false;
   }
 
@@ -149,6 +153,56 @@ class Items {
     this._startUseAnim('clear', board);
   }
 
+  /**
+   * 升级道具效果：从 Lv.1-upgradeItemMaxSourceLevel 中随机选 N 个 +1。
+   * 升级后可能形成相邻同级，useAnim 结束时通过 onUpgradeComplete 回调给 game.js，
+   * 由 game.js 决定是否立即启动合成连锁。
+   * @returns {boolean} 是否成功使用
+   */
+  _useUpgrade(board, particles) {
+    const maxLevel = GAME_CONFIG.items.upgradeItemMaxSourceLevel;
+    const count    = GAME_CONFIG.items.upgradeItemCount;
+
+    const pool = board.slots.filter(
+      (s) =>
+        s.level !== null &&
+        s.level >= 1 &&
+        s.level <= maxLevel &&
+        !s.mergeAnimating &&
+        !s.reserved
+    );
+
+    if (pool.length === 0) {
+      this._showFailHint('该道具暂时无法使用');
+      return false;
+    }
+
+    this.inventory.upgrade -= 1;
+
+    // Fisher-Yates 洗牌
+    const shuffled = pool.slice();
+    for (let i = shuffled.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+    }
+    const targets = shuffled.slice(0, Math.min(count, shuffled.length));
+
+    // 升级 + 闪光 + 粒子
+    for (const slot of targets) {
+      slot.level += 1;
+      slot._upgradeFlashFrame = GAME_CONFIG.items.itemUseAnimFrames;
+      const pos = board.getSlotPosition(slot);
+      const colors = ELEMENT_COLORS[slot.level] || ELEMENT_COLORS[1];
+      particles.spawn(pos.x, pos.y, colors.primary,   14, { speed: 2.8, life: 30 });
+      particles.spawn(pos.x, pos.y, colors.secondary, 10, { speed: 1.8, life: 24 });
+      particles.spawn(pos.x, pos.y, '#FFFFFF',         6, { speed: 2.2, life: 20, radius: 2 });
+    }
+
+    this._pendingUpgradedSlots = targets;
+    this._startUseAnim('upgrade', board);
+    return true;
+  }
+
   /** 启动使用动效 + 锁输入 */
   _startUseAnim(type, board) {
     this.useAnim = {
@@ -170,17 +224,34 @@ class Items {
   }
 
   /**
-   * 每帧推进：useAnim 计时 / useFailHint 计时 / 镜像暂停倒计时。
+   * 每帧推进：useAnim 计时 / useFailHint 计时 / 镜像暂停倒计时 / 升级闪光衰减。
    * 由 game.js 主循环调用。
+   * @param {object} board
+   * @param {(upgradedSlots:object[]) => void} [onUpgradeComplete]
+   *   升级道具 useAnim 结束时触发，game.js 用它启动合成连锁
    */
-  update(board) {
-    // 使用动效推进，到点解锁输入
+  update(board, onUpgradeComplete) {
+    // 升级闪光帧数衰减
+    if (this._pendingUpgradedSlots) {
+      for (const slot of this._pendingUpgradedSlots) {
+        if (slot._upgradeFlashFrame > 0) slot._upgradeFlashFrame -= 1;
+      }
+    }
+
+    // 使用动效推进，到点解锁输入 / 升级时通知 game.js 检查连锁
     if (this.useAnim) {
       this.useAnim.frame += 1;
       if (this.useAnim.frame >= this.useAnim.totalFrames) {
+        const wasUpgrade = this.useAnim.type === 'upgrade';
+        const upgraded = this._pendingUpgradedSlots;
         this.useAnim = null;
         board.itemUseLocked = false;
         board._recomputeInputLock();
+        this._pendingUpgradedSlots = null;
+
+        if (wasUpgrade && upgraded && onUpgradeComplete) {
+          onUpgradeComplete(upgraded);
+        }
       }
     }
 

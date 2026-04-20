@@ -293,6 +293,38 @@ function handleItemTap(type) {
   items.use(type, board, particles);
 }
 
+/**
+ * 升级道具 useAnim 结束后的回调：
+ *  1) 若任一被升级的元素与相邻同级可合成 → 启动 combo 连锁
+ *     （后续链由 handleMergeComplete 驱动；它结束后 mergeFlow 会自动检查吸附）
+ *  2) 否则若存在等级 = 核心等级的元素 → 直接进入 mergeFlow pause 阶段
+ *     让已有的 absorb → coreBurst → recovery 流程跑一次
+ * @param {object[]} upgradedSlots
+ */
+function handleUpgradeComplete(upgradedSlots) {
+  for (const slot of upgradedSlots) {
+    if (slot.level === null) continue;        // 安全检查
+    if (slot.mergeAnimating) continue;
+    const partner = board.findNearestAdjacentSameLevel(slot);
+    if (partner && !partner.mergeAnimating) {
+      score.resetCombo();
+      const combo = score.incrementCombo();
+      const newLevel = slot.level + 1;
+      score.addMergeScore(newLevel, combo);
+      board.startMergeAnimation(slot, partner);
+      return;  // 启动一个链就够了，handleMergeComplete 会继续 combo
+    }
+  }
+
+  // 无相邻同级可合成，但升级可能把元素推到了核心等级 → 触发吸附流程
+  if (board.checkAbsorb()) {
+    mergeFlowState = 'pause';
+    mergeFlowTimer = msToFrames(GAME_CONFIG.mergeFlow.newElementPauseMs);
+    board.mergeFlowLocked = true;
+    board._recomputeInputLock();
+  }
+}
+
 /** 处理重新开始 */
 function handleRestart() {
   board.reset();
@@ -357,7 +389,8 @@ function gameLoop() {
     updateMergeFlow();
 
     // 道具动效推进（使用动效计时 + 失败提示计时 + 暂停倒计时镜像）
-    items.update(board);
+    // 升级道具 useAnim 结束时回调：尝试启动合成连锁
+    items.update(board, handleUpgradeComplete);
 
     // 为每个飞行中的元素沿路径撒尾迹粒子
     for (const fly of board.flyingElements) {

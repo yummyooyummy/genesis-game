@@ -854,6 +854,7 @@ class Board {
       s.level = null;
       s.reserved = false;
       s.mergeAnimating = false;
+      s._upgradeFlashFrame = 0;
     }
     this.queuedSplits = 0;
     this.splitTimer = 0;

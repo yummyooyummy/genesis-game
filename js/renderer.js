@@ -160,6 +160,18 @@ class Renderer {
       } else {
         // 有元素：绘制彩色圆 + 等级名
         this._drawElement(pos.x, pos.y, slot.level, board.getElementRadius(slot.level));
+
+        // 升级道具闪光叠加（白光一闪，18 帧线性衰减）
+        if (slot._upgradeFlashFrame && slot._upgradeFlashFrame > 0) {
+          const flashAlpha = (slot._upgradeFlashFrame / 18) * 0.85;
+          ctx.save();
+          ctx.globalAlpha = flashAlpha;
+          ctx.fillStyle = '#FFFFFF';
+          ctx.beginPath();
+          ctx.arc(pos.x, pos.y, board.getElementRadius(slot.level) + 2, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.restore();
+        }
       }
     }
   }
