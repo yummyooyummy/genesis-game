@@ -47,6 +47,14 @@ const GAME_CONFIG = {
     comboIncrement: 0.5,          // 每次连锁增加的倍率
     absorbMultiplier: 20,         // 吸附奖励 = 新核心等级 × 此值
   },
+  // 合成后分裂位置分布（按核心等级分阶段）
+  spawnDistribution: {
+    early: { innerRate: 0, midRate: 0.7, outerRate: 0.3 },
+    mid:   { innerRate: 0.1, midRate: 0.4, outerRate: 0.5 },
+    late:  { innerRate: 0.5, midRate: 0.2, outerRate: 0.3 },
+    earlyUntilCoreLevel: 3,       // Lv.1-3 用 early
+    midUntilCoreLevel: 6,         // Lv.4-6 用 mid；Lv.7+ 用 late
+  },
 };
 
 /** 秒转帧 */

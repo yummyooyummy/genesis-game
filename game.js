@@ -239,7 +239,20 @@ function updateMergeFlow() {
       board._recomputeInputLock();
 
       if (!board.isFull()) {
-        board.queueSplit(1);
+        // 合成后分裂：使用阶段性偏向算法
+        const target = board._findEmptyForMergeSplit();
+        if (target) {
+          target.reserved = true;
+          board.corePulse = 15;
+          board.flyingElements.push({
+            startX: board.centerX,
+            startY: board.centerY,
+            targetSlot: target,
+            frame: 0,
+            totalFrames: 18,
+          });
+        }
+        // 死锁保险
         const lv1 = board.countLevel1Incoming();
         if (lv1 < 2) {
           board.queueSplit(2 - lv1);

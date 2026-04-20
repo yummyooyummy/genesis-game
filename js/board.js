@@ -504,6 +504,55 @@ class Board {
   }
 
   /**
+   * 合成后分裂专用：按核心等级查 spawnDistribution 确定圈层概率，
+   * 加权随机选圈层，在该圈层内用"优先相邻空位"规则选具体位置。
+   * 若目标圈层无空位则 fallback 到下一优先级。
+   * @returns {object|null}
+   */
+  _findEmptyForMergeSplit() {
+    const dist = GAME_CONFIG.spawnDistribution;
+    let phase;
+    if (this.core.level <= dist.earlyUntilCoreLevel) phase = dist.early;
+    else if (this.core.level <= dist.midUntilCoreLevel) phase = dist.mid;
+    else phase = dist.late;
+
+    const ringEmpty = (ring) => this.slots.filter(
+      (s) => s.ring === ring && s.level === null && !s.reserved
+    );
+
+    const rings = [
+      { ring: 'inner', rate: phase.innerRate },
+      { ring: 'mid',   rate: phase.midRate },
+      { ring: 'outer', rate: phase.outerRate },
+    ];
+
+    // 加权随机选一个圈层
+    const roll = Math.random();
+    let cumulative = 0;
+    let chosen = null;
+    for (const r of rings) {
+      cumulative += r.rate;
+      if (roll < cumulative) { chosen = r.ring; break; }
+    }
+    if (!chosen) chosen = rings[rings.length - 1].ring;
+
+    // chosen → 其余圈层（按 rate 降序）的顺序尝试
+    const fallbackOrder = [chosen, ...rings
+      .filter((r) => r.ring !== chosen)
+      .sort((a, b) => b.rate - a.rate)
+      .map((r) => r.ring)];
+
+    for (const ring of fallbackOrder) {
+      const empty = ringEmpty(ring);
+      if (empty.length === 0) continue;
+      const adj = this._findSameRingAdjacent(ring, empty);
+      if (adj) return adj;
+      return empty[Math.floor(Math.random() * empty.length)];
+    }
+    return null;
+  }
+
+  /**
    * 获取飞行元素当前插值位置（ease-out cubic）
    * @param {object} fly
    * @returns {{ x:number, y:number, t:number }}
