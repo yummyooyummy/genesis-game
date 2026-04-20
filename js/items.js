@@ -96,7 +96,10 @@ class Items {
       return this._useUpgrade(board, particles);
     }
 
-    // pause 在 Task 6 实现
+    if (type === 'pause') {
+      return this._usePause(board, particles);
+    }
+
     return false;
   }
 
@@ -203,6 +206,26 @@ class Items {
     return true;
   }
 
+  /**
+   * 暂停道具效果：冻结定时分裂 15s（可叠加）。
+   *   - 不锁输入（玩家继续正常操作）
+   *   - 不影响合成后分裂 / 初始分裂 / 合成动画
+   *   - 剩余帧数叠加（再次使用时不重置）
+   *   - 激活瞬间核心爆一圈冷紫粒子
+   * @returns {boolean}
+   */
+  _usePause(board, particles) {
+    const frames = msToFrames(GAME_CONFIG.items.pauseItemDurationMs);
+    board.timedSplitPauseFramesRemaining += frames;
+    this.inventory.pause -= 1;
+
+    // 激活瞬间：核心爆粒子 + 短暂脉冲
+    particles.spawn(board.centerX, board.centerY, '#7F77DD', 18, { speed: 3.2, life: 30 });
+    particles.spawn(board.centerX, board.centerY, '#CECBF6', 12, { speed: 2,   life: 24, radius: 2 });
+    board.corePulse = 15;
+    return true;
+  }
+
   /** 启动使用动效 + 锁输入 */
   _startUseAnim(type, board) {
     this.useAnim = {
@@ -224,13 +247,15 @@ class Items {
   }
 
   /**
-   * 每帧推进：useAnim 计时 / useFailHint 计时 / 镜像暂停倒计时 / 升级闪光衰减。
+   * 每帧推进：useAnim 计时 / useFailHint 计时 / 暂停倒计时镜像 / 升级闪光衰减 /
+   * 暂停结束过渡特效。
    * 由 game.js 主循环调用。
    * @param {object} board
+   * @param {object} particles
    * @param {(upgradedSlots:object[]) => void} [onUpgradeComplete]
    *   升级道具 useAnim 结束时触发，game.js 用它启动合成连锁
    */
-  update(board, onUpgradeComplete) {
+  update(board, particles, onUpgradeComplete) {
     // 升级闪光帧数衰减
     if (this._pendingUpgradedSlots) {
       for (const slot of this._pendingUpgradedSlots) {
@@ -263,8 +288,15 @@ class Items {
       }
     }
 
-    // 暂停倒计时镜像（board 是 source of truth）
+    // 暂停倒计时镜像 + 结束瞬间特效
+    const wasPaused = this.pauseCountdownFrames > 0;
     this.pauseCountdownFrames = board.timedSplitPauseFramesRemaining;
+    const isPaused = this.pauseCountdownFrames > 0;
+    if (wasPaused && !isPaused && particles) {
+      board.corePulse = 15;
+      particles.spawn(board.centerX, board.centerY, '#7F77DD', 16, { speed: 3, life: 32 });
+      particles.spawn(board.centerX, board.centerY, '#CECBF6', 10, { speed: 2, life: 24, radius: 2 });
+    }
   }
 }
 

@@ -752,6 +752,85 @@ class Renderer {
   }
 
   /**
+   * 绘制暂停道具视觉反馈：
+   *   1) 核心周围 3 圈慢速旋转的冷紫波纹环（剩余≤阈值时变红 + 频率加倍）
+   *   2) 屏幕四边淡紫色光晕（呼吸）
+   *   3) 屏幕顶部倒计时文字："时间锁定 Ns"（紫色；剩余≤阈值时红色）
+   * @param {import('./board').Board} board
+   * @param {number} centerX 核心 x
+   * @param {number} centerY 核心 y
+   */
+  drawPauseOverlay(board, centerX, centerY) {
+    const remaining = board.timedSplitPauseFramesRemaining;
+    if (remaining <= 0) return;
+
+    const { ctx } = this;
+    const blinkThresholdFrames = GAME_CONFIG.items.pauseItemBlinkAtSeconds * 60;
+    const isCritical = remaining <= blinkThresholdFrames;
+    const remainSec = Math.ceil(remaining / 60);
+
+    // 相位：常规时慢速，critical 时加速
+    const phase = board.gameFrame * 0.05 * (isCritical ? 2.4 : 1);
+    const ringColor = isCritical ? '#FF5555' : '#7F77DD';
+    const edgeRgb = isCritical ? '255, 85, 85' : '127, 119, 221';
+
+    // 1) 核心周围旋转波纹环（3 圈错开相位）
+    ctx.save();
+    for (let i = 0; i < 3; i++) {
+      const baseR = 38 + i * 11;
+      const pulseR = baseR + Math.sin(phase + i * 0.7) * 3;
+      const alpha = 0.22 + Math.sin(phase * 1.5 + i * 0.9) * 0.18;
+      ctx.globalAlpha = Math.max(0.08, alpha);
+      ctx.strokeStyle = ringColor;
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.arc(centerX, centerY, pulseR, 0, Math.PI * 2);
+      ctx.stroke();
+    }
+    ctx.restore();
+
+    // 2) 屏幕四边紫色光晕（淡淡的呼吸）
+    const edgeAlpha = (isCritical ? 0.14 : 0.09) + (Math.sin(phase) + 1) * 0.03;
+    const thickness = 55;
+    ctx.save();
+
+    let grad = ctx.createLinearGradient(0, 0, 0, thickness);
+    grad.addColorStop(0, `rgba(${edgeRgb}, ${edgeAlpha})`);
+    grad.addColorStop(1, `rgba(${edgeRgb}, 0)`);
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, this.width, thickness);
+
+    grad = ctx.createLinearGradient(0, this.height, 0, this.height - thickness);
+    grad.addColorStop(0, `rgba(${edgeRgb}, ${edgeAlpha})`);
+    grad.addColorStop(1, `rgba(${edgeRgb}, 0)`);
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, this.height - thickness, this.width, thickness);
+
+    grad = ctx.createLinearGradient(0, 0, thickness, 0);
+    grad.addColorStop(0, `rgba(${edgeRgb}, ${edgeAlpha})`);
+    grad.addColorStop(1, `rgba(${edgeRgb}, 0)`);
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, thickness, this.height);
+
+    grad = ctx.createLinearGradient(this.width, 0, this.width - thickness, 0);
+    grad.addColorStop(0, `rgba(${edgeRgb}, ${edgeAlpha})`);
+    grad.addColorStop(1, `rgba(${edgeRgb}, 0)`);
+    ctx.fillStyle = grad;
+    ctx.fillRect(this.width - thickness, 0, thickness, this.height);
+
+    ctx.restore();
+
+    // 3) 顶部倒计时文字
+    ctx.save();
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.font = 'bold 16px Arial';
+    ctx.fillStyle = isCritical ? '#FF5555' : 'rgba(206, 203, 246, 0.95)';
+    ctx.fillText(`时间锁定 ${remainSec}s`, this.width / 2, 108);
+    ctx.restore();
+  }
+
+  /**
    * 绘制调试按钮（左下角小按钮，点击给三种道具各 +1）。
    * 仅在 game.js DEBUG_ITEMS=true 时调用。
    */

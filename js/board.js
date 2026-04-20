@@ -333,6 +333,17 @@ class Board {
    * @param {(target:object) => void} [onTimedSplitFire] - 本次定时分裂成功发射时的回调（用于额外粒子）
    */
   updateTimedSplit(onTimedSplitFire) {
+    // 暂停道具：冻结定时分裂调度 — scheduledFrame 跟着 gameFrame 前进，保证"剩余帧"不变
+    if (this.timedSplitPauseFramesRemaining > 0) {
+      this.timedSplitPauseFramesRemaining -= 1;
+      this.gameFrame += 1;
+      if (this.timedSplitScheduledFrame !== null) {
+        this.timedSplitScheduledFrame += 1;
+      }
+      this.timedSplitWarningProgress = 0;
+      return;
+    }
+
     this.gameFrame += 1;
 
     // 安全期内：不做任何调度

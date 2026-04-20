@@ -388,9 +388,9 @@ function gameLoop() {
     // 合成后流程状态机
     updateMergeFlow();
 
-    // 道具动效推进（使用动效计时 + 失败提示计时 + 暂停倒计时镜像）
+    // 道具动效推进（使用动效计时 + 失败提示计时 + 暂停倒计时镜像 + 结束瞬间特效）
     // 升级道具 useAnim 结束时回调：尝试启动合成连锁
-    items.update(board, handleUpgradeComplete);
+    items.update(board, particles, handleUpgradeComplete);
 
     // 为每个飞行中的元素沿路径撒尾迹粒子
     for (const fly of board.flyingElements) {
@@ -477,6 +477,9 @@ function gameLoop() {
 
   // 道具使用期间的屏幕边缘脉冲（清空=暖金/升级=绿松）
   renderer.drawItemUseBurst(items);
+
+  // 暂停道具视觉反馈（核心波纹 + 屏幕紫光 + 顶部倒计时）
+  renderer.drawPauseOverlay(board, centerX, centerY);
 
   // 绘制 UI
   renderer.drawScoreUI(score.total, score.highScore);
