@@ -60,6 +60,7 @@ let mergeFlowTimer = 0;
 let mergeFlowAbsorbSlot = null;
 let mergeFlowAbsorbProgress = 0;
 let mergeFlowBurstFired = false;
+let lastBurstPos = { x: centerX, y: centerY }; // 最近一次合成爆发中点（供 combo 掉落定位）
 
 // ─── 模块实例化 ───
 
@@ -122,6 +123,16 @@ function handleSlotTap(slot) {
 }
 
 /**
+ * combo 达到阈值时触发一次道具掉落
+ */
+function checkComboDropTrigger() {
+  if (score.combo > 0 && score.combo % GAME_CONFIG.items.comboTriggerCount === 0) {
+    const type = ITEM_TYPES[Math.floor(Math.random() * ITEM_TYPES.length)];
+    items.spawnDrop(type, lastBurstPos.x, lastBurstPos.y, dropTargetPositions);
+  }
+}
+
+/**
  * 执行一次玩家主动的合成（两步点击达成条件后）：启动动画，后续链路通过
  * updateMergeAnimations 的 onBurst / onComplete 回调推进。
  *
@@ -146,6 +157,7 @@ function handleMergeBurst(anim, midX, midY) {
   const colors = ELEMENT_COLORS[anim.newLevel] || ELEMENT_COLORS[1];
   particles.spawn(midX, midY, colors.primary, 16, { speed: 4, life: 32 });
   particles.spawn(midX, midY, colors.secondary, 10, { speed: 2.5, life: 22 });
+  lastBurstPos = { x: midX, y: midY };
 
   if (score.combo >= 2) {
     comboDisplay = { count: score.combo, x: centerX, y: centerY, timer: 60 };
@@ -163,6 +175,7 @@ function handleMergeComplete(slotA, newLevel) {
     const c = score.incrementCombo();
     const chainedLevel = slotA.level + 1;
     score.addMergeScore(chainedLevel, c);
+    checkComboDropTrigger();
     board.startMergeAnimation(slotA, nextPartner);
     return;
   }
