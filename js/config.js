@@ -62,7 +62,7 @@ const GAME_CONFIG = {
     blinkDurationMs: 5000,        // 即将消失时的快闪持续时间
     flyInMs: 500,                 // 触发源 → 掉落位的飞行时长
     flyToInventoryMs: 400,        // 悬浮物 → 道具栏的拾取飞行时长
-    comboTriggerCount: 5,         // combo 多少次触发一次掉落
+    comboTriggerCount: 2,         // combo 达到此次数触发一次掉落
     coreLevelForGift: 7,          // 核心升到该等级起开始赠送（含本级）
 
     // 清空道具

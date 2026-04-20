@@ -130,7 +130,7 @@ function handleSlotTap(slot) {
  * combo 达到阈值时触发一次道具掉落
  */
 function checkComboDropTrigger() {
-  if (score.combo > 0 && score.combo % GAME_CONFIG.items.comboTriggerCount === 0) {
+  if (score.combo === GAME_CONFIG.items.comboTriggerCount) {
     const type = ITEM_TYPES[Math.floor(Math.random() * ITEM_TYPES.length)];
     items.spawnDrop(type, lastBurstPos.x, lastBurstPos.y, dropTargetPositions);
   }
