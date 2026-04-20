@@ -55,6 +55,34 @@ const GAME_CONFIG = {
     earlyUntilCoreLevel: 3,       // Lv.1-3 用 early
     midUntilCoreLevel: 6,         // Lv.4-6 用 mid；Lv.7+ 用 late
   },
+  // 道具系统
+  items: {
+    // 通用
+    dropDurationMs: 10000,        // 悬浮持续时间
+    blinkDurationMs: 5000,        // 即将消失时的快闪持续时间
+    flyInMs: 500,                 // 触发源 → 掉落位的飞行时长
+    flyToInventoryMs: 400,        // 悬浮物 → 道具栏的拾取飞行时长
+    comboTriggerCount: 5,         // combo 多少次触发一次掉落
+    coreLevelForGift: 7,          // 核心升到该等级起开始赠送（含本级）
+
+    // 清空道具
+    clearItemTargetLevel: 1,      // 清除的目标元素等级
+
+    // 升级道具
+    upgradeItemCount: 3,          // 随机选几个元素
+    upgradeItemMaxSourceLevel: 5, // 可被选中的最高等级（Lv.1-5）
+
+    // 暂停道具
+    pauseItemDurationMs: 15000,   // 单次锁定时长
+    pauseItemAffectsMerge: false, // 是否冻结合成后分裂（false = 不影响）
+    pauseItemAffectsTimed: true,  // 是否冻结定时分裂（true = 冻结）
+    pauseItemBlinkAtSeconds: 3,   // 剩余几秒开始闪烁警告
+
+    // 使用动效
+    itemUseAnimFrames: 18,        // 清空/升级使用后输入锁帧数
+    dropSlotOffsetY: 0.92,        // 掉落位 y = centerY + boardRadius * 此值
+    dropSlotOffsetX: 0.58,        // 掉落位 x = centerX ± boardRadius * 此值
+  },
 };
 
 /** 秒转帧 */

@@ -10,6 +10,7 @@ const Renderer = require('./js/renderer');
 const Particles = require('./js/particles');
 const Input = require('./js/input');
 const Score = require('./js/score');
+const { Items } = require('./js/items');
 const { GAME_CONFIG, msToFrames } = require('./js/config');
 
 // ─── Canvas 初始化 ───
@@ -57,6 +58,7 @@ const board = new Board(boardRadius, centerX, centerY);
 const renderer = new Renderer(ctx, screenWidth, screenHeight);
 const particles = new Particles();
 const score = new Score();
+const items = new Items();
 
 const input = new Input(
   canvas,
@@ -271,6 +273,7 @@ function handleRestart() {
   board.reset();
   score.reset();
   particles.clear();
+  items.reset();
   gameState = 'playing';
   input.isGameOver = false;
   comboDisplay = { count: 0, x: 0, y: 0, timer: 0 };
