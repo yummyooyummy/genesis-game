@@ -33,6 +33,13 @@ const GAME_CONFIG = {
     convergeFrames: 18,           // 两元素向中点聚合（帧）
     popFrames: 6,                 // 新元素从 0.5× 放大到 1.0×（帧）
   },
+  // 合成后流程（合成动画结束后的各阶段时长）
+  mergeFlow: {
+    newElementPauseMs: 500,       // 新元素停留展示
+    absorbAnimMs: 600,            // 吸附飞行动画
+    coreUpgradeBurstMs: 500,      // 核心升级爆发
+    recoveryMs: 100,              // 恢复过渡
+  },
 };
 
 /** 秒转帧 */

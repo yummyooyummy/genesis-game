@@ -86,6 +86,9 @@ class Board {
     // 合成动画队列（Stage 5）
     this.mergeAnimations = [];     // { slotA, slotB, sourceLevel, newLevel, frame, ... }
 
+    // 合成后流程锁（由 game.js 的 mergeFlow 状态机控制）
+    this.mergeFlowLocked = false;
+
     // 每圈旋转速度（弧度/帧）— 运行时可直接改：
     //   board.rotationSpeeds.inner = 0.006
     //   board.rotationSpeeds = { inner: X, mid: Y, outer: Z }
@@ -307,7 +310,7 @@ class Board {
    * 合成后分裂（queueSplit + flying）不锁输入（与原始行为一致）。
    */
   _recomputeInputLock() {
-    this.inputLocked = !this.initialSplitsComplete || this.mergeAnimations.length > 0;
+    this.inputLocked = !this.initialSplitsComplete || this.mergeAnimations.length > 0 || this.mergeFlowLocked;
   }
 
   /**
@@ -805,6 +808,7 @@ class Board {
     // 选中状态 + 合成动画队列也重置
     this.selectedSlot = null;
     this.mergeAnimations = [];
+    this.mergeFlowLocked = false;
     // 重新排队开局 4 次分裂
     this.queueInitialSplits();
   }

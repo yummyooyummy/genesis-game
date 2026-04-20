@@ -73,7 +73,7 @@ class Renderer {
 
     // 外发光（脉冲时更亮更大）
     const glowRadius = radius * (2 + pulse * 0.8);
-    const glowAlphaHex = Math.floor(0x60 + pulse * 0x80).toString(16).padStart(2, '0');
+    const glowAlphaHex = Math.min(0xFF, Math.floor(0x60 + pulse * 0x80)).toString(16).padStart(2, '0');
     const glow = ctx.createRadialGradient(centerX, centerY, radius * 0.5, centerX, centerY, glowRadius);
     glow.addColorStop(0, colors.primary + glowAlphaHex);
     glow.addColorStop(1, 'transparent');

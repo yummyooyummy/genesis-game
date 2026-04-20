@@ -10,6 +10,7 @@ const Renderer = require('./js/renderer');
 const Particles = require('./js/particles');
 const Input = require('./js/input');
 const Score = require('./js/score');
+const { GAME_CONFIG, msToFrames } = require('./js/config');
 
 // ─── Canvas 初始化 ───
 
@@ -42,6 +43,13 @@ const boardRadius = Math.min(screenWidth * 0.445, (screenHeight - 165) * 0.5);
 let gameState = 'playing'; // 'playing' | 'gameover'
 let decorationTimer = 0;   // 装饰粒子计时器
 let comboDisplay = { count: 0, x: 0, y: 0, timer: 0 }; // combo 显示
+
+// 合成后流程状态机（pause → absorb → coreBurst → recovery）
+let mergeFlowState = null;   // null | 'pause' | 'absorb' | 'coreBurst' | 'recovery'
+let mergeFlowTimer = 0;
+let mergeFlowAbsorbSlot = null;
+let mergeFlowAbsorbProgress = 0;
+let mergeFlowBurstFired = false;
 
 // ─── 模块实例化 ───
 
@@ -131,8 +139,8 @@ function handleMergeBurst(anim, midX, midY) {
 }
 
 /**
- * 合成动画结束后：检查 combo 连锁 → 吸附 → 触发下一次分裂 / 游戏结束。
- * 若还能继续连锁，立即启动下一段合成动画（期间 inputLocked 仍为 true）。
+ * 合成动画结束后：检查 combo 连锁 → 进入 mergeFlow 状态机。
+ * 连锁期间直接启动下一段合成动画；连锁终止后才进入 pause → absorb → coreBurst → recovery。
  */
 function handleMergeComplete(slotA, newLevel) {
   // Combo 连锁：找相邻同级最近的一个，继续合成
@@ -145,57 +153,103 @@ function handleMergeComplete(slotA, newLevel) {
     return;
   }
 
-  // 连锁终止 — 走吸附 + 下一次分裂 + 游戏结束判定
-  const absorbSlot = board.checkAbsorb();
-  if (absorbSlot) {
-    handleAbsorb(absorbSlot);
-  }
-
-  if (!board.isFull()) {
-    board.queueSplit(1);
-    const lv1 = board.countLevel1Incoming();
-    if (lv1 < 2) {
-      board.queueSplit(2 - lv1);
-    }
-  } else {
-    gameState = 'gameover';
-    input.isGameOver = true;
-  }
+  // 连锁终止 — 进入 mergeFlow 状态机
+  mergeFlowState = 'pause';
+  mergeFlowTimer = msToFrames(GAME_CONFIG.mergeFlow.newElementPauseMs);
+  board.mergeFlowLocked = true;
+  board._recomputeInputLock();
 }
 
 /**
- * 处理吸附升级
- * @param {object} slot
+ * 每帧推进合成后流程状态机。
  */
-function handleAbsorb(slot) {
-  const absorbPos = board.getSlotPosition(slot);
-  const colors = ELEMENT_COLORS[slot.level] || ELEMENT_COLORS[1];
+function updateMergeFlow() {
+  if (mergeFlowState === null) return;
 
-  // 吸附尾迹粒子
-  const steps = 15;
-  for (let i = 0; i < steps; i++) {
-    const t = i / steps;
-    const trailX = absorbPos.x + (centerX - absorbPos.x) * t;
-    const trailY = absorbPos.y + (centerY - absorbPos.y) * t;
-    particles.spawnTrail(trailX, trailY, colors.primary);
+  mergeFlowTimer -= 1;
+
+  if (mergeFlowState === 'pause') {
+    if (mergeFlowTimer <= 0) {
+      const absorbSlot = board.checkAbsorb();
+      if (absorbSlot) {
+        mergeFlowAbsorbSlot = absorbSlot;
+        mergeFlowAbsorbProgress = 0;
+        absorbSlot.mergeAnimating = true;
+        mergeFlowState = 'absorb';
+        mergeFlowTimer = msToFrames(GAME_CONFIG.mergeFlow.absorbAnimMs);
+      } else {
+        mergeFlowState = 'recovery';
+        mergeFlowTimer = msToFrames(GAME_CONFIG.mergeFlow.recoveryMs);
+      }
+    }
+    return;
   }
 
-  // 核心升级
-  const newCoreLevel = board.doAbsorb(slot);
-  score.addAbsorbScore(newCoreLevel);
+  if (mergeFlowState === 'absorb') {
+    const totalFrames = msToFrames(GAME_CONFIG.mergeFlow.absorbAnimMs);
+    mergeFlowAbsorbProgress = 1 - mergeFlowTimer / totalFrames;
+    if (mergeFlowAbsorbSlot && mergeFlowTimer % 3 === 0) {
+      const pos = board.getSlotPosition(mergeFlowAbsorbSlot);
+      const t = mergeFlowAbsorbProgress;
+      const trailX = pos.x + (centerX - pos.x) * t;
+      const trailY = pos.y + (centerY - pos.y) * t;
+      const colors = ELEMENT_COLORS[mergeFlowAbsorbSlot.level] || ELEMENT_COLORS[1];
+      particles.spawnTrail(trailX, trailY, colors.primary);
+    }
+    if (mergeFlowTimer <= 0) {
+      mergeFlowAbsorbSlot.mergeAnimating = false;
+      const newCoreLevel = board.doAbsorb(mergeFlowAbsorbSlot);
+      score.addAbsorbScore(newCoreLevel);
+      mergeFlowAbsorbSlot = null;
+      mergeFlowBurstFired = false;
+      mergeFlowState = 'coreBurst';
+      mergeFlowTimer = msToFrames(GAME_CONFIG.mergeFlow.coreUpgradeBurstMs);
+    }
+    return;
+  }
 
-  // 核心升级爆发粒子
-  const coreColors = ELEMENT_COLORS[newCoreLevel] || ELEMENT_COLORS[1];
-  particles.spawn(centerX, centerY, coreColors.primary, 20, {
-    speed: 5,
-    life: 40,
-    radius: 4,
-  });
+  if (mergeFlowState === 'coreBurst') {
+    if (!mergeFlowBurstFired) {
+      mergeFlowBurstFired = true;
+      const coreColors = ELEMENT_COLORS[board.core.level] || ELEMENT_COLORS[1];
+      particles.spawn(centerX, centerY, coreColors.primary, 24, { speed: 5, life: 45, radius: 4 });
+      particles.spawn(centerX, centerY, coreColors.secondary, 16, { speed: 3, life: 35, radius: 3 });
+      board.corePulse = 15;
+    }
+    if (mergeFlowTimer <= 0) {
+      const nextAbsorb = board.checkAbsorb();
+      if (nextAbsorb) {
+        mergeFlowAbsorbSlot = nextAbsorb;
+        mergeFlowAbsorbProgress = 0;
+        nextAbsorb.mergeAnimating = true;
+        mergeFlowState = 'absorb';
+        mergeFlowTimer = msToFrames(GAME_CONFIG.mergeFlow.absorbAnimMs);
+      } else {
+        mergeFlowState = 'recovery';
+        mergeFlowTimer = msToFrames(GAME_CONFIG.mergeFlow.recoveryMs);
+      }
+    }
+    return;
+  }
 
-  // 吸附后再次检查（可能有多个同级元素）
-  const nextAbsorb = board.checkAbsorb();
-  if (nextAbsorb) {
-    handleAbsorb(nextAbsorb);
+  if (mergeFlowState === 'recovery') {
+    if (mergeFlowTimer <= 0) {
+      mergeFlowState = null;
+      board.mergeFlowLocked = false;
+      board._recomputeInputLock();
+
+      if (!board.isFull()) {
+        board.queueSplit(1);
+        const lv1 = board.countLevel1Incoming();
+        if (lv1 < 2) {
+          board.queueSplit(2 - lv1);
+        }
+      } else {
+        gameState = 'gameover';
+        input.isGameOver = true;
+      }
+    }
+    return;
   }
 }
 
@@ -208,6 +262,11 @@ function handleRestart() {
   input.isGameOver = false;
   comboDisplay = { count: 0, x: 0, y: 0, timer: 0 };
   decorationTimer = 0;
+  mergeFlowState = null;
+  mergeFlowTimer = 0;
+  mergeFlowAbsorbSlot = null;
+  mergeFlowAbsorbProgress = 0;
+  mergeFlowBurstFired = false;
 }
 
 // ─── 主循环 ───
@@ -252,6 +311,9 @@ function gameLoop() {
 
     // 合成动画推进（玩家主动合成及 combo 连锁）
     board.updateMergeAnimations(handleMergeBurst, handleMergeComplete);
+
+    // 合成后流程状态机
+    updateMergeFlow();
 
     // 为每个飞行中的元素沿路径撒尾迹粒子
     for (const fly of board.flyingElements) {
@@ -315,6 +377,18 @@ function gameLoop() {
 
   // 绘制从核心飞向目标格的新元素
   renderer.drawFlyingElements(board);
+
+  // 绘制吸附飞行中的元素
+  if (mergeFlowState === 'absorb' && mergeFlowAbsorbSlot) {
+    const absPos = board.getSlotPosition(mergeFlowAbsorbSlot);
+    const t = mergeFlowAbsorbProgress;
+    const ease = 1 - Math.pow(1 - t, 3);
+    const ax = absPos.x + (centerX - absPos.x) * ease;
+    const ay = absPos.y + (centerY - absPos.y) * ease;
+    const level = mergeFlowAbsorbSlot.level;
+    const radius = board.getElementRadius(level) * (1 - ease * 0.4);
+    renderer._drawElement(ax, ay, level, radius);
+  }
 
   // 绘制合成动画（聚合 + 新元素弹出）
   renderer.drawMergeAnimations(board);
