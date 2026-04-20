@@ -14,13 +14,15 @@ class Input {
    * @param {Function} onSlotTap - 点击格子回调 (slot)
    * @param {Function} onRestartTap - 点击重新开始回调 ()
    * @param {Function} [onDebugTap] - 点击调试按钮回调（可选，DEBUG_ITEMS=false 时不注入）
+   * @param {Function} [onItemTap] - 点击道具栏图标回调 (type:'clear'|'upgrade'|'pause')
    */
-  constructor(canvas, dpr, onSlotTap, onRestartTap, onDebugTap) {
+  constructor(canvas, dpr, onSlotTap, onRestartTap, onDebugTap, onItemTap) {
     this.canvas = canvas;
     this.dpr = dpr;
     this.onSlotTap = onSlotTap;
     this.onRestartTap = onRestartTap;
     this.onDebugTap = onDebugTap || null;
+    this.onItemTap = onItemTap || null;
 
     /** @type {Board} */
     this.board = null;
@@ -73,12 +75,40 @@ class Input {
       return;
     }
 
+    // 道具栏命中（优先于棋盘格子命中）
+    if (this.onItemTap) {
+      const itemType = this._hitTestItemBar(x, y);
+      if (itemType) {
+        this.onItemTap(itemType);
+        return;
+      }
+    }
+
     // 正常游戏：命中检测
     if (!this.board) return;
     const hitSlot = this._hitTest(x, y);
     if (hitSlot) {
       this.onSlotTap(hitSlot);
     }
+  }
+
+  /**
+   * 道具栏命中检测：遍历 renderer.itemBarSlots，返回命中的道具类型
+   * @param {number} x
+   * @param {number} y
+   * @returns {'clear'|'upgrade'|'pause'|null}
+   */
+  _hitTestItemBar(x, y) {
+    if (!this.renderer || !this.renderer.itemBarSlots) return null;
+    for (const slot of this.renderer.itemBarSlots) {
+      const dx = x - slot.x;
+      const dy = y - slot.y;
+      const r = slot.r + TOUCH_TOLERANCE;
+      if (dx * dx + dy * dy <= r * r) {
+        return slot.type;
+      }
+    }
+    return null;
   }
 
   /**

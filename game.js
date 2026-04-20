@@ -68,7 +68,8 @@ const input = new Input(
   dpr,
   handleSlotTap,
   handleRestart,
-  handleDebugTap
+  handleDebugTap,
+  handleItemTap
 );
 input.setReferences(board, renderer);
 
@@ -283,6 +284,15 @@ function handleDebugTap() {
   items.grant('pause', 1);
 }
 
+/**
+ * 点击道具栏图标 → 使用对应道具
+ * @param {'clear'|'upgrade'|'pause'} type
+ */
+function handleItemTap(type) {
+  if (gameState !== 'playing') return;
+  items.use(type, board, particles);
+}
+
 /** 处理重新开始 */
 function handleRestart() {
   board.reset();
@@ -345,6 +355,9 @@ function gameLoop() {
 
     // 合成后流程状态机
     updateMergeFlow();
+
+    // 道具动效推进（使用动效计时 + 失败提示计时 + 暂停倒计时镜像）
+    items.update(board);
 
     // 为每个飞行中的元素沿路径撒尾迹粒子
     for (const fly of board.flyingElements) {
@@ -429,10 +442,16 @@ function gameLoop() {
   // 绘制粒子
   particles.draw(ctx);
 
+  // 道具使用期间的屏幕边缘脉冲（清空=暖金/升级=绿松）
+  renderer.drawItemUseBurst(items);
+
   // 绘制 UI
   renderer.drawScoreUI(score.total, score.highScore);
   renderer.drawItemBar(items);
   renderer.drawCoreLevelUI(board.core.level);
+
+  // 道具使用失败提示文字（在 UI 之上）
+  renderer.drawUseFailHint(items);
 
   // 调试按钮（DEBUG_ITEMS=true 时在左下角显示）
   if (DEBUG_ITEMS) {

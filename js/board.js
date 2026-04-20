@@ -89,6 +89,12 @@ class Board {
     // 合成后流程锁（由 game.js 的 mergeFlow 状态机控制）
     this.mergeFlowLocked = false;
 
+    // 道具使用锁（由 items.js 的 useAnim 控制）
+    this.itemUseLocked = false;
+
+    // 定时分裂暂停剩余帧数（暂停道具设置；0 = 未暂停）
+    this.timedSplitPauseFramesRemaining = 0;
+
     // 每圈旋转速度（弧度/帧）— 运行时可直接改：
     //   board.rotationSpeeds.inner = 0.006
     //   board.rotationSpeeds = { inner: X, mid: Y, outer: Z }
@@ -306,11 +312,16 @@ class Board {
    * 根据当前状态重新计算输入锁：
    *  - 初始 4 次分裂尚未完成 → 锁
    *  - 有合成动画在进行中 → 锁
+   *  - 合成后流程（mergeFlow）进行中 → 锁
+   *  - 道具使用动效进行中（清空/升级）→ 锁
    *  - 否则 → 解锁
-   * 合成后分裂（queueSplit + flying）不锁输入（与原始行为一致）。
+   * 合成后分裂（queueSplit + flying）不锁输入。
    */
   _recomputeInputLock() {
-    this.inputLocked = !this.initialSplitsComplete || this.mergeAnimations.length > 0 || this.mergeFlowLocked;
+    this.inputLocked = !this.initialSplitsComplete
+      || this.mergeAnimations.length > 0
+      || this.mergeFlowLocked
+      || this.itemUseLocked;
   }
 
   /**
@@ -858,6 +869,8 @@ class Board {
     this.selectedSlot = null;
     this.mergeAnimations = [];
     this.mergeFlowLocked = false;
+    this.itemUseLocked = false;
+    this.timedSplitPauseFramesRemaining = 0;
     // 重新排队开局 4 次分裂
     this.queueInitialSplits();
   }

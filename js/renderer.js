@@ -662,6 +662,84 @@ class Renderer {
   }
 
   /**
+   * 绘制道具使用期间的屏幕边缘脉冲（清空=暖金、升级=绿松）。
+   * 强度随 frame 呈抛物线 0 → 1 → 0。
+   * @param {import('./items').Items} items
+   */
+  drawItemUseBurst(items) {
+    if (!items.useAnim) return;
+    const { ctx } = this;
+    const anim = items.useAnim;
+    const progress = anim.frame / anim.totalFrames;
+    const intensity = 1 - Math.abs(1 - progress * 2); // 0→1→0
+    const alpha = intensity * 0.32;
+
+    const colorByType = {
+      clear:   '239, 159, 39',    // 暖金
+      upgrade: '93, 202, 165',    // 绿松
+    };
+    const rgb = colorByType[anim.type] || '255, 255, 255';
+
+    const thickness = 70;
+    ctx.save();
+
+    // 上
+    let grad = ctx.createLinearGradient(0, 0, 0, thickness);
+    grad.addColorStop(0, `rgba(${rgb}, ${alpha})`);
+    grad.addColorStop(1, `rgba(${rgb}, 0)`);
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, this.width, thickness);
+
+    // 下
+    grad = ctx.createLinearGradient(0, this.height, 0, this.height - thickness);
+    grad.addColorStop(0, `rgba(${rgb}, ${alpha})`);
+    grad.addColorStop(1, `rgba(${rgb}, 0)`);
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, this.height - thickness, this.width, thickness);
+
+    // 左
+    grad = ctx.createLinearGradient(0, 0, thickness, 0);
+    grad.addColorStop(0, `rgba(${rgb}, ${alpha})`);
+    grad.addColorStop(1, `rgba(${rgb}, 0)`);
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, thickness, this.height);
+
+    // 右
+    grad = ctx.createLinearGradient(this.width, 0, this.width - thickness, 0);
+    grad.addColorStop(0, `rgba(${rgb}, ${alpha})`);
+    grad.addColorStop(1, `rgba(${rgb}, 0)`);
+    ctx.fillStyle = grad;
+    ctx.fillRect(this.width - thickness, 0, thickness, this.height);
+
+    ctx.restore();
+  }
+
+  /**
+   * 绘制道具使用失败提示（屏幕中下方红色文字）
+   * @param {import('./items').Items} items
+   */
+  drawUseFailHint(items) {
+    if (!items.useFailHint) return;
+    const { ctx } = this;
+    const hint = items.useFailHint;
+    const progress = hint.frame / hint.totalFrames;
+    // fade：头 15% 淡入，尾 30% 淡出，中间实心
+    let alpha;
+    if (progress < 0.15) alpha = progress / 0.15;
+    else if (progress > 0.7) alpha = (1 - progress) / 0.3;
+    else alpha = 1;
+
+    ctx.save();
+    ctx.globalAlpha = alpha;
+    ctx.fillStyle = '#FF6464';
+    ctx.font = 'bold 17px Arial';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(hint.text, this.width / 2, this.height * 0.68);
+    ctx.restore();
+  }
+
+  /**
    * 绘制调试按钮（左下角小按钮，点击给三种道具各 +1）。
    * 仅在 game.js DEBUG_ITEMS=true 时调用。
    */
