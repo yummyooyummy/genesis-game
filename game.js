@@ -45,6 +45,9 @@ let gameState = 'playing'; // 'playing' | 'gameover'
 let decorationTimer = 0;   // 装饰粒子计时器
 let comboDisplay = { count: 0, x: 0, y: 0, timer: 0 }; // combo 显示
 
+// 调试开关 — 上线前改为 false，保留按钮代码以备后续调试
+const DEBUG_ITEMS = true;
+
 // 合成后流程状态机（pause → absorb → coreBurst → recovery）
 let mergeFlowState = null;   // null | 'pause' | 'absorb' | 'coreBurst' | 'recovery'
 let mergeFlowTimer = 0;
@@ -64,7 +67,8 @@ const input = new Input(
   canvas,
   dpr,
   handleSlotTap,
-  handleRestart
+  handleRestart,
+  handleDebugTap
 );
 input.setReferences(board, renderer);
 
@@ -268,6 +272,17 @@ function updateMergeFlow() {
   }
 }
 
+/**
+ * 调试：点击屏幕左下角"+1 ALL"按钮 → 三种道具各 +1
+ * 仅在 DEBUG_ITEMS=true 时生效；上线前置 false
+ */
+function handleDebugTap() {
+  if (!DEBUG_ITEMS) return;
+  items.grant('clear', 1);
+  items.grant('upgrade', 1);
+  items.grant('pause', 1);
+}
+
 /** 处理重新开始 */
 function handleRestart() {
   board.reset();
@@ -418,6 +433,11 @@ function gameLoop() {
   renderer.drawScoreUI(score.total, score.highScore);
   renderer.drawItemBar(items);
   renderer.drawCoreLevelUI(board.core.level);
+
+  // 调试按钮（DEBUG_ITEMS=true 时在左下角显示）
+  if (DEBUG_ITEMS) {
+    renderer.drawDebugButton();
+  }
 
   // combo 显示
   if (comboDisplay.timer > 0) {

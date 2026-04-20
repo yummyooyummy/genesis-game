@@ -662,6 +662,48 @@ class Renderer {
   }
 
   /**
+   * 绘制调试按钮（左下角小按钮，点击给三种道具各 +1）。
+   * 仅在 game.js DEBUG_ITEMS=true 时调用。
+   */
+  drawDebugButton() {
+    const { ctx } = this;
+    const w = 60;
+    const h = 32;
+    const x = 12;
+    const y = this.height - 44;
+
+    ctx.save();
+    ctx.fillStyle = 'rgba(155, 143, 226, 0.85)';
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.6)';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    this._roundRect(x, y, w, h, 6);
+    ctx.fill();
+    ctx.stroke();
+
+    ctx.fillStyle = '#fff';
+    ctx.font = 'bold 11px Arial';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('+1 ALL', x + w / 2, y + h / 2);
+    ctx.restore();
+
+    this.debugBtn = { x, y, width: w, height: h };
+  }
+
+  /**
+   * 检测是否点击了调试按钮
+   * @param {number} x
+   * @param {number} y
+   * @returns {boolean}
+   */
+  isDebugBtnHit(x, y) {
+    if (!this.debugBtn) return false;
+    const b = this.debugBtn;
+    return x >= b.x && x <= b.x + b.width && y >= b.y && y <= b.y + b.height;
+  }
+
+  /**
    * 绘制圆角矩形
    */
   _roundRect(x, y, w, h, r) {

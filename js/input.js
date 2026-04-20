@@ -13,12 +13,14 @@ class Input {
    * @param {number} dpr - 设备像素比
    * @param {Function} onSlotTap - 点击格子回调 (slot)
    * @param {Function} onRestartTap - 点击重新开始回调 ()
+   * @param {Function} [onDebugTap] - 点击调试按钮回调（可选，DEBUG_ITEMS=false 时不注入）
    */
-  constructor(canvas, dpr, onSlotTap, onRestartTap) {
+  constructor(canvas, dpr, onSlotTap, onRestartTap, onDebugTap) {
     this.canvas = canvas;
     this.dpr = dpr;
     this.onSlotTap = onSlotTap;
     this.onRestartTap = onRestartTap;
+    this.onDebugTap = onDebugTap || null;
 
     /** @type {Board} */
     this.board = null;
@@ -62,6 +64,12 @@ class Input {
       if (this.renderer && this.renderer.isRestartBtnHit(x, y)) {
         this.onRestartTap();
       }
+      return;
+    }
+
+    // 调试按钮（优先级最高，始终可点击）
+    if (this.onDebugTap && this.renderer && this.renderer.isDebugBtnHit(x, y)) {
+      this.onDebugTap();
       return;
     }
 
