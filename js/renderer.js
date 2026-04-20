@@ -355,6 +355,130 @@ class Renderer {
   }
 
   /**
+   * 绘制底部道具栏（3 个槽位水平居中于屏幕底部、核心等级文字上方）。
+   * 每槽 = 圆形背景 + 几何图标 + 下方数量 "×N"。数量为 0 时图标变灰。
+   * 命中坐标保存到 this.itemBarSlots，供 input.js 的命中检测使用。
+   *
+   * @param {import('./items').Items} items
+   */
+  drawItemBar(items) {
+    const { ctx } = this;
+
+    const slotRadius = 36;
+    const slotSpacing = 92;        // 槽位中心间距
+    const centerX = this.width / 2;
+    const centerY = this.height - 115;
+    const types = ['clear', 'upgrade', 'pause'];
+
+    // 每槽配色（使用状态：实色；数量 0：降透明 + 降饱和 → 用统一灰色）
+    const iconColors = {
+      clear:   '#EF9F27',  // 暖金
+      upgrade: '#5DCAA5',  // 绿松
+      pause:   '#7F77DD',  // 冷紫
+    };
+
+    this.itemBarSlots = [];
+
+    for (let i = 0; i < types.length; i++) {
+      const type = types[i];
+      const count = items.inventory[type];
+      const active = count > 0;
+      const cx = centerX + (i - 1) * slotSpacing; // i=0 → -1, i=1 → 0, i=2 → +1
+      const cy = centerY;
+
+      // 槽位底盘
+      ctx.save();
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.08)';
+      ctx.beginPath();
+      ctx.arc(cx, cy, slotRadius, 0, Math.PI * 2);
+      ctx.fill();
+
+      // 槽位边框
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.18)';
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.arc(cx, cy, slotRadius, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.restore();
+
+      // 图标
+      const iconColor = active ? iconColors[type] : 'rgba(255, 255, 255, 0.3)';
+      this._drawItemIcon(type, cx, cy, iconColor, active);
+
+      // 数量文字（下方居中）
+      ctx.fillStyle = active ? '#fff' : 'rgba(255, 255, 255, 0.35)';
+      ctx.font = `${active ? 'bold ' : ''}15px Arial`;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(`×${count}`, cx, cy + slotRadius + 14);
+
+      this.itemBarSlots.push({ type, x: cx, y: cy, r: slotRadius });
+    }
+  }
+
+  /**
+   * 在 (cx, cy) 绘制指定道具的几何图标。
+   * @param {'clear'|'upgrade'|'pause'} type
+   * @param {number} cx
+   * @param {number} cy
+   * @param {string} color
+   * @param {boolean} active - 非激活时降低视觉强度
+   */
+  _drawItemIcon(type, cx, cy, color, active) {
+    const { ctx } = this;
+    const alpha = active ? 1 : 0.7;
+
+    ctx.save();
+    ctx.globalAlpha = alpha;
+
+    if (type === 'clear') {
+      // 同心螺旋圈：3 圈弧线，半径递增，起点旋转 120° 错开
+      ctx.strokeStyle = color;
+      ctx.lineCap = 'round';
+      const radii = [9, 16, 22];
+      for (let i = 0; i < radii.length; i++) {
+        ctx.lineWidth = 3.2 - i * 0.5;
+        const rotOffset = (i * Math.PI * 2) / 3;
+        ctx.beginPath();
+        ctx.arc(cx, cy, radii[i], rotOffset, rotOffset + Math.PI * 1.5);
+        ctx.stroke();
+      }
+    } else if (type === 'upgrade') {
+      // 向上三角 + 底部两条竖线（类似"加速"指示）
+      ctx.fillStyle = color;
+      ctx.beginPath();
+      ctx.moveTo(cx, cy - 14);        // 顶尖
+      ctx.lineTo(cx + 13, cy + 1);    // 右下
+      ctx.lineTo(cx + 6, cy + 1);     // 右下内收
+      ctx.lineTo(cx + 6, cy + 12);    // 右竖条底
+      ctx.lineTo(cx - 6, cy + 12);    // 左竖条底
+      ctx.lineTo(cx - 6, cy + 1);     // 左下内收
+      ctx.lineTo(cx - 13, cy + 1);    // 左下
+      ctx.closePath();
+      ctx.fill();
+    } else if (type === 'pause') {
+      // 外围光晕环（"时间"感）
+      ctx.strokeStyle = color;
+      ctx.lineWidth = 2;
+      ctx.globalAlpha = alpha * 0.5;
+      ctx.beginPath();
+      ctx.arc(cx, cy, 20, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.globalAlpha = alpha;
+
+      // 两条竖条
+      ctx.fillStyle = color;
+      const barW = 4;
+      const barH = 17;
+      const gap = 6;
+      ctx.fillRect(cx - gap / 2 - barW, cy - barH / 2, barW, barH);
+      ctx.fillRect(cx + gap / 2,        cy - barH / 2, barW, barH);
+    }
+
+    ctx.restore();
+  }
+
+  /**
    * 绘制底部核心等级 UI（原型样式：核心等级 | Lv.N Name）
    * @param {number} coreLevel
    */

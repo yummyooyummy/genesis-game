@@ -416,6 +416,7 @@ function gameLoop() {
 
   // 绘制 UI
   renderer.drawScoreUI(score.total, score.highScore);
+  renderer.drawItemBar(items);
   renderer.drawCoreLevelUI(board.core.level);
 
   // combo 显示
