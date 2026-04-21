@@ -38,6 +38,12 @@ class Input {
     /** 游戏是否结束 */
     this.isGameOver = false;
 
+    /** 是否在菜单界面 */
+    this.isMenu = true;
+
+    /** 菜单触摸回调 */
+    this.onMenuTouch = null;
+
     this._bindEvents();
   }
 
@@ -67,6 +73,13 @@ class Input {
    * @param {number} y - 逻辑像素坐标 y
    */
   _handleTouch(x, y) {
+    if (this.isMenu) {
+      if (this.onMenuTouch) {
+        this.onMenuTouch(x, y);
+      }
+      return;
+    }
+
     if (this.isGameOver) {
       if (this.onGameOverTouch) {
         this.onGameOverTouch(x, y);

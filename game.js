@@ -53,8 +53,9 @@ const dropTargetPositions = {
 // 'menu'     → 开始界面（待实现）
 // 'playing'  → 游戏中（现有逻辑）
 // 'gameover' → 结束界面（待实现）
-let gameState = 'playing';  // 暂时默认为 playing，保持现有行为不变
+let gameState = 'menu';
 let gameOverButtons = null; // { restart, home, share } 每个 { x, y, w, h }
+let menuButtons = null;     // { start: { x, y, w, h } }
 let decorationTimer = 0;   // 装饰粒子计时器
 let comboDisplay = { count: 0, x: 0, y: 0, timer: 0 }; // combo 显示
 
@@ -106,6 +107,11 @@ input.onGameOverTouch = function (x, y) {
   if (isGameOverBtnHit(x, y, 'restart')) { handleRestart(); return; }
   if (isGameOverBtnHit(x, y, 'home'))    { handleHome(); return; }
   if (isGameOverBtnHit(x, y, 'share'))   { handleShare(); return; }
+};
+input.onMenuTouch = function (x, y) {
+  if (menuButtons && menuButtons.start && ui.isPointInRect(x, y, menuButtons.start.x, menuButtons.start.y, menuButtons.start.w, menuButtons.start.h)) {
+    handleStart();
+  }
 };
 
 // ─── 游戏逻辑 ───
@@ -425,6 +431,269 @@ function _saveOnGameOver() {
 }
 
 /**
+ * 绘制简化版星球（蓝色渐变圆 + 椭圆轨道环 + 高光）
+ */
+function drawPlanet(cx, cy, size) {
+  const r = size / 2;
+  ctx.save();
+
+  // 蓝色径向渐变主体
+  const grad = ctx.createRadialGradient(cx - r * 0.2, cy - r * 0.2, r * 0.1, cx, cy, r);
+  grad.addColorStop(0, '#7BD0E0');
+  grad.addColorStop(0.6, '#4A7DB8');
+  grad.addColorStop(1, '#1a3a6a');
+  ctx.beginPath();
+  ctx.arc(cx, cy, r, 0, Math.PI * 2);
+  ctx.fillStyle = grad;
+  ctx.shadowColor = 'rgba(123,208,224,0.4)';
+  ctx.shadowBlur = 30;
+  ctx.fill();
+  ctx.shadowColor = 'transparent';
+  ctx.shadowBlur = 0;
+
+  // 椭圆轨道环（30° 倾斜）
+  ctx.save();
+  ctx.translate(cx, cy);
+  ctx.rotate(-Math.PI / 6);
+  ctx.beginPath();
+  ctx.ellipse(0, 0, r * 1.4, r * 0.35, 0, 0, Math.PI * 2);
+  ctx.strokeStyle = 'rgba(180,165,255,0.25)';
+  ctx.lineWidth = 1.5;
+  ctx.stroke();
+  ctx.restore();
+
+  // 左上高光
+  const hlGrad = ctx.createRadialGradient(cx - r * 0.35, cy - r * 0.35, 0, cx - r * 0.35, cy - r * 0.35, r * 0.5);
+  hlGrad.addColorStop(0, 'rgba(255,255,255,0.35)');
+  hlGrad.addColorStop(1, 'rgba(255,255,255,0)');
+  ctx.beginPath();
+  ctx.arc(cx, cy, r, 0, Math.PI * 2);
+  ctx.fillStyle = hlGrad;
+  ctx.fill();
+
+  ctx.restore();
+}
+
+/**
+ * 绘制开始界面（三变体自动切换）
+ */
+function drawMenuScreen() {
+  const W = screenWidth;
+  const H = screenHeight;
+  const padX = UI_CONFIG.spacing.screenPaddingX;
+  const padBottom = UI_CONFIG.spacing.screenPaddingBottom;
+
+  // ── 背景 ──
+  ctx.fillStyle = UI_CONFIG.color.bgDeep;
+  ctx.fillRect(0, 0, W, H);
+
+  // ── 数据准备 ──
+  const data = playerData.loadPlayerData();
+  const totalGames = data.totalGames || 0;
+  const unlockedCount = data.unlockedLevels ? data.unlockedLevels.length : 1;
+  const isNewbie = totalGames === 0;
+  const isVeteran = unlockedCount >= 15;
+
+  // ── 星球 ──
+  const planetSize = isNewbie ? UI_CONFIG.size.heroPlanet : UI_CONFIG.size.heroPlanetCompact;
+  const planetY = isNewbie ? H * 0.22 : H * 0.15;
+  drawPlanet(W / 2, planetY, planetSize);
+
+  // ── GENESIS 标题 ──
+  const titleY = planetY + planetSize / 2 + 32;
+  ui.drawText(ctx, 'GENESIS', W / 2, titleY, {
+    fontSize: UI_CONFIG.font.heroLogo,
+    color: UI_CONFIG.color.textPrimary,
+    weight: '700',
+    glow: UI_CONFIG.glow.heroTitle,
+    glowColor: UI_CONFIG.color.accentPurpleLight,
+  });
+
+  // ── 副标题 ──
+  const subY = titleY + 24;
+  ui.drawText(ctx, '万 物 起 源', W / 2, subY, {
+    fontSize: UI_CONFIG.font.heroSubtitle,
+    color: UI_CONFIG.color.textMuted,
+    weight: 'normal',
+  });
+
+  // ── 按钮区（先算位置，三变体共用） ──
+  const btnH = UI_CONFIG.size.buttonPrimaryHeight;
+  const btnW = Math.min(UI_CONFIG.size.buttonPrimaryMaxWidth, W - padX * 2);
+  const btnX = (W - btnW) / 2;
+  const btnY = H - padBottom - btnH - 30;
+
+  // ── 版本号 ──
+  ui.drawText(ctx, '万物起源 v1.0.0', W / 2, H - padBottom - 6, {
+    fontSize: UI_CONFIG.font.hintXs,
+    color: UI_CONFIG.color.textMuted,
+  });
+
+  if (isNewbie) {
+    // ═══ 变体 A：新手 ═══
+    const cardW = W - padX * 2;
+    const cardH = 100;
+    const cardX = padX;
+    const cardY = subY + 30;
+    ui.drawGlassCard(ctx, cardX, cardY, cardW, cardH);
+
+    ui.drawText(ctx, '开启你的第一次探索', W / 2, cardY + 32, {
+      fontSize: UI_CONFIG.font.cardTitle,
+      color: UI_CONFIG.color.textPrimary,
+      weight: '600',
+    });
+    ui.drawText(ctx, 'Begin your first exploration', W / 2, cardY + 56, {
+      fontSize: UI_CONFIG.font.bodySmall,
+      color: UI_CONFIG.color.textMuted,
+    });
+
+    // 卡片内小粒子示意（静态 5 个小圆点）
+    const dotColors = [UI_CONFIG.codexColors[0], UI_CONFIG.codexColors[2], UI_CONFIG.codexColors[4], UI_CONFIG.codexColors[1], UI_CONFIG.codexColors[3]];
+    const dotBaseY = cardY + 80;
+    for (let i = 0; i < 5; i++) {
+      const dx = W / 2 + (i - 2) * 22;
+      ctx.beginPath();
+      ctx.arc(dx, dotBaseY, 3, 0, Math.PI * 2);
+      ctx.fillStyle = dotColors[i];
+      ctx.globalAlpha = 0.6;
+      ctx.fill();
+      ctx.globalAlpha = 1;
+    }
+  } else {
+    // ═══ 变体 B/C：进阶 / 资深 ═══
+    let curY = subY + 26;
+
+    // 图鉴点阵（15 个圆点）
+    const dotSize = UI_CONFIG.size.codexDotSize;
+    const dotGap = UI_CONFIG.size.codexDotGap;
+    const totalDotsW = 15 * dotSize + 14 * dotGap;
+    const dotsStartX = (W - totalDotsW) / 2;
+
+    for (let i = 0; i < 15; i++) {
+      const dx = dotsStartX + i * (dotSize + dotGap) + dotSize / 2;
+      const dy = curY;
+      const isUnlocked = i < unlockedCount;
+      ctx.beginPath();
+      ctx.arc(dx, dy, dotSize / 2, 0, Math.PI * 2);
+      if (isUnlocked) {
+        ctx.fillStyle = UI_CONFIG.codexColors[i];
+        ctx.shadowColor = UI_CONFIG.codexColors[i];
+        ctx.shadowBlur = UI_CONFIG.glow.codexDot;
+        ctx.fill();
+        ctx.shadowColor = 'transparent';
+        ctx.shadowBlur = 0;
+      } else {
+        ctx.strokeStyle = 'rgba(74,90,158,0.35)';
+        ctx.lineWidth = 1;
+        ctx.stroke();
+      }
+    }
+
+    // 解锁进度文字
+    curY += 22;
+    if (isVeteran) {
+      // 资深：文字 + 金色徽章
+      const statusText = '已解锁 15 / 15 · 已达演化终点';
+      const statusW = ui.measureText(ctx, statusText, UI_CONFIG.font.bodySmall, 'normal');
+      const badgeText = '★ 全收集';
+      const badgeW = ui.measureText(ctx, badgeText, UI_CONFIG.font.badge, '600') + 16;
+      const badgeH = 18;
+      const totalLineW = statusW + 8 + badgeW;
+      const lineStartX = (W - totalLineW) / 2;
+
+      ui.drawText(ctx, statusText, lineStartX, curY, {
+        fontSize: UI_CONFIG.font.bodySmall,
+        color: UI_CONFIG.color.textMuted,
+        align: 'left',
+      });
+
+      // 金色徽章
+      const badgeX = lineStartX + statusW + 8;
+      const badgeY = curY - badgeH / 2;
+      ctx.save();
+      ctx.beginPath();
+      const br = 4;
+      ctx.moveTo(badgeX + br, badgeY);
+      ctx.arcTo(badgeX + badgeW, badgeY, badgeX + badgeW, badgeY + badgeH, br);
+      ctx.arcTo(badgeX + badgeW, badgeY + badgeH, badgeX, badgeY + badgeH, br);
+      ctx.arcTo(badgeX, badgeY + badgeH, badgeX, badgeY, br);
+      ctx.arcTo(badgeX, badgeY, badgeX + badgeW, badgeY, br);
+      ctx.closePath();
+      ctx.fillStyle = 'rgba(255,182,72,0.15)';
+      ctx.fill();
+      ctx.strokeStyle = UI_CONFIG.color.accentGold;
+      ctx.lineWidth = 1;
+      ctx.stroke();
+      ctx.restore();
+
+      ui.drawText(ctx, badgeText, badgeX + badgeW / 2, curY, {
+        fontSize: UI_CONFIG.font.badge,
+        color: UI_CONFIG.color.accentGold,
+        weight: '600',
+      });
+    } else {
+      const maxLv = data.maxLevel || 1;
+      const latestName = UI_CONFIG.codexNames[maxLv - 1] || '';
+      const statusText = '已解锁 ' + unlockedCount + ' / 15 · 最新 Lv.' + maxLv + ' ' + latestName;
+      ui.drawText(ctx, statusText, W / 2, curY, {
+        fontSize: UI_CONFIG.font.bodySmall,
+        color: UI_CONFIG.color.textMuted,
+      });
+    }
+
+    // 本局目标卡片
+    curY += 28;
+    const objCardW = W - padX * 2;
+    const objCardH = isVeteran ? 80 : 90;
+    const objCardX = padX;
+    ui.drawGlassCard(ctx, objCardX, curY, objCardW, objCardH);
+
+    if (isVeteran) {
+      ui.drawText(ctx, '挑战更高分', W / 2, curY + 28, {
+        fontSize: UI_CONFIG.font.cardTitle,
+        color: UI_CONFIG.color.textPrimary,
+        weight: '600',
+      });
+      const highScoreText = '突破你的最高分 ' + (data.maxScore || 0);
+      ui.drawText(ctx, highScoreText, W / 2, curY + 54, {
+        fontSize: UI_CONFIG.font.bodySmall,
+        color: UI_CONFIG.color.textMuted,
+      });
+    } else {
+      ui.drawText(ctx, '本局目标', W / 2, curY + 20, {
+        fontSize: UI_CONFIG.font.cardLabel,
+        color: UI_CONFIG.color.textMuted,
+      });
+      const objLevel = currentObjective;
+      const objNameZh = UI_CONFIG.codexNamesZh[objLevel - 1] || '';
+      const objNameEn = UI_CONFIG.codexNames[objLevel - 1] || '';
+      ui.drawText(ctx, 'Lv.' + objLevel + ' ' + objNameZh, W / 2, curY + 46, {
+        fontSize: UI_CONFIG.font.cardHeadline,
+        color: UI_CONFIG.color.accentCyan,
+        weight: '700',
+      });
+      const nextHint = objLevel < 15 ? '达成可解锁 Lv.' + (objLevel + 1) + ' 形态' : '最高等级';
+      ui.drawText(ctx, nextHint, W / 2, curY + 70, {
+        fontSize: UI_CONFIG.font.hint,
+        color: UI_CONFIG.color.textMuted,
+      });
+    }
+
+    // 底部统计行
+    curY += objCardH + 16;
+    const statsText = '最高分 ' + (data.maxScore || 0).toLocaleString() + ' · 已探索 ' + totalGames + ' 局';
+    ui.drawText(ctx, statsText, W / 2, curY, {
+      fontSize: UI_CONFIG.font.hintXs,
+      color: UI_CONFIG.color.textMuted,
+    });
+  }
+
+  // ── "开始游戏" 主按钮 ──
+  ui.drawPrimaryButton(ctx, btnX, btnY, btnW, btnH, '开始游戏');
+  menuButtons = { start: { x: btnX, y: btnY, w: btnW, h: btnH } };
+}
+
+/**
  * 绘制结束界面（静态布局，不处理触摸）
  * 数据来源：lastGameResult + playerData
  */
@@ -623,6 +892,14 @@ function isGameOverBtnHit(tx, ty, key) {
 
 function handleHome() {
   handleRestart();
+  gameState = 'menu';
+  input.isMenu = true;
+  console.log('[状态] 切换到 menu');
+}
+
+function handleStart() {
+  handleRestart();
+  console.log('[状态] 从 menu 进入 playing');
 }
 
 function handleShare() {
@@ -637,6 +914,7 @@ function handleRestart() {
   items.reset();
   gameState = 'playing';
   input.isGameOver = false;
+  input.isMenu = false;
   comboDisplay = { count: 0, x: 0, y: 0, timer: 0 };
   decorationTimer = 0;
   mergeFlowState = null;
@@ -658,7 +936,7 @@ function handleRestart() {
 
 function gameLoop() {
   if (gameState === 'menu') {
-    // TODO: 绘制开始界面（下一步实现）
+    drawMenuScreen();
   } else if (gameState === 'playing') {
     // === UPDATE ===
 
