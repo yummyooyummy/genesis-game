@@ -353,27 +353,29 @@ class Renderer {
    */
   drawScoreUI(score, highScore = 0) {
     const { ctx } = this;
-    const leftMargin = 22;
-    const topMargin = 38;
+    const leftMargin = 24;
+    const topMargin = 20;
 
-    // 当前分数（大号白色）
-    ctx.fillStyle = '#fff';
-    ctx.font = 'bold 40px Arial';
+    // 当前分数（大号白色，带千位分隔符）
+    ctx.fillStyle = '#FFFFFF';
+    ctx.font = 'bold 36px Arial';
     ctx.textAlign = 'left';
     ctx.textBaseline = 'top';
     ctx.fillText(this._formatNumber(score), leftMargin, topMargin);
 
     // 历史最高分（皇冠 + 小号金色）
-    const crownSize = 12;
-    const crownX = leftMargin + crownSize;
-    const crownY = topMargin + 52;
+    const crownSize = 16;
+    const scoreHeight = 36;
+    const highY = topMargin + scoreHeight + 6;
+    const crownX = leftMargin + crownSize / 2;
+    const crownY = highY;
     this._drawCrown(crownX, crownY, crownSize, '#EF9F27');
 
-    ctx.fillStyle = 'rgba(239, 159, 39, 0.85)';
+    ctx.fillStyle = '#EF9F27';
     ctx.font = '14px Arial';
     ctx.textAlign = 'left';
     ctx.textBaseline = 'middle';
-    ctx.fillText(this._formatNumber(highScore), leftMargin + crownSize * 2 + 6, crownY);
+    ctx.fillText(this._formatNumber(highScore), leftMargin + crownSize + 6, crownY);
   }
 
   /**
@@ -386,18 +388,11 @@ class Renderer {
   drawItemBar(items) {
     const { ctx } = this;
 
-    const slotRadius = 36;
-    const slotSpacing = 92;        // 槽位中心间距
+    const slotRadius = 30;
+    const slotSpacing = 92;        // 槽位中心间距（直径 60 + 间距 32）
     const centerX = this.width / 2;
     const centerY = this.height - 115;
     const types = ['clear', 'upgrade', 'pause'];
-
-    // 每槽配色（使用状态：实色；数量 0：降透明 + 降饱和 → 用统一灰色）
-    const iconColors = {
-      clear:   '#EF9F27',  // 暖金
-      upgrade: '#5DCAA5',  // 绿松
-      pause:   '#7F77DD',  // 冷紫
-    };
 
     this.itemBarSlots = [];
 
@@ -405,34 +400,25 @@ class Renderer {
       const type = types[i];
       const count = items.inventory[type];
       const active = count > 0;
-      const cx = centerX + (i - 1) * slotSpacing; // i=0 → -1, i=1 → 0, i=2 → +1
+      const cx = centerX + (i - 1) * slotSpacing;
       const cy = centerY;
 
-      // 槽位底盘
-      ctx.save();
-      ctx.fillStyle = 'rgba(255, 255, 255, 0.08)';
+      // 圆盘底色
+      ctx.fillStyle = active ? '#6B6B6B' : '#3A3A3A';
       ctx.beginPath();
       ctx.arc(cx, cy, slotRadius, 0, Math.PI * 2);
       ctx.fill();
 
-      // 槽位边框
-      ctx.strokeStyle = 'rgba(255, 255, 255, 0.18)';
-      ctx.lineWidth = 1.5;
-      ctx.beginPath();
-      ctx.arc(cx, cy, slotRadius, 0, Math.PI * 2);
-      ctx.stroke();
-      ctx.restore();
-
       // 图标
-      const iconColor = active ? iconColors[type] : 'rgba(255, 255, 255, 0.3)';
+      const iconColor = active ? '#FFFFFF' : '#5A5A5A';
       this._drawItemIcon(type, cx, cy, iconColor, active);
 
       // 数量文字（下方居中）
-      ctx.fillStyle = active ? '#fff' : 'rgba(255, 255, 255, 0.35)';
-      ctx.font = `${active ? 'bold ' : ''}15px Arial`;
+      ctx.fillStyle = active ? '#FFFFFF' : '#6A6A6A';
+      ctx.font = '16px Arial';
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
-      ctx.fillText(`×${count}`, cx, cy + slotRadius + 14);
+      ctx.fillText(`x${count}`, cx, cy + slotRadius + 16);
 
       this.itemBarSlots.push({ type, x: cx, y: cy, r: slotRadius });
     }
@@ -454,45 +440,41 @@ class Renderer {
     ctx.globalAlpha = alpha;
 
     if (type === 'clear') {
-      // 同心螺旋圈：3 圈弧线，半径递增，起点旋转 120° 错开
       ctx.strokeStyle = color;
       ctx.lineCap = 'round';
-      const radii = [9, 16, 22];
+      const radii = [7, 12, 17];
       for (let i = 0; i < radii.length; i++) {
-        ctx.lineWidth = 3.2 - i * 0.5;
+        ctx.lineWidth = 2.5 - i * 0.4;
         const rotOffset = (i * Math.PI * 2) / 3;
         ctx.beginPath();
         ctx.arc(cx, cy, radii[i], rotOffset, rotOffset + Math.PI * 1.5);
         ctx.stroke();
       }
     } else if (type === 'upgrade') {
-      // 向上三角 + 底部两条竖线（类似"加速"指示）
       ctx.fillStyle = color;
       ctx.beginPath();
-      ctx.moveTo(cx, cy - 14);        // 顶尖
-      ctx.lineTo(cx + 13, cy + 1);    // 右下
-      ctx.lineTo(cx + 6, cy + 1);     // 右下内收
-      ctx.lineTo(cx + 6, cy + 12);    // 右竖条底
-      ctx.lineTo(cx - 6, cy + 12);    // 左竖条底
-      ctx.lineTo(cx - 6, cy + 1);     // 左下内收
-      ctx.lineTo(cx - 13, cy + 1);    // 左下
+      ctx.moveTo(cx, cy - 11);
+      ctx.lineTo(cx + 10, cy + 1);
+      ctx.lineTo(cx + 5, cy + 1);
+      ctx.lineTo(cx + 5, cy + 9);
+      ctx.lineTo(cx - 5, cy + 9);
+      ctx.lineTo(cx - 5, cy + 1);
+      ctx.lineTo(cx - 10, cy + 1);
       ctx.closePath();
       ctx.fill();
     } else if (type === 'pause') {
-      // 外围光晕环（"时间"感）
       ctx.strokeStyle = color;
-      ctx.lineWidth = 2;
-      ctx.globalAlpha = alpha * 0.5;
+      ctx.lineWidth = 1.5;
+      ctx.globalAlpha = alpha * 0.4;
       ctx.beginPath();
-      ctx.arc(cx, cy, 20, 0, Math.PI * 2);
+      ctx.arc(cx, cy, 16, 0, Math.PI * 2);
       ctx.stroke();
       ctx.globalAlpha = alpha;
 
-      // 两条竖条
       ctx.fillStyle = color;
-      const barW = 4;
-      const barH = 17;
-      const gap = 6;
+      const barW = 3.5;
+      const barH = 14;
+      const gap = 5;
       ctx.fillRect(cx - gap / 2 - barW, cy - barH / 2, barW, barH);
       ctx.fillRect(cx + gap / 2,        cy - barH / 2, barW, barH);
     }
@@ -506,39 +488,55 @@ class Renderer {
    */
   drawCoreLevelUI(coreLevel) {
     const { ctx } = this;
-    const colors = ELEMENT_COLORS[coreLevel] || ELEMENT_COLORS[1];
     const name = ELEMENT_COLORS[coreLevel]?.name || '';
     const cx = this.width / 2;
-    const y = this.height - 40;
+    const y = this.height - 30;
 
     ctx.font = '16px Arial';
     ctx.textBaseline = 'middle';
     ctx.textAlign = 'center';
+    ctx.fillStyle = '#888888';
 
-    const label = '核心等级';
-    const sep = '  |  ';
-    const levelText = `Lv.${coreLevel} ${name}`;
+    const text = `核心等级 | Lv.${coreLevel} ${name}`;
+    ctx.fillText(text, cx, y);
+  }
 
-    const labelWidth = ctx.measureText(label).width;
-    const sepWidth = ctx.measureText(sep).width;
-    const levelWidth = ctx.measureText(levelText).width;
-    const totalWidth = labelWidth + sepWidth + levelWidth;
-    let cursor = cx - totalWidth / 2;
+  /**
+   * 绘制右下角退出按钮（方框带向右箭头）
+   */
+  drawExitButton() {
+    const { ctx } = this;
+    const x = this.width - 24 - 12; // 距右 24px，图标中心
+    const y = this.height - 40;
+    const size = 24;
+    const half = size / 2;
 
-    // 左侧标签（柔和白）
-    ctx.fillStyle = 'rgba(255, 255, 255, 0.7)';
-    ctx.textAlign = 'left';
-    ctx.fillText(label, cursor, y);
-    cursor += labelWidth;
+    ctx.save();
+    ctx.strokeStyle = '#888888';
+    ctx.lineWidth = 1.8;
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
 
-    // 分隔竖线（更淡）
-    ctx.fillStyle = 'rgba(255, 255, 255, 0.35)';
-    ctx.fillText(sep, cursor, y);
-    cursor += sepWidth;
+    // 方框（左侧开口）
+    ctx.beginPath();
+    ctx.moveTo(x - half + 6, y - half);
+    ctx.lineTo(x + half, y - half);
+    ctx.lineTo(x + half, y + half);
+    ctx.lineTo(x - half + 6, y + half);
+    ctx.stroke();
 
-    // 右侧等级名（使用元素主色）
-    ctx.fillStyle = colors.primary;
-    ctx.fillText(levelText, cursor, y);
+    // 向右箭头
+    ctx.beginPath();
+    ctx.moveTo(x - half - 2, y);
+    ctx.lineTo(x + 2, y);
+    ctx.moveTo(x - 3, y - 5);
+    ctx.lineTo(x + 2, y);
+    ctx.lineTo(x - 3, y + 5);
+    ctx.stroke();
+
+    ctx.restore();
+
+    this.exitBtnPos = { x, y, r: half + 6 };
   }
 
   /**

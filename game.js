@@ -34,7 +34,7 @@ ctx.scale(dpr, dpr);
 /** 棋盘中心坐标（逻辑像素） */
 const centerX = screenWidth / 2;
 // 棋盘垂直中心：在顶部分数区（~110px）和底部等级栏（~55px from bottom）之间居中
-const centerY = (110 + (screenHeight - 55)) / 2;
+const centerY = screenHeight * 0.42;
 
 /** 棋盘半径（逻辑像素）— 外圈轨道贴近屏宽，留约 20px 边距 */
 const boardRadius = Math.min(screenWidth * 0.445, (screenHeight - 165) * 0.5);
@@ -561,6 +561,7 @@ function gameLoop() {
   renderer.drawScoreUI(score.total, score.highScore);
   renderer.drawItemBar(items);
   renderer.drawCoreLevelUI(board.core.level);
+  renderer.drawExitButton();
 
   // 道具使用失败提示文字（在 UI 之上）
   renderer.drawUseFailHint(items);
