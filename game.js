@@ -1203,7 +1203,7 @@ function gameLoop() {
     renderer.drawDrops(items);
 
     // 绘制 UI
-    renderer.drawScoreUI(score.total, score.highScore);
+    renderer.drawScoreUI(score.total, playerData.loadPlayerData().maxScore);
     renderer.drawItemBar(items);
     renderer.drawCoreLevelUI(board.core.level);
     renderer.drawPauseButton();
@@ -1253,7 +1253,7 @@ function gameLoop() {
     renderer.drawItemUseBurst(items);
     renderer.drawPauseOverlay(board, centerX, centerY);
     renderer.drawDrops(items);
-    renderer.drawScoreUI(score.total, score.highScore);
+    renderer.drawScoreUI(score.total, playerData.loadPlayerData().maxScore);
     renderer.drawItemBar(items);
     renderer.drawCoreLevelUI(board.core.level);
     renderer.drawPauseButton();
