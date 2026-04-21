@@ -62,8 +62,9 @@ let currentObjective = playerData.getCurrentGoal();
 let sessionMaxLevel = 1;
 let sessionObjectiveAchieved = false;
 let lastGameResult = null; // { isNewRecord, newlyUnlockedLevel } 供结束界面用
-console.log('[GENESIS] 存档读取:', JSON.stringify(savedData));
-console.log('[GENESIS] 本局目标: Lv.' + currentObjective);
+console.log('[存档] 读取成功');
+console.log('[存档] 最高分', savedData.maxScore, '最高等级', savedData.maxLevel);
+console.log('[本局] 目标等级', currentObjective);
 
 // 合成后流程状态机（pause → absorb → coreBurst → recovery）
 let mergeFlowState = null;   // null | 'pause' | 'absorb' | 'coreBurst' | 'recovery'
@@ -243,7 +244,10 @@ function updateMergeFlow() {
       const newCoreLevel = board.doAbsorb(mergeFlowAbsorbSlot);
       // 追踪本局最高核心等级 + 目标达成
       if (newCoreLevel > sessionMaxLevel) sessionMaxLevel = newCoreLevel;
-      if (newCoreLevel >= currentObjective) sessionObjectiveAchieved = true;
+      if (newCoreLevel >= currentObjective && !sessionObjectiveAchieved) {
+        sessionObjectiveAchieved = true;
+        console.log('[本局] 达成目标 Lv.' + newCoreLevel);
+      }
       if (!openingAbsorbActive) {
         score.addAbsorbScore(newCoreLevel);
         // 核心升级赠送道具（Lv.7+）
@@ -392,12 +396,20 @@ function handleUpgradeComplete(upgradedSlots) {
 
 /** 游戏结束时保存存档（两个 gameover 触发点共用） */
 function _saveOnGameOver() {
-  lastGameResult = playerData.updateAfterGame({
+  const result = playerData.updateAfterGame({
     score: score.total,
     maxLevelReached: sessionMaxLevel,
     objectiveAchieved: sessionObjectiveAchieved,
   });
-  console.log('[GENESIS] 游戏结束 — 存档已更新:', JSON.stringify(lastGameResult));
+  lastGameResult = {
+    score: score.total,
+    maxLevel: sessionMaxLevel,
+    objective: currentObjective,
+    objectiveAchieved: sessionObjectiveAchieved,
+    isNewRecord: result.isNewRecord,
+    newlyUnlockedLevel: result.newlyUnlockedLevel,
+  };
+  console.log('[存档] 更新完成', JSON.stringify(lastGameResult));
 }
 
 /** 处理重新开始 */
@@ -422,7 +434,7 @@ function handleRestart() {
   sessionObjectiveAchieved = false;
   lastGameResult = null;
   currentObjective = playerData.getCurrentGoal();
-  console.log('[GENESIS] 新一局目标: Lv.' + currentObjective);
+  console.log('[本局] 目标等级', currentObjective);
 }
 
 // ─── 主循环 ───
