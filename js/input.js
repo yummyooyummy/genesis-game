@@ -67,10 +67,9 @@ class Input {
    * @param {number} y - 逻辑像素坐标 y
    */
   _handleTouch(x, y) {
-    // 游戏结束时只检测重新开始按钮
     if (this.isGameOver) {
-      if (this.renderer && this.renderer.isRestartBtnHit(x, y)) {
-        this.onRestartTap();
+      if (this.onGameOverTouch) {
+        this.onGameOverTouch(x, y);
       }
       return;
     }

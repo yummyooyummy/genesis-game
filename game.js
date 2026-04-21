@@ -54,6 +54,7 @@ const dropTargetPositions = {
 // 'playing'  → 游戏中（现有逻辑）
 // 'gameover' → 结束界面（待实现）
 let gameState = 'playing';  // 暂时默认为 playing，保持现有行为不变
+let gameOverButtons = null; // { restart, home, share } 每个 { x, y, w, h }
 let decorationTimer = 0;   // 装饰粒子计时器
 let comboDisplay = { count: 0, x: 0, y: 0, timer: 0 }; // combo 显示
 
@@ -101,6 +102,11 @@ const input = new Input(
   handleDropTap
 );
 input.setReferences(board, renderer, items);
+input.onGameOverTouch = function (x, y) {
+  if (isGameOverBtnHit(x, y, 'restart')) { handleRestart(); return; }
+  if (isGameOverBtnHit(x, y, 'home'))    { handleHome(); return; }
+  if (isGameOverBtnHit(x, y, 'share'))   { handleShare(); return; }
+};
 
 // ─── 游戏逻辑 ───
 
@@ -601,6 +607,26 @@ function drawGameOverScreen() {
 
   // 分享按钮（描边方块占位）
   ui.drawSecondaryButton(ctx, shareX, secondaryBtnY, shareW, btnH, '分享');
+
+  gameOverButtons = {
+    restart: { x: primaryBtnX, y: primaryBtnY, w: btnW, h: btnH },
+    home:    { x: secondaryX, y: secondaryBtnY, w: secondaryW, h: btnH },
+    share:   { x: shareX, y: secondaryBtnY, w: shareW, h: btnH },
+  };
+}
+
+function isGameOverBtnHit(tx, ty, key) {
+  if (!gameOverButtons || !gameOverButtons[key]) return false;
+  const b = gameOverButtons[key];
+  return ui.isPointInRect(tx, ty, b.x, b.y, b.w, b.h);
+}
+
+function handleHome() {
+  handleRestart();
+}
+
+function handleShare() {
+  console.log('[分享] 占位 — 待接入微信分享');
 }
 
 /** 处理重新开始 */
