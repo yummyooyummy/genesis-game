@@ -12,6 +12,7 @@ const Input = require('./js/input');
 const Score = require('./js/score');
 const { Items, ITEM_TYPES } = require('./js/items');
 const { GAME_CONFIG, msToFrames } = require('./js/config');
+const playerData = require('./js/playerData');
 
 // ─── Canvas 初始化 ───
 
@@ -53,6 +54,16 @@ let comboDisplay = { count: 0, x: 0, y: 0, timer: 0 }; // combo 显示
 
 // 调试开关 — 上线前改为 false，保留按钮代码以备后续调试
 const DEBUG_ITEMS = false;
+
+// ─── 存档 + 单局追踪 ───
+
+const savedData = playerData.loadPlayerData();
+let currentObjective = playerData.getCurrentGoal();
+let sessionMaxLevel = 1;
+let sessionObjectiveAchieved = false;
+let lastGameResult = null; // { isNewRecord, newlyUnlockedLevel } 供结束界面用
+console.log('[GENESIS] 存档读取:', JSON.stringify(savedData));
+console.log('[GENESIS] 本局目标: Lv.' + currentObjective);
 
 // 合成后流程状态机（pause → absorb → coreBurst → recovery）
 let mergeFlowState = null;   // null | 'pause' | 'absorb' | 'coreBurst' | 'recovery'
@@ -230,6 +241,9 @@ function updateMergeFlow() {
     if (mergeFlowTimer <= 0) {
       mergeFlowAbsorbSlot.mergeAnimating = false;
       const newCoreLevel = board.doAbsorb(mergeFlowAbsorbSlot);
+      // 追踪本局最高核心等级 + 目标达成
+      if (newCoreLevel > sessionMaxLevel) sessionMaxLevel = newCoreLevel;
+      if (newCoreLevel >= currentObjective) sessionObjectiveAchieved = true;
       if (!openingAbsorbActive) {
         score.addAbsorbScore(newCoreLevel);
         // 核心升级赠送道具（Lv.7+）
@@ -304,6 +318,7 @@ function updateMergeFlow() {
       } else {
         gameState = 'gameover';
         input.isGameOver = true;
+        _saveOnGameOver();
       }
     }
     return;
@@ -375,6 +390,16 @@ function handleUpgradeComplete(upgradedSlots) {
   }
 }
 
+/** 游戏结束时保存存档（两个 gameover 触发点共用） */
+function _saveOnGameOver() {
+  lastGameResult = playerData.updateAfterGame({
+    score: score.total,
+    maxLevelReached: sessionMaxLevel,
+    objectiveAchieved: sessionObjectiveAchieved,
+  });
+  console.log('[GENESIS] 游戏结束 — 存档已更新:', JSON.stringify(lastGameResult));
+}
+
 /** 处理重新开始 */
 function handleRestart() {
   board.reset();
@@ -392,6 +417,12 @@ function handleRestart() {
   mergeFlowBurstFired = false;
   openingAbsorbPending = true;
   openingAbsorbActive = false;
+  // 重置单局追踪 + 生成新目标
+  sessionMaxLevel = 1;
+  sessionObjectiveAchieved = false;
+  lastGameResult = null;
+  currentObjective = playerData.getCurrentGoal();
+  console.log('[GENESIS] 新一局目标: Lv.' + currentObjective);
 }
 
 // ─── 主循环 ───
@@ -482,6 +513,7 @@ function gameLoop() {
       board.queuedSplits = 0;
       gameState = 'gameover';
       input.isGameOver = true;
+      _saveOnGameOver();
     }
 
     // combo 显示计时
