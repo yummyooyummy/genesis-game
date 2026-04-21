@@ -817,17 +817,127 @@ function drawGameOverScreen() {
 
   // 第 2 行：最高分数
   const row2Y = cursorY + rowH + rowH / 2;
+  const isNewRecord = !!(data.isNewRecord);
+  const highScoreColor = isNewRecord ? UI_CONFIG.color.accentGold : UI_CONFIG.color.textPrimary;
+
   ui.drawText(ctx, '最高分数', cardInnerLeft, row2Y, {
     fontSize: UI_CONFIG.font.cardLabel,
     color: UI_CONFIG.color.textMuted,
     align: 'left',
   });
+
+  // 金色发光分数
+  if (isNewRecord) {
+    ctx.save();
+    ctx.shadowColor = 'rgba(255,182,72,0.60)';
+    ctx.shadowBlur = UI_CONFIG.glow.recordGold;
+  }
   ui.drawText(ctx, String(maxScore), cardInnerRight, row2Y, {
     fontSize: UI_CONFIG.font.scoreLG,
-    color: UI_CONFIG.color.textPrimary,
+    color: highScoreColor,
     align: 'right',
     weight: 'bold',
   });
+  if (isNewRecord) ctx.restore();
+
+  // NEW! 徽章
+  if (isNewRecord) {
+    const badgeText = 'NEW!';
+    const badgeFontSize = UI_CONFIG.font.badge;
+    const badgePadX = 6;
+    const badgePadY = 3;
+    const badgeW = ui.measureText(ctx, badgeText, badgeFontSize, '700') + badgePadX * 2;
+    const badgeH = badgeFontSize + badgePadY * 2;
+    const scoreW = ui.measureText(ctx, String(maxScore), UI_CONFIG.font.scoreLG, 'bold');
+    const badgeX = cardInnerRight - scoreW - 8 - badgeW;
+    const badgeY = row2Y - badgeH / 2;
+
+    ctx.save();
+    ctx.shadowColor = 'rgba(138,127,209,0.50)';
+    ctx.shadowBlur = 10;
+    ctx.fillStyle = UI_CONFIG.color.accentPurple;
+    ctx.beginPath();
+    const r = badgeH / 2;
+    ctx.moveTo(badgeX + r, badgeY);
+    ctx.lineTo(badgeX + badgeW - r, badgeY);
+    ctx.arc(badgeX + badgeW - r, badgeY + r, r, -Math.PI / 2, Math.PI / 2);
+    ctx.lineTo(badgeX + r, badgeY + badgeH);
+    ctx.arc(badgeX + r, badgeY + r, r, Math.PI / 2, -Math.PI / 2);
+    ctx.closePath();
+    ctx.fill();
+    ctx.restore();
+
+    ui.drawText(ctx, badgeText, badgeX + badgeW / 2, badgeY + badgeH / 2, {
+      fontSize: badgeFontSize,
+      color: '#FFFFFF',
+      weight: '700',
+    });
+  }
+
+  // ── 发现新形态横幅 ──
+  const newLevel = data.newlyUnlockedLevel;
+  if (newLevel != null) {
+    const bannerGap = UI_CONFIG.spacing.cardGap;
+    const bannerH = UI_CONFIG.size.newFormBannerHeight;
+    const bannerY = cursorY + cardH + bannerGap;
+    const bannerX = padX;
+    const bannerW = W - padX * 2;
+
+    // 金色发光毛玻璃卡片
+    ctx.save();
+    ctx.shadowColor = 'rgba(255,182,72,0.28)';
+    ctx.shadowBlur = 24;
+    ui.drawGlassCard(ctx, bannerX, bannerY, bannerW, bannerH, {
+      radius: UI_CONFIG.radius.cardScore,
+      borderColor: 'rgba(255,182,72,0.30)',
+    });
+    ctx.restore();
+
+    // 左侧等级圆点
+    const dotR = 20;
+    const dotCX = bannerX + 16 + dotR;
+    const dotCY = bannerY + bannerH / 2 - 4;
+    const dotColor = UI_CONFIG.codexColors[newLevel - 1] || UI_CONFIG.color.accentCyan;
+
+    ctx.save();
+    ctx.shadowColor = dotColor + '99';
+    ctx.shadowBlur = 14;
+    ctx.fillStyle = dotColor;
+    ctx.beginPath();
+    ctx.arc(dotCX, dotCY, dotR, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+
+    // 右侧文字
+    const textLeft = dotCX + dotR + 14;
+    const enName = UI_CONFIG.codexNames[newLevel - 1] || '';
+    const zhName = UI_CONFIG.codexNamesZh[newLevel - 1] || '';
+
+    ui.drawText(ctx, '发现新形态', textLeft, bannerY + 24, {
+      fontSize: UI_CONFIG.font.cardLabel,
+      color: UI_CONFIG.color.accentGoldSoft,
+      align: 'left',
+    });
+
+    ctx.save();
+    ctx.shadowColor = 'rgba(255,216,135,0.50)';
+    ctx.shadowBlur = 14;
+    ui.drawText(ctx, 'Lv.' + newLevel + ' ' + enName + ' ' + zhName, textLeft, bannerY + 46, {
+      fontSize: UI_CONFIG.font.cardTitle,
+      color: UI_CONFIG.color.accentGold,
+      align: 'left',
+      weight: '600',
+    });
+    ctx.restore();
+
+    // 底部小字
+    ui.drawText(ctx, zhName + ' · 已加入图鉴', bannerX + bannerW / 2, bannerY + bannerH - 10, {
+      fontSize: UI_CONFIG.font.hintXs,
+      color: UI_CONFIG.color.textMuted,
+    });
+
+    cursorY += bannerH + bannerGap;
+  }
 
   // ── 详情区 ──
   cursorY += cardH + 18;
