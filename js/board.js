@@ -379,19 +379,23 @@ class Board {
   }
 
   /**
-   * 发射一次定时分裂：从中圈和外圈的所有空位中真随机选一个作为目标。
-   * 与"合成后分裂"并行独立运行；不使用优先相邻空位规则。
-   * 若中/外圈均无空位则跳过（不触发 game over）。
+   * 发射一次定时分裂：按概率选圈（外 40%、中 40%、内 20%），再从该圈空位中随机选一个。
+   * 若选中圈无空位则 fallback 到其余圈的空位池。
    *
    * @param {(target:object) => void} [onFire] - 成功发射时的回调
    * @returns {boolean} 是否成功发射
    */
   _fireTimedSplit(onFire) {
-    const pool = this.slots.filter(
-      (s) => (s.ring === 'mid' || s.ring === 'outer') && s.level === null && !s.reserved
-    );
-    if (pool.length === 0) return false;
+    const emptyByRing = { inner: [], mid: [], outer: [] };
+    for (const s of this.slots) {
+      if (s.level === null && !s.reserved) emptyByRing[s.ring].push(s);
+    }
+    const allEmpty = [...emptyByRing.outer, ...emptyByRing.mid, ...emptyByRing.inner];
+    if (allEmpty.length === 0) return false;
 
+    const r = Math.random();
+    const pick = r < 0.4 ? 'outer' : r < 0.8 ? 'mid' : 'inner';
+    const pool = emptyByRing[pick].length > 0 ? emptyByRing[pick] : allEmpty;
     const target = pool[Math.floor(Math.random() * pool.length)];
     target.reserved = true;
     this.corePulse = CORE_PULSE_FRAMES;
