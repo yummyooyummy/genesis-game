@@ -10,8 +10,8 @@
 - **平台：** 微信小游戏
 - **技术栈：** 原生 Canvas API + JavaScript（CommonJS 模块）
 - **AppID：** wxb749bfbf62a3d6b7
-- **设计文档：** GENESIS_GDD_v1.2.md（内部版本 v1.3，2026-04-19 更新）
-- **开发流程文档：** GENESIS_DEV_WORKFLOW_v1.0.md
+- **设计文档：** GENESIS_GDD_v2.0（2026-04-21 更新）
+- **开发流程文档：** GENESIS_DEV_WORKFLOW_v2.0
 
 ---
 
@@ -19,19 +19,24 @@
 
 ```
 genesis-game/
-├── game.js               ← 游戏入口 · 主循环 · 状态管理 · 道具调度
+├── game.js               ← 游戏入口 · 主循环 · 状态管理 · 道具调度 · 存档接入
 ├── game.json             ← 微信小游戏配置
 ├── project.config.json   ← 项目配置（AppID 已填入）
 ├── js/
 │   ├── config.js         ← 全局配置（GAME_CONFIG 单例 + 时间/帧辅助）
 │   ├── board.js          ← 棋盘数据结构与逻辑
-│   ├── renderer.js       ← Canvas 渲染（含道具栏/掉落物/暂停覆盖层）
+│   ├── renderer.js       ← Canvas 渲染（含道具栏/掉落物/暂停覆盖层/退出按钮）
 │   ├── particles.js      ← 粒子效果系统
 │   ├── input.js          ← 触摸事件处理（含道具栏/掉落物命中检测）
 │   ├── score.js          ← 计分系统
-│   └── items.js          ← 道具系统（库存/掉落/效果/使用动画）
+│   ├── items.js          ← 道具系统（库存/掉落/效果/使用动画）
+│   └── playerData.js     ← 本地存档（读取/保存/更新/目标生成）
+├── design/
+│   └── ui_prototype.png  ← 原型图参考
 ├── images/               ← 空文件夹（后续放 Figma 导出的元素 PNG）
 ├── docs/plans/           ← 开发计划文档
+├── GENESIS_GDD_v2.0
+├── GENESIS_DEV_WORKFLOW_v2.0
 ├── GENESIS_GDD_v1.2.md
 ├── GENESIS_DEV_WORKFLOW_v1.0.md
 └── DEVELOPMENT_STATUS.md ← 本文件
@@ -41,14 +46,21 @@ genesis-game/
 
 ## 当前开发阶段
 
-**阶段五：道具系统 — 编码完成 ✅**
+**阶段七：存档系统 + UI 调整 — 编码完成 ✅**
 
-在阶段四（配置化 / 定时分裂 / 两步点击交互）基础上完成道具系统：
+在阶段五（道具系统）基础上完成：
 
-1. **三种道具** — 清空（最密集圈层 Lv.1 消散）、升级（随机 3 个 Lv.1-5 +1 并触发连锁）、暂停（冻结定时分裂 15s，可叠加）
-2. **掉落与拾取** — Combo 5 次或核心 Lv.7+ 升级时随机掉落，飞入左/右悬浮位，点击拾取飞入道具栏
-3. **道具栏 UI** — 底部 3 个几何图标槽位 + 数量显示，Canvas 绘制
-4. **新模块 `js/items.js`** — 独立管理库存、掉落物状态机、道具效果、使用动画
+**阶段六：游戏调优（5 项）✅**
+1. **开局流程** — 初始分裂后自动吸附 1 个 Lv.1，核心升 Lv.2，玩家从 3 个 Lv.1 开始
+2. **取消安全期** — 定时分裂计时器开局后立即启动（safePeriodSeconds = 0）
+3. **Combo 掉落** — Combo ≥ 2 触发道具掉落（每次连锁仅一次）
+4. **核心赠送修复** — 掉落位满时兜底入库 + 改为 Lv.5 起赠送
+5. **前摇特效** — 改为核心内部脉冲发光 + 震动（不超出核心范围）
+
+**阶段七：存档 + UI ✅**
+1. **本地存档** — `js/playerData.js` 模块（读取/保存/更新/目标生成/清除）
+2. **存档接入** — game.js 启动读取、进行中追踪 sessionMaxLevel/objectiveAchieved、结束时更新
+3. **UI 样式调整** — 分数区字体/位置、道具栏灰色圆盘样式、核心等级文字、退出按钮
 
 ---
 
@@ -59,7 +71,7 @@ genesis-game/
 | 功能 | 状态 | 说明 |
 |------|------|------|
 | `GAME_CONFIG` 单例 | ✅ 完成 | 集中所有本轮新增功能的可调参数 |
-| `timedSplit.safePeriodSeconds` | ✅ 完成 | 默认 30s 安全期 |
+| `timedSplit.safePeriodSeconds` | ✅ 完成 | 0（已取消安全期） |
 | `timedSplit.preSplitWarningSeconds` | ✅ 完成 | 默认 1.5s 前摇 |
 | `timedSplit.intervalByLevel` | ✅ 完成 | `'1-3':20, '4-5':15, '6-7':12, '8-10':8` 秒 |
 | `initialSplit.count / intervalMs` | ✅ 完成 | 开局分裂数量 4 + 间隔 200ms |
@@ -95,8 +107,11 @@ genesis-game/
 | 棋盘垂直居中 | ✅ 完成 | 在分数区和底部栏之间居中 |
 | **道具系统实例化** | ✅ 完成 | Items 模块实例化、reset 接入、update/render 调度 |
 | **道具使用调度** | ✅ 完成 | 道具栏点击 → `items.use()`；清空/升级锁输入 18 帧 |
-| **道具掉落触发** | ✅ 完成 | Combo 5 次 + 核心 Lv.7+ 升级时随机掉落 |
+| **道具掉落触发** | ✅ 完成 | Combo ≥ 2 触发 + 核心 Lv.5+ 升级时随机掉落 |
 | **掉落物拾取调度** | ✅ 完成 | 点击悬浮掉落物 → 飞入道具栏 → 库存 +1 |
+| **开局自动吸附** | ✅ 完成 | 初始分裂落地后自动吸附 1 个 Lv.1 → 核心升 Lv.2 → 不计分不赠送 |
+| **存档接入** | ✅ 完成 | 启动读取 + 进行中追踪 sessionMaxLevel/objectiveAchieved + 结束时更新 |
+| **单局结果** | ✅ 完成 | `lastGameResult` 含 score/maxLevel/objective/isNewRecord/newlyUnlockedLevel |
 
 ### js/board.js — 棋盘核心逻辑
 
@@ -140,7 +155,7 @@ genesis-game/
 | 元素标签 | ✅ 完成 | 只显示等级数字 |
 | 核心绘制 | ✅ 完成 | 24px 径向渐变 + 外发光 + "Lv.N" 文字 |
 | 核心脉冲 | ✅ 完成 | 分裂瞬间放大 +25% + 发光增强 |
-| **核心前摇呼吸环** | ✅ 完成 | `drawCore(…, warningProgress)` 期间叠加暖色（#EF9F27）慢呼吸环；1.5s 完成一次 0→1→0 |
+| **核心前摇特效** | ✅ 完成 | `drawCore(…, warningProgress)` 核心内部脉冲发光 + 震动（≤2px），严格不超出核心范围 |
 | **选中态连接线** | ✅ 完成 | `drawConnectionLines`：4 个几何邻居；同级+相邻→亮色粗线（元素副色），否则暗灰细线；每帧重算 |
 | **选中态高亮** | ✅ 完成 | `drawSelectionHighlight`：外发光 + 元素脉冲缩放（1.0↔1.15，周期 60 帧）+ 白色高亮环 |
 | **合成动画绘制** | ✅ 完成 | `drawMergeAnimations`：聚合阶段双元素向中点滑动+缩小；弹出阶段新元素 0.5→1.2→1.0 缩放从中点回到 slotA |
@@ -156,6 +171,7 @@ genesis-game/
 | **暂停覆盖层** | ✅ 完成 | `drawPauseOverlay`：核心波纹 + 紫色屏幕光晕 + 倒计时文字 + 临近结束闪烁 |
 | **道具使用光效** | ✅ 完成 | `drawItemUseBurst`：清空暖金 / 升级绿松屏幕边缘脉冲 |
 | **升级闪白** | ✅ 完成 | 被升级元素叠白色半透明层 18 帧渐隐 |
+| **退出按钮** | ✅ 完成 | `drawExitButton`：右下角方框+箭头图标，#888888（暂无功能） |
 
 ### js/particles.js — 粒子系统
 
@@ -203,9 +219,20 @@ genesis-game/
 | `update(board)` | ✅ 完成 | 推进 useAnim / pauseCountdown / upgradeFlash |
 | `updateDrops()` | ✅ 完成 | 推进所有掉落物的阶段帧计数 |
 
+### js/playerData.js — 本地存档（新增）
+
+| 功能 | 状态 | 说明 |
+|------|------|------|
+| `loadPlayerData()` | ✅ 完成 | 从 `wx.getStorageSync` 读取，损坏/不存在时返回默认值，结果缓存 |
+| `savePlayerData(data)` | ✅ 完成 | 写入 `wx.setStorageSync`，同步更新缓存 |
+| `updateAfterGame(result)` | ✅ 完成 | 合并本局结果，更新 maxScore/maxLevel/totalGames/unlockedLevels，返回 `{ isNewRecord, newlyUnlockedLevel }` |
+| `getCurrentGoal()` | ✅ 完成 | maxLevel≤3 返回 3；20% 返回 maxLevel（挑战）；80% 返回 maxLevel-1（舒适区） |
+| `clearPlayerData()` | ✅ 完成 | 清除存档 + 缓存（调试用） |
+| 存储 key | ✅ 完成 | `genesis_player_data` |
+
 ---
 
-## 已验证功能（2026-04-20 自测通过）
+## 已验证功能（2026-04-21 自测通过）
 
 | # | 功能 | 验证结果 |
 |---|------|----------|
@@ -219,9 +246,9 @@ genesis-game/
 | 8 | Combo 连锁（每步都动画） | ✅ 通过 |
 | 9 | 跨圈相邻合成 | ✅ 通过 |
 | 10 | 吸附升级 | ✅ 通过 |
-| 11 | 开局 30 秒安全期无定时分裂 | ✅ 通过 |
-| 12 | 30 秒后每 N 秒（按核心等级）一次定时分裂 | ✅ 通过 |
-| 13 | 前摇 1.5 秒暖色呼吸环 | ✅ 通过 |
+| 11 | 定时分裂无安全期，开局后立即启动计时器 | ✅ 通过 |
+| 12 | 每 N 秒（按核心等级）一次定时分裂 | ✅ 通过 |
+| 13 | 前摇 1.5 秒核心内部脉冲发光 + 震动（不超出核心范围） | ✅ 通过 |
 | 14 | 定时分裂目标：中/外圈随机空位 | ✅ 通过 |
 | 15 | 中/外圈全满时定时分裂跳过，不触发 game over | ✅ 通过 |
 | 16 | 合成后分裂（queueSplit）与定时分裂并行独立运行 | ✅ 通过 |
@@ -240,9 +267,14 @@ genesis-game/
 | 29 | 暂停道具 — 剩余 ≤3s 文字变红 + 波纹加速 | ✅ 通过 |
 | 30 | 掉落物 flyIn → floating → blinking → 消失全流程 | ✅ 通过 |
 | 31 | 掉落物点击拾取 → 飞入道具栏 → 库存 +1 | ✅ 通过 |
-| 32 | Combo 5 次触发随机道具掉落 | ✅ 通过 |
-| 33 | 核心 Lv.7+ 升级赠送随机道具掉落 | ✅ 通过 |
+| 32 | Combo ≥ 2 触发随机道具掉落（每次连锁仅一次） | ✅ 通过 |
+| 33 | 核心 Lv.5+ 升级赠送随机道具掉落（掉落位满时兜底入库） | ✅ 通过 |
 | 34 | 合成/吸附锁定期间道具栏不可点击 | ✅ 通过 |
+| 35 | 开局自动吸附 1 个 Lv.1 → 核心升 Lv.2 → 场上剩 3 个 Lv.1 | ✅ 通过 |
+| 36 | 本地存档读取/保存/更新（playerData.js） | ✅ 通过 |
+| 37 | 游戏结束时存档自动更新（isNewRecord / newlyUnlockedLevel） | ✅ 通过 |
+| 38 | 单局目标生成（getCurrentGoal） | ✅ 通过 |
+| 39 | 重启后 session 变量重置 + 新目标生成 | ✅ 通过 |
 
 ---
 
@@ -260,18 +292,26 @@ genesis-game/
 
 ## 待开发功能（后续阶段）
 
-### 第六阶段：视觉升级与真机测试
+### 第八阶段：界面系统（P2-P6）
 
 | 功能 | 优先级 | 说明 |
 |------|--------|------|
-| 元素图片贴图 | 中 | Figma 设计 10 级元素 PNG → images/ → drawImage |
-| 屏幕震动（combo） | 低 | combo 时屏幕轻微震动 |
-| 音效 | 低 | 合成 / 吸附 / 前摇触发音 / 道具使用音 |
-| 真机性能实测 | 高 | 低端机帧率 / 粒子数表现 |
-| 数值平衡 | 中 | 定时分裂间隔、安全期长度、道具掉落率可能需要微调 |
-| `checkAbsorb` bug 修复 | 高 | 见"已知遗留问题"第 1 条 |
+| 游戏结束界面 | P2 | 毛玻璃遮罩 + 本局/最高分 + 破纪录特效 + 重新开始/返回主页 |
+| 开始界面 | P3 | 星球插图 + 标题 + 成就区（最高分/等级/局数）+ 开始按钮 |
+| 暂停弹窗 | P4 | 退出按钮触发 → 暂停旋转+计时器 → 继续/重新开始/返回主页 |
+| 单局目标系统 | P5 | 动态目标 + 达成横幅（顶部下滑 5s 自动收起）|
+| 完整页面流转 | P6 | 开始→游戏→暂停→结束→开始 |
 
-### 第七阶段：发布上线
+### 第九阶段：视觉升级 + UI 配置化
+
+| 功能 | 优先级 | 说明 |
+|------|--------|------|
+| UI_CONFIG 参数配置化 | 高 | 棋盘/分数/道具栏/核心等级等 UI 参数提取到配置对象 |
+| 冷色调宇宙色板 | 中 | GDD v2.0 新元素颜色表（淡紫→金白渐变） |
+| `checkAbsorb` bug 修复 | 高 | 见"已知遗留问题"第 1 条 |
+| 真机性能实测 | 高 | 低端机帧率 / 粒子数表现 |
+
+### 第十阶段：发布上线
 
 | 事项 | 优先级 | 说明 |
 |------|--------|------|
@@ -304,7 +344,7 @@ genesis-game/
 | 核心脉冲时长 | 15 帧 | `js/board.js CORE_PULSE_FRAMES` |
 | Lv.1 死锁下限 | 2 | `js/board.js DEADLOCK_MIN_LEVEL1` |
 | 历史最高分存储 key | `genesis_high_score` | `js/score.js` |
-| **安全期时长** | 30 秒 | ★ `GAME_CONFIG.timedSplit.safePeriodSeconds` |
+| **安全期时长** | 0 秒（已取消） | ★ `GAME_CONFIG.timedSplit.safePeriodSeconds` |
 | **前摇时长** | 1.5 秒 | ★ `GAME_CONFIG.timedSplit.preSplitWarningSeconds` |
 | **定时分裂间隔（Lv.1-3）** | 20 秒 | ★ `GAME_CONFIG.timedSplit.intervalByLevel` |
 | **定时分裂间隔（Lv.4-5）** | 15 秒 | ★ 同上 |
@@ -321,8 +361,8 @@ genesis-game/
 | **道具掉落快闪时长** | 5 秒 | ★ `GAME_CONFIG.items.blinkDurationMs` |
 | **道具飞入时长** | 500ms | ★ `GAME_CONFIG.items.flyInMs` |
 | **道具拾取飞行时长** | 400ms | ★ `GAME_CONFIG.items.flyToInventoryMs` |
-| **Combo 触发掉落次数** | 5 | ★ `GAME_CONFIG.items.comboTriggerCount` |
-| **核心赠送道具起始等级** | Lv.7 | ★ `GAME_CONFIG.items.coreLevelForGift` |
+| **Combo 触发掉落次数** | 2 | ★ `GAME_CONFIG.items.comboTriggerCount` |
+| **核心赠送道具起始等级** | Lv.5 | ★ `GAME_CONFIG.items.coreLevelForGift` |
 | **清空目标等级** | Lv.1 | ★ `GAME_CONFIG.items.clearItemTargetLevel` |
 | **升级随机数量** | 3 | ★ `GAME_CONFIG.items.upgradeItemCount` |
 | **升级最高源等级** | Lv.5 | ★ `GAME_CONFIG.items.upgradeItemMaxSourceLevel` |
@@ -362,7 +402,8 @@ game.js
  ├─ require('./js/input')       → Input
  ├─ require('./js/score')       → Score
  ├─ require('./js/items')       → { Items, ITEM_TYPES }
- └─ require('./js/config')      → { GAME_CONFIG, msToFrames }
+ ├─ require('./js/config')      → { GAME_CONFIG, msToFrames }
+ └─ require('./js/playerData')  → { loadPlayerData, getCurrentGoal, updateAfterGame, ... }
 
 js/board.js
  └─ require('./config')         → { GAME_CONFIG, msToFrames, secondsToFrames, getTimedSplitInterval }
@@ -374,7 +415,8 @@ js/renderer.js
 js/items.js
  └─ require('./config')         → { GAME_CONFIG, msToFrames, secondsToFrames }
 
-js/config.js                    → 无依赖（叶子节点）
+js/playerData.js                → 无依赖（使用 wx.getStorageSync / wx.setStorageSync）
+js/config.js                    → 无依赖（叶子节点，含 GAME_CONFIG + UI_CONFIG）
 js/particles.js                 → 无依赖
 js/input.js                     → 无依赖
 js/score.js                     → 无依赖
@@ -391,9 +433,12 @@ js/score.js                     → 无依赖
 | Day 4-7 | 核心玩法 | 分裂、合成、吸附、combo 全部编码完成 | ✅ 完成 |
 | Day 8-10 | 视觉打磨 + 交互重构 | 配置化 / 定时分裂 / 两步点击 / 合成动画 / 连接线 | ✅ 完成并自测通过 |
 | Day 11 | 道具系统 | 清空/升级/暂停三种道具 + 掉落/拾取 + combo/核心升级触发 | ✅ 完成 |
-| Day 12-13 | 真机测试 + 性能优化 + `checkAbsorb` 修复 | 🔲 待开发 |
-| Day 14-15 | 发布准备 | 提交审核 | 🔲 待开发 |
+| Day 12 | 游戏调优 | 开局流程/取消安全期/Combo≥2掉落/核心Lv.5+赠送/前摇特效 | ✅ 完成 |
+| Day 13 | 存档 + UI | playerData.js + 存档接入 + UI 样式调整 + UI_CONFIG 设计 tokens | ✅ 完成 |
+| Day 14-15 | 界面系统 | 结束界面/开始界面/暂停弹窗/目标系统 | 🔲 待开发 |
+| Day 16-17 | 视觉升级 | UI_CONFIG 接入/冷色调色板/checkAbsorb 修复/真机测试 | 🔲 待开发 |
+| Day 18-19 | 发布准备 | 提交审核 | 🔲 待开发 |
 
 ---
 
-*最后更新：2026-04-20 · 阶段五道具系统编码完成（清空/升级/暂停 + 掉落拾取 + combo/核心升级触发）*
+*最后更新：2026-04-21 · 存档系统完成 + 游戏调优 5 项 + UI 样式调整 + UI_CONFIG 设计 tokens*
