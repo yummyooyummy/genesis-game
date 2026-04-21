@@ -71,6 +71,9 @@ let currentObjective = playerData.getCurrentGoal();
 let sessionMaxLevel = 1;
 let sessionObjectiveAchieved = false;
 let lastGameResult = null; // { isNewRecord, newlyUnlockedLevel } 供结束界面用
+let objectiveBannerVisible = false;
+let objectiveBannerShown = false;
+let objectiveBannerButtons = null; // { continue: {x,y,w,h}, end: {x,y,w,h} }
 console.log('[存档] 读取成功');
 console.log('[存档] 最高分', savedData.maxScore, '最高等级', savedData.maxLevel);
 console.log('[本局] 目标等级', currentObjective);
@@ -116,6 +119,22 @@ input.onMenuTouch = function (x, y) {
   }
 };
 input.onPauseTap = handlePause;
+input.onObjectiveBannerTouch = function (x, y) {
+  if (!objectiveBannerButtons) return;
+  if (ui.isPointInRect(x, y, objectiveBannerButtons.continue.x, objectiveBannerButtons.continue.y, objectiveBannerButtons.continue.w, objectiveBannerButtons.continue.h)) {
+    objectiveBannerVisible = false;
+    input.isObjectiveBannerVisible = false;
+    return;
+  }
+  if (ui.isPointInRect(x, y, objectiveBannerButtons.end.x, objectiveBannerButtons.end.y, objectiveBannerButtons.end.w, objectiveBannerButtons.end.h)) {
+    objectiveBannerVisible = false;
+    input.isObjectiveBannerVisible = false;
+    gameState = 'gameover';
+    input.isGameOver = true;
+    _saveOnGameOver();
+    return;
+  }
+};
 input.onPausedTouch = function (x, y) {
   if (!pauseDialogButtons) return;
   if (ui.isPointInRect(x, y, pauseDialogButtons.resume.x, pauseDialogButtons.resume.y, pauseDialogButtons.resume.w, pauseDialogButtons.resume.h)) {
@@ -282,6 +301,11 @@ function updateMergeFlow() {
       if (newCoreLevel >= currentObjective && !sessionObjectiveAchieved) {
         sessionObjectiveAchieved = true;
         console.log('[本局] 达成目标 Lv.' + newCoreLevel);
+        if (!objectiveBannerShown) {
+          objectiveBannerVisible = true;
+          objectiveBannerShown = true;
+          input.isObjectiveBannerVisible = true;
+        }
       }
       if (!openingAbsorbActive) {
         score.addAbsorbScore(newCoreLevel);
@@ -1049,6 +1073,67 @@ function handleResume() {
   console.log('[状态] 从 paused 恢复到 playing');
 }
 
+/** 绘制中途达成目标横幅 */
+function drawObjectiveBanner() {
+  const W = screenWidth;
+  const padX = UI_CONFIG.spacing.screenPaddingX;
+  const cardW = W - padX * 2;
+  const cardH = 140;
+  const cardX = padX;
+  const cardY = screenHeight * 0.22;
+
+  // 毛玻璃卡片 + 紫色微光
+  ctx.save();
+  ctx.shadowColor = 'rgba(154,138,212,0.35)';
+  ctx.shadowBlur = 24;
+  ui.drawGlassCard(ctx, cardX, cardY, cardW, cardH, {
+    radius: UI_CONFIG.radius.dialog,
+    borderColor: 'rgba(154,138,212,0.30)',
+  });
+  ctx.restore();
+
+  // 左侧等级圆点
+  const dotR = 20;
+  const dotCX = cardX + 20 + dotR;
+  const dotCY = cardY + 38;
+  const dotColor = UI_CONFIG.codexColors[currentObjective - 1] || UI_CONFIG.color.accentCyan;
+
+  ctx.save();
+  ctx.shadowColor = dotColor + '99';
+  ctx.shadowBlur = 14;
+  ctx.fillStyle = dotColor;
+  ctx.beginPath();
+  ctx.arc(dotCX, dotCY, dotR, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.restore();
+
+  // 文字
+  const textLeft = dotCX + dotR + 14;
+  ui.drawText(ctx, '达成本局目标 Lv.' + currentObjective + '！', textLeft, cardY + 38, {
+    fontSize: UI_CONFIG.font.cardTitle,
+    color: UI_CONFIG.color.textPrimary,
+    align: 'left',
+    weight: '600',
+  });
+
+  // 按钮区：两个并排
+  const btnGap = 12;
+  const btnH = UI_CONFIG.size.buttonPrimaryHeight;
+  const btnAreaW = cardW - 40;
+  const btnW = (btnAreaW - btnGap) / 2;
+  const btnY = cardY + cardH - btnH - 16;
+  const btnLeftX = cardX + 20;
+  const btnRightX = btnLeftX + btnW + btnGap;
+
+  ui.drawPrimaryButton(ctx, btnLeftX, btnY, btnW, btnH, '继续挑战');
+  ui.drawSecondaryButton(ctx, btnRightX, btnY, btnW, btnH, '结束本局');
+
+  objectiveBannerButtons = {
+    continue: { x: btnLeftX, y: btnY, w: btnW, h: btnH },
+    end:      { x: btnRightX, y: btnY, w: btnW, h: btnH },
+  };
+}
+
 /**
  * 绘制暂停弹窗（遮罩 + 毛玻璃卡片 + 状态 + 三按钮）
  */
@@ -1138,6 +1223,10 @@ function handleRestart() {
   openingAbsorbPending = true;
   openingAbsorbActive = false;
   pauseDialogButtons = null;
+  objectiveBannerVisible = false;
+  objectiveBannerShown = false;
+  objectiveBannerButtons = null;
+  input.isObjectiveBannerVisible = false;
   // 重置单局追踪 + 生成新目标
   sessionMaxLevel = 1;
   sessionObjectiveAchieved = false;
@@ -1333,6 +1422,9 @@ function gameLoop() {
 
     // 浮动得分
     renderer.drawScorePopup(score.lastScorePopup);
+
+    // 中途达成目标横幅（盖在所有 UI 之上）
+    if (objectiveBannerVisible) drawObjectiveBanner();
 
     ctx.restore();
   } else if (gameState === 'paused') {
