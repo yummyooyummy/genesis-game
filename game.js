@@ -11,8 +11,9 @@ const Particles = require('./js/particles');
 const Input = require('./js/input');
 const Score = require('./js/score');
 const { Items, ITEM_TYPES } = require('./js/items');
-const { GAME_CONFIG, msToFrames } = require('./js/config');
+const { GAME_CONFIG, UI_CONFIG, msToFrames } = require('./js/config');
 const playerData = require('./js/playerData');
+const ui = require('./js/uiHelpers');
 
 // ─── Canvas 初始化 ───
 
@@ -48,7 +49,11 @@ const dropTargetPositions = {
 
 // ─── 游戏状态 ───
 
-let gameState = 'playing'; // 'playing' | 'gameover'
+// 游戏状态机
+// 'menu'     → 开始界面（待实现）
+// 'playing'  → 游戏中（现有逻辑）
+// 'gameover' → 结束界面（待实现）
+let gameState = 'playing';  // 暂时默认为 playing，保持现有行为不变
 let decorationTimer = 0;   // 装饰粒子计时器
 let comboDisplay = { count: 0, x: 0, y: 0, timer: 0 }; // combo 显示
 
@@ -321,6 +326,7 @@ function updateMergeFlow() {
         }
       } else {
         gameState = 'gameover';
+        console.log('[状态] 切换到 gameOver');
         input.isGameOver = true;
         _saveOnGameOver();
       }
@@ -412,6 +418,191 @@ function _saveOnGameOver() {
   console.log('[存档] 更新完成', JSON.stringify(lastGameResult));
 }
 
+/**
+ * 绘制结束界面（静态布局，不处理触摸）
+ * 数据来源：lastGameResult + playerData
+ */
+function drawGameOverScreen() {
+  const W = screenWidth;
+  const H = screenHeight;
+  const padX = UI_CONFIG.spacing.screenPaddingX;
+  const padBottom = UI_CONFIG.spacing.screenPaddingBottom;
+  const padTop = UI_CONFIG.spacing.screenPaddingTop;
+
+  // ── 背景 ──
+  ctx.fillStyle = UI_CONFIG.color.bgDeep;
+  ctx.fillRect(0, 0, W, H);
+
+  // ── 数据准备 ──
+  const data = lastGameResult || {};
+  const curScore = data.score || 0;
+  const maxLevel = data.maxLevel || 1;
+  const objective = data.objective || 3;
+  const achieved = data.objectiveAchieved !== false;
+  const maxScore = playerData.loadPlayerData().maxScore || 0;
+  const levelName = (UI_CONFIG.codexNamesZh && UI_CONFIG.codexNamesZh[maxLevel - 1]) || '';
+
+  let cursorY = padTop;
+
+  // ── 标题 "游戏结束" ──
+  ui.drawText(ctx, '游戏结束', W / 2, cursorY, {
+    fontSize: UI_CONFIG.font.screenTitle,
+    color: UI_CONFIG.color.textPrimary,
+    weight: '600',
+  });
+
+  // ── 短横线分隔符 ──
+  cursorY += 20;
+  ctx.save();
+  ctx.strokeStyle = UI_CONFIG.color.borderSoft;
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(W / 2 - 20, cursorY);
+  ctx.lineTo(W / 2 + 20, cursorY);
+  ctx.stroke();
+  ctx.restore();
+
+  // ── 本局目标行 ──
+  cursorY += 20;
+  const objLabel = '本局目标：Lv.' + objective + '  ';
+  const objResult = achieved ? '✓达成' : '✗未达成';
+  const objResultColor = achieved ? UI_CONFIG.color.successGreen : UI_CONFIG.color.errorPink;
+  const labelW = ui.measureText(ctx, objLabel, UI_CONFIG.font.cardLabel, 'normal');
+  const resultW = ui.measureText(ctx, objResult, UI_CONFIG.font.cardLabel, 'normal');
+  const totalW = labelW + resultW;
+  const objStartX = (W - totalW) / 2;
+
+  ui.drawText(ctx, objLabel, objStartX, cursorY, {
+    fontSize: UI_CONFIG.font.cardLabel,
+    color: UI_CONFIG.color.textSecondary,
+    align: 'left',
+  });
+  ui.drawText(ctx, objResult, objStartX + labelW, cursorY, {
+    fontSize: UI_CONFIG.font.cardLabel,
+    color: objResultColor,
+    align: 'left',
+  });
+
+  // ── 分数卡片 ──
+  cursorY += 24;
+  const cardX = padX;
+  const cardW = W - padX * 2;
+  const cardH = 130;
+  ui.drawGlassCard(ctx, cardX, cursorY, cardW, cardH);
+
+  const cardPadX = 20;
+  const cardInnerLeft = cardX + cardPadX;
+  const cardInnerRight = cardX + cardW - cardPadX;
+  const rowH = cardH / 2;
+
+  // 第 1 行：本局分数
+  const row1Y = cursorY + rowH / 2;
+  ui.drawText(ctx, '本局分数', cardInnerLeft, row1Y, {
+    fontSize: UI_CONFIG.font.cardLabel,
+    color: UI_CONFIG.color.textMuted,
+    align: 'left',
+  });
+  ui.drawText(ctx, String(curScore), cardInnerRight, row1Y, {
+    fontSize: UI_CONFIG.font.scoreLG,
+    color: UI_CONFIG.color.textPrimary,
+    align: 'right',
+    weight: 'bold',
+  });
+
+  // 虚线 divider
+  const divY = cursorY + rowH;
+  ctx.save();
+  ctx.strokeStyle = UI_CONFIG.color.borderSoft;
+  ctx.lineWidth = 1;
+  ctx.setLineDash([4, 4]);
+  ctx.beginPath();
+  ctx.moveTo(cardInnerLeft, divY);
+  ctx.lineTo(cardInnerRight, divY);
+  ctx.stroke();
+  ctx.setLineDash([]);
+  ctx.restore();
+
+  // 第 2 行：最高分数
+  const row2Y = cursorY + rowH + rowH / 2;
+  ui.drawText(ctx, '最高分数', cardInnerLeft, row2Y, {
+    fontSize: UI_CONFIG.font.cardLabel,
+    color: UI_CONFIG.color.textMuted,
+    align: 'left',
+  });
+  ui.drawText(ctx, String(maxScore), cardInnerRight, row2Y, {
+    fontSize: UI_CONFIG.font.scoreLG,
+    color: UI_CONFIG.color.textPrimary,
+    align: 'right',
+    weight: 'bold',
+  });
+
+  // ── 详情区 ──
+  cursorY += cardH + 18;
+  const detailLeft = padX + 8;
+  const detailRight = W - padX - 8;
+  const detailRowH = 32;
+
+  const details = [
+    { label: '核心等级', value: 'Lv.' + maxLevel + ' ' + levelName, valueColor: UI_CONFIG.color.accentCyan },
+    { label: '最高连锁', value: '--', valueColor: UI_CONFIG.color.textPrimary },
+    { label: '合成次数', value: '--', valueColor: UI_CONFIG.color.textPrimary },
+  ];
+
+  for (let i = 0; i < details.length; i++) {
+    const rowY = cursorY + detailRowH * i + detailRowH / 2;
+
+    ui.drawText(ctx, details[i].label, detailLeft, rowY, {
+      fontSize: UI_CONFIG.font.cardLabel,
+      color: UI_CONFIG.color.textMuted,
+      align: 'left',
+    });
+    ui.drawText(ctx, details[i].value, detailRight, rowY, {
+      fontSize: UI_CONFIG.font.cardLabel,
+      color: details[i].valueColor,
+      align: 'right',
+    });
+
+    // 行间虚线（最后一行不画）
+    if (i < details.length - 1) {
+      const lineY = cursorY + detailRowH * (i + 1);
+      ctx.save();
+      ctx.strokeStyle = UI_CONFIG.color.borderSoft;
+      ctx.lineWidth = 1;
+      ctx.setLineDash([4, 4]);
+      ctx.beginPath();
+      ctx.moveTo(detailLeft, lineY);
+      ctx.lineTo(detailRight, lineY);
+      ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.restore();
+    }
+  }
+
+  // ── 按钮区 ──
+  const btnH = UI_CONFIG.size.buttonPrimaryHeight;
+  const btnMaxW = UI_CONFIG.size.buttonPrimaryMaxWidth;
+  const shareW = UI_CONFIG.size.shareSquareWidth;
+  const gap = UI_CONFIG.spacing.cardGap;
+  const btnW = Math.min(btnMaxW, W - padX * 2);
+
+  const secondaryBtnY = H - padBottom - btnH;
+  const primaryBtnY = secondaryBtnY - gap - btnH;
+  const primaryBtnX = (W - btnW) / 2;
+
+  // 主按钮 "重新开始"
+  ui.drawPrimaryButton(ctx, primaryBtnX, primaryBtnY, btnW, btnH, '重新开始');
+
+  // 次要按钮 "返回主页" + 分享按钮
+  const secondaryW = btnW - shareW - gap;
+  const secondaryX = primaryBtnX;
+  const shareX = secondaryX + secondaryW + gap;
+
+  ui.drawSecondaryButton(ctx, secondaryX, secondaryBtnY, secondaryW, btnH, '返回主页');
+
+  // 分享按钮（描边方块占位）
+  ui.drawSecondaryButton(ctx, shareX, secondaryBtnY, shareW, btnH, '分享');
+}
+
 /** 处理重新开始 */
 function handleRestart() {
   board.reset();
@@ -440,9 +631,11 @@ function handleRestart() {
 // ─── 主循环 ───
 
 function gameLoop() {
-  // === UPDATE ===
+  if (gameState === 'menu') {
+    // TODO: 绘制开始界面（下一步实现）
+  } else if (gameState === 'playing') {
+    // === UPDATE ===
 
-  if (gameState === 'playing') {
     // 旋转
     board.updateRotation();
 
@@ -524,6 +717,7 @@ function gameLoop() {
     ) {
       board.queuedSplits = 0;
       gameState = 'gameover';
+      console.log('[状态] 切换到 gameOver');
       input.isGameOver = true;
       _saveOnGameOver();
     }
@@ -544,91 +738,88 @@ function gameLoop() {
         particles.spawnDecoration(pos.x, pos.y, colors.secondary, board.getElementRadius(slot.level));
       }
     }
+
+    // 粒子更新
+    particles.update();
+
+    // === RENDER ===
+
+    ctx.save();
+
+    // 清空背景
+    renderer.clear();
+
+    // 绘制轨道线
+    renderer.drawTracks(centerX, centerY, boardRadius);
+
+    // 绘制选中态连接线（在元素下层，作为相邻关系的背景提示）
+    renderer.drawConnectionLines(board);
+
+    // 绘制所有格子和元素（选中格 / 合成动画格 由后续专用函数绘制）
+    renderer.drawSlots(board);
+
+    // 绘制选中高亮（发光环 + 脉冲元素）
+    renderer.drawSelectionHighlight(board);
+
+    // 绘制核心（带脉冲缩放/发光 + 定时分裂前摇呼吸环）
+    renderer.drawCore(centerX, centerY, board.core.level, board.getCorePulseRatio(), board.timedSplitWarningProgress);
+
+    // 绘制从核心飞向目标格的新元素
+    renderer.drawFlyingElements(board);
+
+    // 绘制吸附飞行中的元素
+    if (mergeFlowState === 'absorb' && mergeFlowAbsorbSlot) {
+      const absPos = board.getSlotPosition(mergeFlowAbsorbSlot);
+      const t = mergeFlowAbsorbProgress;
+      const ease = 1 - Math.pow(1 - t, 3);
+      const ax = absPos.x + (centerX - absPos.x) * ease;
+      const ay = absPos.y + (centerY - absPos.y) * ease;
+      const level = mergeFlowAbsorbSlot.level;
+      const radius = board.getElementRadius(level) * (1 - ease * 0.4);
+      renderer._drawElement(ax, ay, level, radius);
+    }
+
+    // 绘制合成动画（聚合 + 新元素弹出）
+    renderer.drawMergeAnimations(board);
+
+    // 绘制粒子
+    particles.draw(ctx);
+
+    // 道具使用期间的屏幕边缘脉冲（清空=暖金/升级=绿松）
+    renderer.drawItemUseBurst(items);
+
+    // 暂停道具视觉反馈（核心波纹 + 屏幕紫光 + 顶部倒计时）
+    renderer.drawPauseOverlay(board, centerX, centerY);
+
+    // 掉落物绘制（flyIn / floating / blinking / pickingUp）
+    renderer.drawDrops(items);
+
+    // 绘制 UI
+    renderer.drawScoreUI(score.total, score.highScore);
+    renderer.drawItemBar(items);
+    renderer.drawCoreLevelUI(board.core.level);
+    renderer.drawExitButton();
+
+    // 道具使用失败提示文字（在 UI 之上）
+    renderer.drawUseFailHint(items);
+
+    // 调试按钮（DEBUG_ITEMS=true 时在左下角显示）
+    if (DEBUG_ITEMS) {
+      renderer.drawDebugButton();
+    }
+
+    // combo 显示
+    if (comboDisplay.timer > 0) {
+      renderer.drawCombo(comboDisplay.count, comboDisplay.x, comboDisplay.y);
+    }
+
+    // 浮动得分
+    renderer.drawScorePopup(score.lastScorePopup);
+
+    ctx.restore();
+  } else if (gameState === 'gameover') {
+    drawGameOverScreen();
   }
-
-  // 粒子更新（无论游戏状态）
-  particles.update();
-
-  // === RENDER ===
-
-  ctx.save();
-
-  // 清空背景
-  renderer.clear();
-
-  // 绘制轨道线
-  renderer.drawTracks(centerX, centerY, boardRadius);
-
-  // 绘制选中态连接线（在元素下层，作为相邻关系的背景提示）
-  renderer.drawConnectionLines(board);
-
-  // 绘制所有格子和元素（选中格 / 合成动画格 由后续专用函数绘制）
-  renderer.drawSlots(board);
-
-  // 绘制选中高亮（发光环 + 脉冲元素）
-  renderer.drawSelectionHighlight(board);
-
-  // 绘制核心（带脉冲缩放/发光 + 定时分裂前摇呼吸环）
-  renderer.drawCore(centerX, centerY, board.core.level, board.getCorePulseRatio(), board.timedSplitWarningProgress);
-
-  // 绘制从核心飞向目标格的新元素
-  renderer.drawFlyingElements(board);
-
-  // 绘制吸附飞行中的元素
-  if (mergeFlowState === 'absorb' && mergeFlowAbsorbSlot) {
-    const absPos = board.getSlotPosition(mergeFlowAbsorbSlot);
-    const t = mergeFlowAbsorbProgress;
-    const ease = 1 - Math.pow(1 - t, 3);
-    const ax = absPos.x + (centerX - absPos.x) * ease;
-    const ay = absPos.y + (centerY - absPos.y) * ease;
-    const level = mergeFlowAbsorbSlot.level;
-    const radius = board.getElementRadius(level) * (1 - ease * 0.4);
-    renderer._drawElement(ax, ay, level, radius);
-  }
-
-  // 绘制合成动画（聚合 + 新元素弹出）
-  renderer.drawMergeAnimations(board);
-
-  // 绘制粒子
-  particles.draw(ctx);
-
-  // 道具使用期间的屏幕边缘脉冲（清空=暖金/升级=绿松）
-  renderer.drawItemUseBurst(items);
-
-  // 暂停道具视觉反馈（核心波纹 + 屏幕紫光 + 顶部倒计时）
-  renderer.drawPauseOverlay(board, centerX, centerY);
-
-  // 掉落物绘制（flyIn / floating / blinking / pickingUp）
-  renderer.drawDrops(items);
-
-  // 绘制 UI
-  renderer.drawScoreUI(score.total, score.highScore);
-  renderer.drawItemBar(items);
-  renderer.drawCoreLevelUI(board.core.level);
-  renderer.drawExitButton();
-
-  // 道具使用失败提示文字（在 UI 之上）
-  renderer.drawUseFailHint(items);
-
-  // 调试按钮（DEBUG_ITEMS=true 时在左下角显示）
-  if (DEBUG_ITEMS) {
-    renderer.drawDebugButton();
-  }
-
-  // combo 显示
-  if (comboDisplay.timer > 0) {
-    renderer.drawCombo(comboDisplay.count, comboDisplay.x, comboDisplay.y);
-  }
-
-  // 浮动得分
-  renderer.drawScorePopup(score.lastScorePopup);
-
-  // 游戏结束界面
-  if (gameState === 'gameover') {
-    renderer.drawGameOver(board.core.level, score.total);
-  }
-
-  ctx.restore();
 
   // 继续循环
   requestAnimationFrame(gameLoop);
