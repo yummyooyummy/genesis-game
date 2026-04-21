@@ -50,12 +50,14 @@ const dropTargetPositions = {
 // ─── 游戏状态 ───
 
 // 游戏状态机
-// 'menu'     → 开始界面（待实现）
-// 'playing'  → 游戏中（现有逻辑）
-// 'gameover' → 结束界面（待实现）
+// 'menu'     → 开始界面
+// 'playing'  → 游戏中
+// 'paused'   → 暂停弹窗
+// 'gameover' → 结束界面
 let gameState = 'menu';
 let gameOverButtons = null; // { restart, home, share } 每个 { x, y, w, h }
 let menuButtons = null;     // { start: { x, y, w, h } }
+let pauseDialogButtons = null; // { resume, restart, home } 每个 { x, y, w, h }
 let decorationTimer = 0;   // 装饰粒子计时器
 let comboDisplay = { count: 0, x: 0, y: 0, timer: 0 }; // combo 显示
 
@@ -111,6 +113,22 @@ input.onGameOverTouch = function (x, y) {
 input.onMenuTouch = function (x, y) {
   if (menuButtons && menuButtons.start && ui.isPointInRect(x, y, menuButtons.start.x, menuButtons.start.y, menuButtons.start.w, menuButtons.start.h)) {
     handleStart();
+  }
+};
+input.onPauseTap = handlePause;
+input.onPausedTouch = function (x, y) {
+  if (!pauseDialogButtons) return;
+  if (ui.isPointInRect(x, y, pauseDialogButtons.resume.x, pauseDialogButtons.resume.y, pauseDialogButtons.resume.w, pauseDialogButtons.resume.h)) {
+    handleResume();
+    return;
+  }
+  if (ui.isPointInRect(x, y, pauseDialogButtons.restart.x, pauseDialogButtons.restart.y, pauseDialogButtons.restart.w, pauseDialogButtons.restart.h)) {
+    handleRestart();
+    return;
+  }
+  if (ui.isPointInRect(x, y, pauseDialogButtons.home.x, pauseDialogButtons.home.y, pauseDialogButtons.home.w, pauseDialogButtons.home.h)) {
+    handleHome();
+    return;
   }
 };
 
@@ -906,6 +924,90 @@ function handleShare() {
   console.log('[分享] 占位 — 待接入微信分享');
 }
 
+function handlePause() {
+  if (gameState !== 'playing') return;
+  gameState = 'paused';
+  input.isPaused = true;
+  console.log('[状态] 切换到 paused');
+}
+
+function handleResume() {
+  if (gameState !== 'paused') return;
+  gameState = 'playing';
+  input.isPaused = false;
+  pauseDialogButtons = null;
+  console.log('[状态] 从 paused 恢复到 playing');
+}
+
+/**
+ * 绘制暂停弹窗（遮罩 + 毛玻璃卡片 + 状态 + 三按钮）
+ */
+function drawPauseDialog() {
+  const W = screenWidth;
+  const H = screenHeight;
+
+  // 半透明遮罩
+  ctx.fillStyle = UI_CONFIG.color.bgOverlay;
+  ctx.fillRect(0, 0, W, H);
+
+  // 卡片尺寸与位置
+  const padX = UI_CONFIG.spacing.screenPaddingX;
+  const cardW = W - padX * 2;
+  const cardH = 290;
+  const cardX = padX;
+  const cardY = (H - cardH) / 2;
+
+  ui.drawGlassCard(ctx, cardX, cardY, cardW, cardH, {
+    radius: UI_CONFIG.radius.dialog,
+    fillColor: UI_CONFIG.color.glassCardDense,
+    borderColor: UI_CONFIG.color.borderGlass,
+  });
+
+  // 标题
+  const titleY = cardY + 40;
+  ui.drawText(ctx, '游戏暂停', W / 2, titleY, {
+    fontSize: UI_CONFIG.font.screenTitle,
+    color: UI_CONFIG.color.textPrimary,
+    weight: '600',
+  });
+
+  // 状态行 1：当前分数
+  const row1Y = titleY + 40;
+  ui.drawText(ctx, '当前分数  ' + score.total, W / 2, row1Y, {
+    fontSize: UI_CONFIG.font.cardTitle,
+    color: UI_CONFIG.color.textSecondary,
+  });
+
+  // 状态行 2：核心等级
+  const row2Y = row1Y + 28;
+  const lvName = UI_CONFIG.codexNamesZh[board.core.level - 1] || '';
+  ui.drawText(ctx, '核心等级  Lv.' + board.core.level + ' ' + lvName, W / 2, row2Y, {
+    fontSize: UI_CONFIG.font.cardTitle,
+    color: UI_CONFIG.color.accentCyan,
+  });
+
+  // 按钮区
+  const btnH = UI_CONFIG.size.buttonPrimaryHeight;
+  const btnW = cardW - 40;
+  const btnX = cardX + 20;
+  const gap = UI_CONFIG.spacing.cardGap;
+
+  const resumeBtnY = row2Y + 36;
+  ui.drawPrimaryButton(ctx, btnX, resumeBtnY, btnW, btnH, '继续游戏');
+
+  const restartBtnY = resumeBtnY + btnH + gap;
+  ui.drawSecondaryButton(ctx, btnX, restartBtnY, btnW, btnH, '重新开始');
+
+  const homeBtnY = restartBtnY + btnH + gap;
+  ui.drawSecondaryButton(ctx, btnX, homeBtnY, btnW, btnH, '返回主页');
+
+  pauseDialogButtons = {
+    resume:  { x: btnX, y: resumeBtnY, w: btnW, h: btnH },
+    restart: { x: btnX, y: restartBtnY, w: btnW, h: btnH },
+    home:    { x: btnX, y: homeBtnY, w: btnW, h: btnH },
+  };
+}
+
 /** 处理重新开始 */
 function handleRestart() {
   board.reset();
@@ -915,6 +1017,7 @@ function handleRestart() {
   gameState = 'playing';
   input.isGameOver = false;
   input.isMenu = false;
+  input.isPaused = false;
   comboDisplay = { count: 0, x: 0, y: 0, timer: 0 };
   decorationTimer = 0;
   mergeFlowState = null;
@@ -924,6 +1027,7 @@ function handleRestart() {
   mergeFlowBurstFired = false;
   openingAbsorbPending = true;
   openingAbsorbActive = false;
+  pauseDialogButtons = null;
   // 重置单局追踪 + 生成新目标
   sessionMaxLevel = 1;
   sessionObjectiveAchieved = false;
@@ -1102,7 +1206,7 @@ function gameLoop() {
     renderer.drawScoreUI(score.total, score.highScore);
     renderer.drawItemBar(items);
     renderer.drawCoreLevelUI(board.core.level);
-    renderer.drawExitButton();
+    renderer.drawPauseButton();
 
     // 道具使用失败提示文字（在 UI 之上）
     renderer.drawUseFailHint(items);
@@ -1121,6 +1225,42 @@ function gameLoop() {
     renderer.drawScorePopup(score.lastScorePopup);
 
     ctx.restore();
+  } else if (gameState === 'paused') {
+    // 暂停状态：渲染 playing 画面（静态，不跑 update）+ 叠加暂停弹窗
+    ctx.save();
+
+    renderer.clear();
+    renderer.drawTracks(centerX, centerY, boardRadius);
+    renderer.drawConnectionLines(board);
+    renderer.drawSlots(board);
+    renderer.drawSelectionHighlight(board);
+    renderer.drawCore(centerX, centerY, board.core.level, board.getCorePulseRatio(), board.timedSplitWarningProgress);
+    renderer.drawFlyingElements(board);
+
+    if (mergeFlowState === 'absorb' && mergeFlowAbsorbSlot) {
+      const absPos = board.getSlotPosition(mergeFlowAbsorbSlot);
+      const t = mergeFlowAbsorbProgress;
+      const ease = 1 - Math.pow(1 - t, 3);
+      const ax = absPos.x + (centerX - absPos.x) * ease;
+      const ay = absPos.y + (centerY - absPos.y) * ease;
+      const level = mergeFlowAbsorbSlot.level;
+      const radius = board.getElementRadius(level) * (1 - ease * 0.4);
+      renderer._drawElement(ax, ay, level, radius);
+    }
+
+    renderer.drawMergeAnimations(board);
+    particles.draw(ctx);
+    renderer.drawItemUseBurst(items);
+    renderer.drawPauseOverlay(board, centerX, centerY);
+    renderer.drawDrops(items);
+    renderer.drawScoreUI(score.total, score.highScore);
+    renderer.drawItemBar(items);
+    renderer.drawCoreLevelUI(board.core.level);
+    renderer.drawPauseButton();
+
+    ctx.restore();
+
+    drawPauseDialog();
   } else if (gameState === 'gameover') {
     drawGameOverScreen();
   }

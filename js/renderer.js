@@ -502,41 +502,24 @@ class Renderer {
   }
 
   /**
-   * 绘制右下角退出按钮（方框带向右箭头）
+   * 绘制右下角暂停按钮（⏸ 双竖线）
    */
-  drawExitButton() {
+  drawPauseButton() {
     const { ctx } = this;
-    const x = this.width - 24 - 12; // 距右 24px，图标中心
+    const x = this.width - 24 - 12;
     const y = this.height - 40;
-    const size = 24;
-    const half = size / 2;
+    const half = 12;
 
     ctx.save();
-    ctx.strokeStyle = '#888888';
-    ctx.lineWidth = 1.8;
-    ctx.lineCap = 'round';
-    ctx.lineJoin = 'round';
-
-    // 方框（左侧开口）
-    ctx.beginPath();
-    ctx.moveTo(x - half + 6, y - half);
-    ctx.lineTo(x + half, y - half);
-    ctx.lineTo(x + half, y + half);
-    ctx.lineTo(x - half + 6, y + half);
-    ctx.stroke();
-
-    // 向右箭头
-    ctx.beginPath();
-    ctx.moveTo(x - half - 2, y);
-    ctx.lineTo(x + 2, y);
-    ctx.moveTo(x - 3, y - 5);
-    ctx.lineTo(x + 2, y);
-    ctx.lineTo(x - 3, y + 5);
-    ctx.stroke();
-
+    ctx.fillStyle = '#888888';
+    const barW = 4;
+    const barH = 16;
+    const gap = 6;
+    ctx.fillRect(x - gap / 2 - barW, y - barH / 2, barW, barH);
+    ctx.fillRect(x + gap / 2, y - barH / 2, barW, barH);
     ctx.restore();
 
-    this.exitBtnPos = { x, y, r: half + 6 };
+    this.pauseBtnPos = { x, y, r: half + 6 };
   }
 
   /**

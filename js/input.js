@@ -38,11 +38,20 @@ class Input {
     /** 游戏是否结束 */
     this.isGameOver = false;
 
+    /** 是否暂停 */
+    this.isPaused = false;
+
     /** 是否在菜单界面 */
     this.isMenu = true;
 
     /** 菜单触摸回调 */
     this.onMenuTouch = null;
+
+    /** 暂停弹窗触摸回调 */
+    this.onPausedTouch = null;
+
+    /** 点击暂停按钮回调 */
+    this.onPauseTap = null;
 
     this._bindEvents();
   }
@@ -80,11 +89,29 @@ class Input {
       return;
     }
 
+    if (this.isPaused) {
+      if (this.onPausedTouch) {
+        this.onPausedTouch(x, y);
+      }
+      return;
+    }
+
     if (this.isGameOver) {
       if (this.onGameOverTouch) {
         this.onGameOverTouch(x, y);
       }
       return;
+    }
+
+    // 暂停按钮命中（优先级最高）
+    if (this.onPauseTap && this.renderer && this.renderer.pauseBtnPos) {
+      const btn = this.renderer.pauseBtnPos;
+      const dx = x - btn.x;
+      const dy = y - btn.y;
+      if (dx * dx + dy * dy <= btn.r * btn.r) {
+        this.onPauseTap();
+        return;
+      }
     }
 
     // 调试按钮（优先级最高，始终可点击）
