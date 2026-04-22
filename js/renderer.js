@@ -378,14 +378,14 @@ class Renderer {
 
     // 当前分数（大号白色，带千位分隔符）
     ctx.fillStyle = '#FFFFFF';
-    ctx.font = 'bold 36px Arial';
+    ctx.font = 'bold 58px Arial';
     ctx.textAlign = 'left';
     ctx.textBaseline = 'top';
     ctx.fillText(this._formatNumber(score), leftMargin, topMargin);
 
     // 历史最高分（皇冠 + 小号金色）
     const crownSize = 16;
-    const scoreHeight = 36;
+    const scoreHeight = 58;
     const highY = topMargin + scoreHeight + 6;
     const crownX = leftMargin + crownSize / 2;
     const crownY = highY;
