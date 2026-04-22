@@ -158,6 +158,8 @@ class Renderer {
       if (slot === board.selectedSlot) continue;
       // 合成动画中的格子由 drawMergeAnimations 绘制（Stage 5）
       if (slot.mergeAnimating) continue;
+      // 磁吸动画中的格子由 drawMagnetAnimation 绘制
+      if (slot._magnetAnimating) continue;
 
       const pos = board.getSlotPosition(slot);
 
@@ -295,6 +297,24 @@ class Renderer {
         const r = board.getElementRadius(anim.newLevel) * state.scale;
         this._drawElement(state.newPos.x, state.newPos.y, anim.newLevel, r);
       }
+    }
+  }
+
+  /**
+   * 绘制磁吸动画（粒子从外圈向内圈滑动）
+   * @param {import('./items').Items} items
+   * @param {import('./board').default} board
+   */
+  drawMagnetAnimation(items, board) {
+    if (!items._magnetAnim) return;
+    const { moves, frame, totalFrames } = items._magnetAnim;
+    const t = Math.min(1, frame / totalFrames);
+    const ease = 1 - Math.pow(1 - t, 3);
+
+    for (const move of moves) {
+      const x = move.fromPos.x + (move.toPos.x - move.fromPos.x) * ease;
+      const y = move.fromPos.y + (move.toPos.y - move.fromPos.y) * ease;
+      this._drawElement(x, y, move.level, board.getElementRadius(move.level));
     }
   }
 
@@ -463,12 +483,21 @@ class Renderer {
       ctx.closePath();
       ctx.fill();
     } else if (type === 'magnet') {
-      // 占位图标（Step D 替换为完整磁吸图标）
+      // 紫色 U 形磁铁 + 内向箭头
+      ctx.strokeStyle = color;
+      ctx.lineWidth = 2.5;
+      ctx.beginPath();
+      ctx.arc(cx, cy - 2, 9, 0, Math.PI);
+      ctx.stroke();
       ctx.fillStyle = color;
-      ctx.font = 'bold 18px Arial';
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-      ctx.fillText('M', cx, cy);
+      ctx.fillRect(cx - 9, cy - 4, 3, 10);
+      ctx.fillRect(cx + 6, cy - 4, 3, 10);
+      // 内向小箭头
+      ctx.beginPath();
+      ctx.moveTo(cx - 4, cy + 8);
+      ctx.lineTo(cx, cy + 4);
+      ctx.lineTo(cx + 4, cy + 8);
+      ctx.stroke();
     }
 
     ctx.restore();
@@ -672,6 +701,7 @@ class Renderer {
     const colorByType = {
       clear:   '239, 159, 39',    // 暖金
       upgrade: '93, 202, 165',    // 绿松
+      magnet:  '155, 127, 221',   // 紫
     };
     const rgb = colorByType[anim.type] || '255, 255, 255';
 

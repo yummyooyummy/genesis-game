@@ -30,6 +30,9 @@ class Items {
     /** 闪光延迟效果（0.2s 闪光 → 执行） */
     this._pendingEffect = null;
 
+    /** 磁吸动画状态 */
+    this._magnetAnim = null;
+
     /**
      * 使用失败提示（如"该道具暂时无法使用"）
      * { text: string, frame: number, totalFrames: number }
@@ -43,6 +46,7 @@ class Items {
     this.drops = [];
     this.useAnim = null;
     this._pendingEffect = null;
+    this._magnetAnim = null;
     this.useFailHint = null;
   }
 
@@ -170,6 +174,7 @@ class Items {
   canUse(type, board) {
     if (this.inventory[type] <= 0) return false;
     if (this._pendingEffect !== null) return false;
+    if (this._magnetAnim !== null) return false;
     if (this.useAnim !== null) return false;
     if (board.mergeFlowLocked) return false;
     if (board.mergeAnimations.length > 0) return false;
@@ -193,6 +198,10 @@ class Items {
 
     if (type === 'upgrade') {
       return this._useUpgrade(board, particles);
+    }
+
+    if (type === 'magnet') {
+      return this._useMagnet(board, particles);
     }
 
     return false;
@@ -256,6 +265,93 @@ class Items {
     return true;
   }
 
+  /**
+   * 磁吸道具：所有粒子分层向内吸附一格（0.5s 流动动画）
+   */
+  _useMagnet(board, particles) {
+    const moves = [];
+    const plannedLevels = new Map();
+    for (const s of board.slots) {
+      plannedLevels.set(s, (s.mergeAnimating || s.reserved) ? null : s.level);
+    }
+
+    // Phase 1: outer → mid
+    const outerParticles = board.getSlotsByRing('outer').filter(
+      s => plannedLevels.get(s) !== null
+    );
+    for (const slot of outerParticles) {
+      const result = this._findInwardTarget(board, slot, 'mid', plannedLevels);
+      if (result) {
+        const srcLevel = plannedLevels.get(slot);
+        moves.push({ slot, targetSlot: result.target, action: result.action, level: srcLevel });
+        plannedLevels.set(slot, null);
+        plannedLevels.set(result.target, result.action === 'merge' ? srcLevel + 1 : srcLevel);
+      }
+    }
+
+    // Phase 2: mid → inner（只移动原有中圈粒子，不移动刚从外圈到达的）
+    const phase1Targets = new Set(moves.map(m => m.targetSlot));
+    const midParticles = board.getSlotsByRing('mid').filter(s =>
+      s.level !== null && !s.mergeAnimating && !s.reserved &&
+      plannedLevels.get(s) !== null && !phase1Targets.has(s)
+    );
+    for (const slot of midParticles) {
+      const result = this._findInwardTarget(board, slot, 'inner', plannedLevels);
+      if (result) {
+        const srcLevel = plannedLevels.get(slot);
+        moves.push({ slot, targetSlot: result.target, action: result.action, level: srcLevel });
+        plannedLevels.set(slot, null);
+        plannedLevels.set(result.target, result.action === 'merge' ? srcLevel + 1 : srcLevel);
+      }
+    }
+
+    if (moves.length === 0) {
+      this._showFailHint('无法吸附');
+      return false;
+    }
+
+    this.inventory.magnet -= 1;
+    for (const move of moves) {
+      move.fromPos = board.getSlotPosition(move.slot);
+      move.toPos = board.getSlotPosition(move.targetSlot);
+      move.slot._magnetAnimating = true;
+    }
+    this._magnetAnim = { moves, frame: 0, totalFrames: 30 };
+    board.itemUseLocked = true;
+    board._recomputeInputLock();
+    return true;
+  }
+
+  /**
+   * 磁吸辅助：在 targetRing 中找可吸附的目标（空位 → move，同级 → merge）
+   */
+  _findInwardTarget(board, slot, targetRing, plannedLevels) {
+    const aligned = board._findAlignedInRing(slot, targetRing);
+    if (!aligned) return null;
+
+    const ringSlots = board.getSlotsByRing(targetRing);
+    const count = ringSlots.length;
+    const leftIdx = (aligned.slotIndex - 1 + count) % count;
+    const rightIdx = (aligned.slotIndex + 1) % count;
+    const left = ringSlots.find(s => s.slotIndex === leftIdx);
+    const right = ringSlots.find(s => s.slotIndex === rightIdx);
+    const candidates = [aligned];
+    if (left) candidates.push(left);
+    if (right) candidates.push(right);
+
+    const srcLevel = plannedLevels.get(slot);
+    for (const target of candidates) {
+      const tLevel = plannedLevels.get(target);
+      if (tLevel === null && !target.reserved) {
+        return { target, action: 'move' };
+      }
+      if (tLevel === srcLevel && !target.mergeAnimating) {
+        return { target, action: 'merge' };
+      }
+    }
+    return null;
+  }
+
   /** 启动使用动效 + 锁输入 */
   _startUseAnim(type, board) {
     this.useAnim = {
@@ -307,6 +403,36 @@ class Items {
     this._pendingEffect = null;
   }
 
+  /** 磁吸动画结束 → 应用移动/合成 + 喷粒子 */
+  _executeMagnet(board, particles, onMagnetComplete) {
+    const mergedSlots = [];
+    for (const move of this._magnetAnim.moves) {
+      move.slot._magnetAnimating = false;
+      const pos = board.getSlotPosition(move.targetSlot);
+      const colors = ELEMENT_COLORS[move.level] || ELEMENT_COLORS[1];
+
+      if (move.action === 'move') {
+        move.targetSlot.level = move.level;
+        move.slot.level = null;
+        particles.spawn(pos.x, pos.y, colors.primary, 6, { speed: 1.5, life: 18 });
+      } else {
+        move.targetSlot.level = move.level + 1;
+        move.slot.level = null;
+        const newColors = ELEMENT_COLORS[move.level + 1] || ELEMENT_COLORS[1];
+        particles.spawn(pos.x, pos.y, newColors.primary, 14, { speed: 3, life: 28 });
+        particles.spawn(pos.x, pos.y, newColors.secondary, 8, { speed: 2, life: 22 });
+        mergedSlots.push(move.targetSlot);
+      }
+      if (board.selectedSlot === move.slot) board.clearSelection();
+    }
+
+    this._magnetAnim = null;
+    board.itemUseLocked = false;
+    board._recomputeInputLock();
+
+    if (onMagnetComplete) onMagnetComplete(mergedSlots);
+  }
+
   /**
    * 每帧推进：闪光延迟 / useAnim 计时 / useFailHint 计时 / 升级闪光衰减。
    * 由 game.js 主循环调用。
@@ -315,7 +441,15 @@ class Items {
    * @param {(upgradedSlots:object[]) => void} [onUpgradeComplete]
    *   升级道具 useAnim 结束时触发，game.js 用它启动合成连锁
    */
-  update(board, particles, onUpgradeComplete) {
+  update(board, particles, onUpgradeComplete, onMagnetComplete) {
+    // 磁吸动画推进
+    if (this._magnetAnim) {
+      this._magnetAnim.frame += 1;
+      if (this._magnetAnim.frame >= this._magnetAnim.totalFrames) {
+        this._executeMagnet(board, particles, onMagnetComplete);
+      }
+    }
+
     // 闪光延迟效果推进（0.2s 闪光 → 执行实际效果）
     if (this._pendingEffect) {
       for (const slot of this._pendingEffect.targets) {

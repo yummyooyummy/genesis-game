@@ -459,6 +459,35 @@ function handleUpgradeComplete(upgradedSlots) {
   }
 }
 
+/**
+ * 磁吸道具动画结束后的回调：检查合成连锁 + 吸附
+ * @param {object[]} mergedSlots - 磁吸过程中发生合成的目标格
+ */
+function handleMagnetComplete(mergedSlots) {
+  // 先检查所有受影响的格子是否能触发合成连锁
+  const allSlots = [...mergedSlots];
+  for (const slot of allSlots) {
+    if (slot.level === null || slot.mergeAnimating) continue;
+    const partner = board.findNearestAdjacentSameLevel(slot);
+    if (partner && !partner.mergeAnimating) {
+      score.resetCombo();
+      const combo = score.incrementCombo();
+      const newLevel = slot.level + 1;
+      score.addMergeScore(newLevel, combo);
+      board.startMergeAnimation(slot, partner);
+      return;
+    }
+  }
+
+  // 无合成但可能有吸附
+  if (board.checkAbsorb()) {
+    mergeFlowState = 'pause';
+    mergeFlowTimer = msToFrames(GAME_CONFIG.mergeFlow.newElementPauseMs);
+    board.mergeFlowLocked = true;
+    board._recomputeInputLock();
+  }
+}
+
 /** 游戏结束时保存存档（两个 gameover 触发点共用） */
 function _saveOnGameOver() {
   const result = playerData.updateAfterGame({
@@ -1308,7 +1337,7 @@ function gameLoop() {
 
     // 道具动效推进（使用动效计时 + 失败提示计时 + 暂停倒计时镜像 + 结束瞬间特效）
     // 升级道具 useAnim 结束时回调：尝试启动合成连锁
-    items.update(board, particles, handleUpgradeComplete);
+    items.update(board, particles, handleUpgradeComplete, handleMagnetComplete);
 
     // 掉落物生命周期推进（flyIn → floating → blinking → 消失 / 拾取飞行）
     items.updateDrops();
@@ -1394,6 +1423,9 @@ function gameLoop() {
     // 绘制合成动画（聚合 + 新元素弹出）
     renderer.drawMergeAnimations(board);
 
+    // 绘制磁吸动画（粒子向内滑动）
+    renderer.drawMagnetAnimation(items, board);
+
     // 绘制粒子
     particles.draw(ctx);
 
@@ -1455,6 +1487,7 @@ function gameLoop() {
     }
 
     renderer.drawMergeAnimations(board);
+    renderer.drawMagnetAnimation(items, board);
     particles.draw(ctx);
     renderer.drawItemUseBurst(items);
     renderer.drawDrops(items);
