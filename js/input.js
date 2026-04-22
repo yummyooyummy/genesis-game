@@ -13,7 +13,7 @@ class Input {
    * @param {number} dpr - 设备像素比
    * @param {Function} onSlotTap - 点击格子回调 (slot)
    * @param {Function} onRestartTap - 点击重新开始回调 ()
-   * @param {Function} [onDebugTap] - 点击调试按钮回调（可选，DEBUG_ITEMS=false 时不注入）
+   * @param {Function} [onDebugTap] - 已废弃，保留参数位置兼容
    * @param {Function} [onItemTap] - 点击道具栏图标回调 (type:'clear'|'upgrade'|'pause')
    * @param {Function} [onDropTap] - 点击悬浮掉落物回调 (drop)
    */
@@ -114,11 +114,7 @@ class Input {
       }
     }
 
-    // 调试按钮（优先级最高，始终可点击）
-    if (this.onDebugTap && this.renderer && this.renderer.isDebugBtnHit(x, y)) {
-      this.onDebugTap();
-      return;
-    }
+
 
     // 悬浮掉落物命中（优先于道具栏和棋盘）
     if (this.onDropTap && this.items) {

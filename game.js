@@ -64,8 +64,8 @@ let pauseDialogButtons = null; // { resume, restart, home } 每个 { x, y, w, h 
 let decorationTimer = 0;   // 装饰粒子计时器
 let comboDisplay = { count: 0, x: 0, y: 0, timer: 0 }; // combo 显示
 
-// 调试开关 — 上线前改为 false，保留按钮代码以备后续调试
-const DEBUG_ITEMS = true;
+// 调试开关 — 上线前改为 false
+const DEBUG_ITEMS = false;
 
 // ─── 存档 + 单局追踪 ───
 
@@ -101,7 +101,7 @@ const input = new Input(
   dpr,
   handleSlotTap,
   handleRestart,
-  handleDebugTap,
+  null,
   handleItemTap,
   handleDropTap
 );
@@ -375,19 +375,6 @@ function updateMergeFlow() {
   }
 }
 
-/**
- * 调试：点击屏幕左下角"+1 ALL"按钮 → 三种道具各 +1 + 生成一个随机掉落物
- * 仅在 DEBUG_ITEMS=true 时生效；上线前置 false
- */
-function handleDebugTap() {
-  if (!DEBUG_ITEMS) return;
-  items.grant('clear', 1);
-  items.grant('upgrade', 1);
-  items.grant('magnet', 1);
-  // 同时生成一个随机掉落物用于测试拾取流程
-  const type = ITEM_TYPES[Math.floor(Math.random() * ITEM_TYPES.length)];
-  items.spawnDrop(type, centerX, centerY, dropTargetPositions);
-}
 
 /**
  * 点击道具栏图标 → 使用对应道具
@@ -1254,10 +1241,7 @@ function gameLoop() {
     // 道具使用失败提示文字（在 UI 之上）
     renderer.drawUseFailHint(items);
 
-    // 调试按钮（DEBUG_ITEMS=true 时在左下角显示）
-    if (DEBUG_ITEMS) {
-      renderer.drawDebugButton();
-    }
+
 
     // combo 显示
     if (comboDisplay.timer > 0) {
