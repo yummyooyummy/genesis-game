@@ -13,7 +13,6 @@ function _defaultData() {
     maxScore: 0,
     maxLevel: 1,
     totalGames: 0,
-    unlockedLevels: [1],
   };
 }
 
@@ -28,7 +27,7 @@ function loadPlayerData() {
   if (_cache) return _cache;
   try {
     const raw = wx.getStorageSync(STORAGE_KEY);
-    if (raw && typeof raw === 'object' && Array.isArray(raw.unlockedLevels)) {
+    if (raw && typeof raw === 'object' && typeof raw.maxScore === 'number') {
       _cache = Object.assign(_defaultData(), raw);
       return _cache;
     }
@@ -63,18 +62,12 @@ function updateAfterGame(result) {
   const isNewRecord = result.score > data.maxScore;
   if (isNewRecord) data.maxScore = result.score;
 
-  // 更新历史最高核心等级 + 解锁记录
+  // 更新历史最高核心等级
   let newlyUnlockedLevel = null;
   if (result.maxLevelReached > data.maxLevel) {
+    newlyUnlockedLevel = result.maxLevelReached;
     data.maxLevel = result.maxLevelReached;
   }
-  for (let lv = 1; lv <= result.maxLevelReached; lv++) {
-    if (!data.unlockedLevels.includes(lv)) {
-      data.unlockedLevels.push(lv);
-      newlyUnlockedLevel = lv; // 返回最高的新解锁等级
-    }
-  }
-  data.unlockedLevels.sort((a, b) => a - b);
 
   data.totalGames += 1;
 

@@ -532,9 +532,10 @@ function drawMenuScreen() {
   // ── 数据准备 ──
   const data = playerData.loadPlayerData();
   const totalGames = data.totalGames || 0;
-  const unlockedCount = data.unlockedLevels ? data.unlockedLevels.length : 1;
+  // TODO: 等新设计稿出来后删除 — unlockedCount/isVeteran 依赖已删除的 unlockedLevels
+  // const unlockedCount = data.unlockedLevels ? data.unlockedLevels.length : 1;
   const isNewbie = totalGames === 0;
-  const isVeteran = unlockedCount >= 15;
+  // const isVeteran = unlockedCount >= 15;
 
   // ── 星球 ──
   const planetSize = isNewbie ? UI_CONFIG.size.heroPlanet : UI_CONFIG.size.heroPlanetCompact;
@@ -605,6 +606,7 @@ function drawMenuScreen() {
     // ═══ 变体 B/C：进阶 / 资深 ═══
     let curY = subY + 26;
 
+    /* TODO: 等新设计稿出来后删除 — 图鉴点阵 + 解锁进度已废弃
     // 图鉴点阵（15 个圆点）
     const dotSize = UI_CONFIG.size.codexDotSize;
     const dotGap = UI_CONFIG.size.codexDotGap;
@@ -633,80 +635,18 @@ function drawMenuScreen() {
 
     // 解锁进度文字
     curY += 22;
-    if (isVeteran) {
-      // 资深：文字 + 金色徽章
-      const statusText = '已解锁 15 / 15 · 已达演化终点';
-      const statusW = ui.measureText(ctx, statusText, UI_CONFIG.font.bodySmall, 'normal');
-      const badgeText = '★ 全收集';
-      const badgeW = ui.measureText(ctx, badgeText, UI_CONFIG.font.badge, '600') + 16;
-      const badgeH = 18;
-      const totalLineW = statusW + 8 + badgeW;
-      const lineStartX = (W - totalLineW) / 2;
-
-      ui.drawText(ctx, statusText, lineStartX, curY, {
-        fontSize: UI_CONFIG.font.bodySmall,
-        color: UI_CONFIG.color.textMuted,
-        align: 'left',
-      });
-
-      // 金色徽章
-      const badgeX = lineStartX + statusW + 8;
-      const badgeY = curY - badgeH / 2;
-      ctx.save();
-      ctx.beginPath();
-      const br = 4;
-      ctx.moveTo(badgeX + br, badgeY);
-      ctx.arcTo(badgeX + badgeW, badgeY, badgeX + badgeW, badgeY + badgeH, br);
-      ctx.arcTo(badgeX + badgeW, badgeY + badgeH, badgeX, badgeY + badgeH, br);
-      ctx.arcTo(badgeX, badgeY + badgeH, badgeX, badgeY, br);
-      ctx.arcTo(badgeX, badgeY, badgeX + badgeW, badgeY, br);
-      ctx.closePath();
-      ctx.fillStyle = 'rgba(255,182,72,0.15)';
-      ctx.fill();
-      ctx.strokeStyle = UI_CONFIG.color.accentGold;
-      ctx.lineWidth = 1;
-      ctx.stroke();
-      ctx.restore();
-
-      ui.drawText(ctx, badgeText, badgeX + badgeW / 2, curY, {
-        fontSize: UI_CONFIG.font.badge,
-        color: UI_CONFIG.color.accentGold,
-        weight: '600',
-      });
-    } else {
-      const maxLv = data.maxLevel || 1;
-      const latestName = UI_CONFIG.codexNames[maxLv - 1] || '';
-      const statusText = '已解锁 ' + unlockedCount + ' / 15 · 最新 Lv.' + maxLv + ' ' + latestName;
-      ui.drawText(ctx, statusText, W / 2, curY, {
-        fontSize: UI_CONFIG.font.bodySmall,
-        color: UI_CONFIG.color.textMuted,
-      });
-    }
+    if (isVeteran) { ... } else { ... }
+    */
 
     // 本局目标卡片
     curY += 28;
     const objCardW = W - padX * 2;
-    const objCardH = isVeteran ? 80 : 90;
+    const objCardH = 90;
     const objCardX = padX;
     ui.drawGlassCard(ctx, objCardX, curY, objCardW, objCardH);
 
-    if (isVeteran) {
-      ui.drawText(ctx, '挑战更高分', W / 2, curY + 28, {
-        fontSize: UI_CONFIG.font.cardTitle,
-        color: UI_CONFIG.color.textPrimary,
-        weight: '600',
-      });
-      const highScoreText = '突破你的最高分 ' + (data.maxScore || 0);
-      ui.drawText(ctx, highScoreText, W / 2, curY + 54, {
-        fontSize: UI_CONFIG.font.bodySmall,
-        color: UI_CONFIG.color.textMuted,
-      });
-    } else {
-      // TODO: 等新设计稿出来后删除 — 本局目标卡片已废弃
-      // ui.drawText(ctx, '本局目标', W / 2, curY + 20, { ... });
-      // const objLevel = currentObjective;
-      // ...
-    }
+    // TODO: 等新设计稿出来后删除 — 本局目标卡片已废弃
+    // ...
 
     // 底部统计行
     curY += objCardH + 16;
@@ -919,7 +859,7 @@ function drawGameOverScreen() {
     ctx.restore();
 
     // 底部小字
-    ui.drawText(ctx, zhName + ' · 已加入图鉴', bannerX + bannerW / 2, bannerY + bannerH - 10, {
+    ui.drawText(ctx, zhName + ' · 新形态解锁', bannerX + bannerW / 2, bannerY + bannerH - 10, {
       fontSize: UI_CONFIG.font.hintXs,
       color: UI_CONFIG.color.textMuted,
     });
