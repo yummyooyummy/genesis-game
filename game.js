@@ -1402,7 +1402,9 @@ function gameLoop() {
     renderer.drawDrops(items);
 
     // 绘制 UI
-    renderer.drawScoreUI(score.total, playerData.loadPlayerData().maxScore);
+    const storedMax1 = playerData.loadPlayerData().maxScore;
+    const displayMax1 = Math.max(storedMax1, score.total);
+    renderer.drawScoreUI(score.total, displayMax1);
     renderer.drawItemBar(items);
     renderer.drawCoreLevelUI(board.core.level);
     renderer.drawPauseButton();
@@ -1455,7 +1457,9 @@ function gameLoop() {
     renderer.drawItemUseBurst(items);
     renderer.drawPauseOverlay(board, centerX, centerY);
     renderer.drawDrops(items);
-    renderer.drawScoreUI(score.total, playerData.loadPlayerData().maxScore);
+    const storedMax2 = playerData.loadPlayerData().maxScore;
+    const displayMax2 = Math.max(storedMax2, score.total);
+    renderer.drawScoreUI(score.total, displayMax2);
     renderer.drawItemBar(items);
     renderer.drawCoreLevelUI(board.core.level);
     renderer.drawPauseButton();
