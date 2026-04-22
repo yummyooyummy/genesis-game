@@ -53,10 +53,6 @@ class Input {
     /** 点击暂停按钮回调 */
     this.onPauseTap = null;
 
-    /** 中途达成目标横幅 */
-    this.isObjectiveBannerVisible = false;
-    this.onObjectiveBannerTouch = null;
-
     this._bindEvents();
   }
 
@@ -103,13 +99,6 @@ class Input {
     if (this.isGameOver) {
       if (this.onGameOverTouch) {
         this.onGameOverTouch(x, y);
-      }
-      return;
-    }
-
-    if (this.isObjectiveBannerVisible) {
-      if (this.onObjectiveBannerTouch) {
-        this.onObjectiveBannerTouch(x, y);
       }
       return;
     }

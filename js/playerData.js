@@ -14,8 +14,6 @@ function _defaultData() {
     maxLevel: 1,
     totalGames: 0,
     unlockedLevels: [1],
-    lastObjective: null,
-    lastObjectiveAchieved: false,
   };
 }
 
@@ -56,7 +54,7 @@ function savePlayerData(data) {
 
 /**
  * 游戏结束时调用，合并本局结果到存档并持久化。
- * @param {{ score: number, maxLevelReached: number, objectiveAchieved: boolean }} result
+ * @param {{ score: number, maxLevelReached: number }} result
  * @returns {{ isNewRecord: boolean, newlyUnlockedLevel: number|null }}
  */
 function updateAfterGame(result) {
@@ -64,9 +62,6 @@ function updateAfterGame(result) {
 
   const isNewRecord = result.score > data.maxScore;
   if (isNewRecord) data.maxScore = result.score;
-
-  // 记录本局是否达成目标
-  data.lastObjectiveAchieved = result.objectiveAchieved;
 
   // 更新历史最高核心等级 + 解锁记录
   let newlyUnlockedLevel = null;
@@ -88,20 +83,6 @@ function updateAfterGame(result) {
 }
 
 /**
- * 生成本局目标等级。
- * 规则：
- *   - maxLevel <= 3 → 返回 3（新手保底）
- *   - 20% 概率返回 maxLevel（挑战）
- *   - 80% 返回 maxLevel - 1（舒适区）
- */
-function getCurrentGoal() {
-  const data = loadPlayerData();
-  if (data.maxLevel <= 3) return 3;
-  if (Math.random() < 0.2) return data.maxLevel;
-  return data.maxLevel - 1;
-}
-
-/**
  * 清除存档（调试用）。同时清空缓存。
  */
 function clearPlayerData() {
@@ -117,6 +98,5 @@ module.exports = {
   loadPlayerData,
   savePlayerData,
   updateAfterGame,
-  getCurrentGoal,
   clearPlayerData,
 };
