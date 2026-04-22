@@ -397,7 +397,7 @@ function handleDebugTap() {
   if (!DEBUG_ITEMS) return;
   items.grant('clear', 1);
   items.grant('upgrade', 1);
-  items.grant('pause', 1);
+  items.grant('magnet', 1);
   // 同时生成一个随机掉落物用于测试拾取流程
   const type = ITEM_TYPES[Math.floor(Math.random() * ITEM_TYPES.length)];
   items.spawnDrop(type, centerX, centerY, dropTargetPositions);
@@ -405,7 +405,7 @@ function handleDebugTap() {
 
 /**
  * 点击道具栏图标 → 使用对应道具
- * @param {'clear'|'upgrade'|'pause'} type
+ * @param {'clear'|'upgrade'|'magnet'} type
  */
 function handleItemTap(type) {
   if (gameState !== 'playing') return;
@@ -1395,9 +1395,6 @@ function gameLoop() {
     // 道具使用期间的屏幕边缘脉冲（清空=暖金/升级=绿松）
     renderer.drawItemUseBurst(items);
 
-    // 暂停道具视觉反馈（核心波纹 + 屏幕紫光 + 顶部倒计时）
-    renderer.drawPauseOverlay(board, centerX, centerY);
-
     // 掉落物绘制（flyIn / floating / blinking / pickingUp）
     renderer.drawDrops(items);
 
@@ -1455,7 +1452,6 @@ function gameLoop() {
     renderer.drawMergeAnimations(board);
     particles.draw(ctx);
     renderer.drawItemUseBurst(items);
-    renderer.drawPauseOverlay(board, centerX, centerY);
     renderer.drawDrops(items);
     const storedMax2 = playerData.loadPlayerData().maxScore;
     const displayMax2 = Math.max(storedMax2, score.total);

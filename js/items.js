@@ -14,7 +14,7 @@ const { GAME_CONFIG, msToFrames } = require('./config');
 const { ELEMENT_COLORS } = require('./board');
 
 /** 三种道具类型（顺序即道具栏顺序） */
-const ITEM_TYPES = ['clear', 'upgrade', 'pause'];
+const ITEM_TYPES = ['clear', 'upgrade', 'magnet'];
 
 /** 圈层优先级（inner > mid > outer，用于"最密集圈"的 tie-breaker） */
 const RING_ORDER = ['inner', 'mid', 'outer'];
@@ -22,7 +22,7 @@ const RING_ORDER = ['inner', 'mid', 'outer'];
 class Items {
   constructor() {
     /** 库存数量（按类型） */
-    this.inventory = { clear: 0, upgrade: 0, pause: 0 };
+    this.inventory = { clear: 0, upgrade: 0, magnet: 0 };
 
     /** 屏幕上悬浮/飞行中的掉落物（最多 2 个，对应左右两侧固定位） */
     this.drops = [];
@@ -33,9 +33,6 @@ class Items {
      */
     this.useAnim = null;
 
-    /** 暂停道具剩余帧数（镜像 board.timedSplitPauseFramesRemaining，仅供 UI 读取） */
-    this.pauseCountdownFrames = 0;
-
     /**
      * 使用失败提示（如"该道具暂时无法使用"）
      * { text: string, frame: number, totalFrames: number }
@@ -45,10 +42,9 @@ class Items {
 
   /** 重置到初始状态（由 game.js 的 handleRestart 调用） */
   reset() {
-    this.inventory = { clear: 0, upgrade: 0, pause: 0 };
+    this.inventory = { clear: 0, upgrade: 0, magnet: 0 };
     this.drops = [];
     this.useAnim = null;
-    this.pauseCountdownFrames = 0;
     this.useFailHint = null;
   }
 
@@ -62,7 +58,7 @@ class Items {
 
   /**
    * 生成一个掉落物（从触发源飞向左/右悬浮位）。
-   * @param {'clear'|'upgrade'|'pause'} type
+   * @param {'clear'|'upgrade'|'magnet'} type
    * @param {number} sourceX - 触发源 x（合成中点 / 核心）
    * @param {number} sourceY - 触发源 y
    * @param {{left:{x,y}, right:{x,y}}} targetPositions - 左右两个固定悬浮位坐标
@@ -184,7 +180,7 @@ class Items {
 
   /**
    * 使用某个道具。所有可行性校验都在这里完成。
-   * @param {'clear'|'upgrade'|'pause'} type
+   * @param {'clear'|'upgrade'|'magnet'} type
    * @param {object} board
    * @param {object} particles
    * @returns {boolean} 是否成功使用（失败不扣库存）
@@ -205,10 +201,6 @@ class Items {
 
     if (type === 'upgrade') {
       return this._useUpgrade(board, particles);
-    }
-
-    if (type === 'pause') {
-      return this._usePause(board, particles);
     }
 
     return false;
@@ -317,26 +309,6 @@ class Items {
     return true;
   }
 
-  /**
-   * 暂停道具效果：冻结定时分裂 15s（可叠加）。
-   *   - 不锁输入（玩家继续正常操作）
-   *   - 不影响合成后分裂 / 初始分裂 / 合成动画
-   *   - 剩余帧数叠加（再次使用时不重置）
-   *   - 激活瞬间核心爆一圈冷紫粒子
-   * @returns {boolean}
-   */
-  _usePause(board, particles) {
-    const frames = msToFrames(GAME_CONFIG.items.pauseItemDurationMs);
-    board.timedSplitPauseFramesRemaining += frames;
-    this.inventory.pause -= 1;
-
-    // 激活瞬间：核心爆粒子 + 短暂脉冲
-    particles.spawn(board.centerX, board.centerY, '#7F77DD', 18, { speed: 3.2, life: 30 });
-    particles.spawn(board.centerX, board.centerY, '#CECBF6', 12, { speed: 2,   life: 24, radius: 2 });
-    board.corePulse = 15;
-    return true;
-  }
-
   /** 启动使用动效 + 锁输入 */
   _startUseAnim(type, board) {
     this.useAnim = {
@@ -399,15 +371,6 @@ class Items {
       }
     }
 
-    // 暂停倒计时镜像 + 结束瞬间特效
-    const wasPaused = this.pauseCountdownFrames > 0;
-    this.pauseCountdownFrames = board.timedSplitPauseFramesRemaining;
-    const isPaused = this.pauseCountdownFrames > 0;
-    if (wasPaused && !isPaused && particles) {
-      board.corePulse = 15;
-      particles.spawn(board.centerX, board.centerY, '#7F77DD', 16, { speed: 3, life: 32 });
-      particles.spawn(board.centerX, board.centerY, '#CECBF6', 10, { speed: 2, life: 24, radius: 2 });
-    }
   }
 }
 
