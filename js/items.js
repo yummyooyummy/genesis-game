@@ -7,8 +7,7 @@
  */
 
 const { GAME_CONFIG, msToFrames } = require('./config');
-const { ELEMENT_COLORS } = require('./board');
-const playerData = require('./playerData');
+const { ELEMENT_COLORS, getElementColors } = require('./board');
 
 /** 三种道具类型（顺序即道具栏顺序） */
 const ITEM_TYPES = ['clear', 'upgrade', 'magnet'];
@@ -234,7 +233,6 @@ class Items {
 
   /**
    * 进化道具：全场最低等级粒子全部 +1 级（0.2s 闪光 → 执行）
-   * 上限：最低等级 > maxLevel - 2 时无法使用
    */
   _useUpgrade(board, particles) {
     const allParticles = board.slots.filter(
@@ -246,13 +244,6 @@ class Items {
     }
 
     const minLevel = Math.min(...allParticles.map(s => s.level));
-    const maxAllowed = playerData.loadPlayerData().maxLevel - 2;
-
-    if (minLevel > maxAllowed) {
-      this._showFailHint(`无法使用：最低 Lv.${minLevel} 超过上限`);
-      return false;
-    }
-
     const targets = allParticles.filter(s => s.level === minLevel);
 
     this.inventory.upgrade -= 1;
@@ -379,7 +370,7 @@ class Items {
     if (type === 'clear') {
       for (const slot of targets) {
         const pos = board.getSlotPosition(slot);
-        const colors = ELEMENT_COLORS[slot.level] || ELEMENT_COLORS[1];
+        const colors = getElementColors(slot.level);
         particles.spawn(pos.x, pos.y, colors.primary, 12, { speed: 3, life: 28 });
         particles.spawn(pos.x, pos.y, colors.secondary, 8, { speed: 1.8, life: 22 });
         slot.level = null;
@@ -391,7 +382,7 @@ class Items {
       for (const slot of targets) {
         slot.level += 1;
         const pos = board.getSlotPosition(slot);
-        const colors = ELEMENT_COLORS[slot.level] || ELEMENT_COLORS[1];
+        const colors = getElementColors(slot.level);
         particles.spawn(pos.x, pos.y, colors.primary, 14, { speed: 2.8, life: 30 });
         particles.spawn(pos.x, pos.y, colors.secondary, 10, { speed: 1.8, life: 24 });
         particles.spawn(pos.x, pos.y, '#FFFFFF', 6, { speed: 2.2, life: 20, radius: 2 });
@@ -409,7 +400,7 @@ class Items {
     for (const move of this._magnetAnim.moves) {
       move.slot._magnetAnimating = false;
       const pos = board.getSlotPosition(move.targetSlot);
-      const colors = ELEMENT_COLORS[move.level] || ELEMENT_COLORS[1];
+      const colors = getElementColors(move.level);
 
       if (move.action === 'move') {
         move.targetSlot.level = move.level;
@@ -418,7 +409,7 @@ class Items {
       } else {
         move.targetSlot.level = move.level + 1;
         move.slot.level = null;
-        const newColors = ELEMENT_COLORS[move.level + 1] || ELEMENT_COLORS[1];
+        const newColors = getElementColors(move.level + 1);
         particles.spawn(pos.x, pos.y, newColors.primary, 14, { speed: 3, life: 28 });
         particles.spawn(pos.x, pos.y, newColors.secondary, 8, { speed: 2, life: 22 });
         mergedSlots.push(move.targetSlot);

@@ -324,6 +324,25 @@ function getTimedSplitInterval(coreLevel) {
   return table[firstKey];
 }
 
+function getLevelColor(level) {
+  if (level <= 15) return UI_CONFIG.codexColors[level - 1];
+  return '#FFD700';
+}
+
+function getLevelNameZh(level) {
+  if (level <= 15) return UI_CONFIG.codexNamesZh[level - 1];
+  const overflow = level - 15;
+  if (overflow === 1) return '超越';
+  return '超越' + '+'.repeat(overflow - 1);
+}
+
+function getLevelNameEn(level) {
+  if (level <= 15) return UI_CONFIG.codexNames[level - 1];
+  const overflow = level - 15;
+  if (overflow === 1) return 'Transcend';
+  return 'Transcend' + '+'.repeat(overflow - 1);
+}
+
 module.exports = {
   GAME_CONFIG,
   TARGET_FPS,
@@ -331,4 +350,7 @@ module.exports = {
   secondsToFrames,
   msToFrames,
   getTimedSplitInterval,
+  getLevelColor,
+  getLevelNameZh,
+  getLevelNameEn,
 };

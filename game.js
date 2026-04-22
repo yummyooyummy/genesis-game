@@ -5,13 +5,13 @@
  * 职责：Canvas 创建、模块实例化、requestAnimationFrame 主循环、游戏状态管理
  */
 
-const { Board, ELEMENT_COLORS } = require('./js/board');
+const { Board, ELEMENT_COLORS, getElementColors } = require('./js/board');
 const Renderer = require('./js/renderer');
 const Particles = require('./js/particles');
 const Input = require('./js/input');
 const Score = require('./js/score');
 const { Items, ITEM_TYPES } = require('./js/items');
-const { GAME_CONFIG, UI_CONFIG, msToFrames } = require('./js/config');
+const { GAME_CONFIG, UI_CONFIG, msToFrames, getLevelColor, getLevelNameZh, getLevelNameEn } = require('./js/config');
 const playerData = require('./js/playerData');
 const ui = require('./js/uiHelpers');
 
@@ -206,7 +206,7 @@ function performMerge(slotA, slotB) {
  * 每一步 combo 都会触发一次（包含玩家主动合成和自动连锁）。
  */
 function handleMergeBurst(anim, midX, midY) {
-  const colors = ELEMENT_COLORS[anim.newLevel] || ELEMENT_COLORS[1];
+  const colors = getElementColors(anim.newLevel);
   particles.spawn(midX, midY, colors.primary, 16, { speed: 4, life: 32 });
   particles.spawn(midX, midY, colors.secondary, 10, { speed: 2.5, life: 22 });
   lastBurstPos = { x: midX, y: midY };
@@ -272,7 +272,7 @@ function updateMergeFlow() {
       const t = mergeFlowAbsorbProgress;
       const trailX = pos.x + (centerX - pos.x) * t;
       const trailY = pos.y + (centerY - pos.y) * t;
-      const colors = ELEMENT_COLORS[mergeFlowAbsorbSlot.level] || ELEMENT_COLORS[1];
+      const colors = getElementColors(mergeFlowAbsorbSlot.level);
       particles.spawnTrail(trailX, trailY, colors.primary);
     }
     if (mergeFlowTimer <= 0) {
@@ -300,7 +300,7 @@ function updateMergeFlow() {
   if (mergeFlowState === 'coreBurst') {
     if (!mergeFlowBurstFired) {
       mergeFlowBurstFired = true;
-      const coreColors = ELEMENT_COLORS[board.core.level] || ELEMENT_COLORS[1];
+      const coreColors = getElementColors(board.core.level);
       particles.spawn(centerX, centerY, coreColors.primary, 24, { speed: 5, life: 45, radius: 4 });
       particles.spawn(centerX, centerY, coreColors.secondary, 16, { speed: 3, life: 35, radius: 3 });
       board.corePulse = 15;
@@ -682,7 +682,7 @@ function drawGameOverScreen() {
   const curScore = data.score || 0;
   const maxLevel = data.maxLevel || 1;
   const maxScore = playerData.loadPlayerData().maxScore || 0;
-  const levelName = (UI_CONFIG.codexNamesZh && UI_CONFIG.codexNamesZh[maxLevel - 1]) || '';
+  const levelName = getLevelNameZh(maxLevel);
 
   let cursorY = padTop;
 
@@ -825,7 +825,7 @@ function drawGameOverScreen() {
     const dotR = 20;
     const dotCX = bannerX + 16 + dotR;
     const dotCY = bannerY + bannerH / 2 - 4;
-    const dotColor = UI_CONFIG.codexColors[newLevel - 1] || UI_CONFIG.color.accentCyan;
+    const dotColor = getLevelColor(newLevel);
 
     ctx.save();
     ctx.shadowColor = dotColor + '99';
@@ -838,8 +838,8 @@ function drawGameOverScreen() {
 
     // 右侧文字
     const textLeft = dotCX + dotR + 14;
-    const enName = UI_CONFIG.codexNames[newLevel - 1] || '';
-    const zhName = UI_CONFIG.codexNamesZh[newLevel - 1] || '';
+    const enName = getLevelNameEn(newLevel);
+    const zhName = getLevelNameZh(newLevel);
 
     ui.drawText(ctx, '发现新形态', textLeft, bannerY + 24, {
       fontSize: UI_CONFIG.font.cardLabel,
@@ -1018,7 +1018,7 @@ function drawPauseDialog() {
 
   // 状态行 2：核心等级
   const row2Y = row1Y + 28;
-  const lvName = UI_CONFIG.codexNamesZh[board.core.level - 1] || '';
+  const lvName = getLevelNameZh(board.core.level);
   ui.drawText(ctx, '核心等级  Lv.' + board.core.level + ' ' + lvName, W / 2, row2Y, {
     fontSize: UI_CONFIG.font.cardTitle,
     color: UI_CONFIG.color.accentCyan,
@@ -1177,7 +1177,7 @@ function gameLoop() {
       for (const slot of board.slots) {
         if (slot.level === null) continue;
         const pos = board.getSlotPosition(slot);
-        const colors = ELEMENT_COLORS[slot.level] || ELEMENT_COLORS[1];
+        const colors = getElementColors(slot.level);
         particles.spawnDecoration(pos.x, pos.y, colors.secondary, board.getElementRadius(slot.level));
       }
     }

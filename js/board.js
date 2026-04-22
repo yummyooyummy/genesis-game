@@ -44,6 +44,13 @@ const ELEMENT_COLORS = {
   10: { name: 'Galaxy',   primary: '#7F77DD', secondary: '#CECBF6' },
 };
 
+const TRANSCEND_COLORS = { name: 'Transcend', primary: '#FFD700', secondary: '#FFF4B0' };
+
+function getElementColors(level) {
+  if (level >= 16) return TRANSCEND_COLORS;
+  return ELEMENT_COLORS[level] || ELEMENT_COLORS[(level - 1) % 10 + 1];
+}
+
 class Board {
   /**
    * @param {number} boardRadius - 棋盘绘制半径（像素）
@@ -908,4 +915,5 @@ module.exports = {
   RING_RADIUS_RATIO,
   ELEMENT_COLORS,
   ROTATION_SPEED,
+  getElementColors,
 };

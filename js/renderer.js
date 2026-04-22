@@ -3,8 +3,8 @@
  * 负责：暗色背景、轨道线、元素绘制、核心绘制、分数/等级 UI、游戏结束界面
  */
 
-const { RING_CONFIG, RING_RADIUS_RATIO, ELEMENT_COLORS } = require('./board');
-const { GAME_CONFIG } = require('./config');
+const { RING_CONFIG, RING_RADIUS_RATIO, ELEMENT_COLORS, getElementColors } = require('./board');
+const { GAME_CONFIG, getLevelNameEn } = require('./config');
 
 /** 背景色 */
 const BG_COLOR = '#0a0a1a';
@@ -66,7 +66,7 @@ class Renderer {
    */
   drawCore(centerX, centerY, coreLevel, pulse = 0, warningProgress = 0) {
     const { ctx } = this;
-    const colors = ELEMENT_COLORS[coreLevel] || ELEMENT_COLORS[1];
+    const colors = getElementColors(coreLevel);
     const baseRadius = 24;
     // 脉冲放大：最大 +25% 尺寸
     const radius = baseRadius * (1 + pulse * 0.25);
@@ -214,7 +214,7 @@ class Renderer {
 
       ctx.save();
       if (eligible) {
-        const colors = ELEMENT_COLORS[selected.level] || ELEMENT_COLORS[1];
+        const colors = getElementColors(selected.level);
         ctx.strokeStyle = colors.secondary;
         ctx.lineWidth = 2.5;
         ctx.globalAlpha = 0.85;
@@ -243,7 +243,7 @@ class Renderer {
     const { ctx } = this;
     const pos = board.getSlotPosition(selected);
     const baseRadius = board.getElementRadius(selected.level);
-    const colors = ELEMENT_COLORS[selected.level] || ELEMENT_COLORS[1];
+    const colors = getElementColors(selected.level);
 
     // 脉冲缩放（用 gameFrame 产生 0 → 1 → 0 循环，周期 60 帧）
     let pulseScale = 1.0;
@@ -327,7 +327,7 @@ class Renderer {
    */
   _drawElement(x, y, level, radius) {
     const { ctx } = this;
-    const colors = ELEMENT_COLORS[level] || ELEMENT_COLORS[1];
+    const colors = getElementColors(level);
 
     // 外发光
     ctx.save();
@@ -509,7 +509,7 @@ class Renderer {
    */
   drawCoreLevelUI(coreLevel) {
     const { ctx } = this;
-    const name = ELEMENT_COLORS[coreLevel]?.name || '';
+    const name = getLevelNameEn(coreLevel);
     const cx = this.width / 2;
     const y = this.height - 30;
 
@@ -651,11 +651,11 @@ class Renderer {
     ctx.fillText('游戏结束', cx, cy - 80);
 
     // 核心等级
-    const colors = ELEMENT_COLORS[coreLevel] || ELEMENT_COLORS[1];
+    const colors = getElementColors(coreLevel);
     ctx.fillStyle = colors.primary;
     ctx.font = 'bold 24px Arial';
     ctx.fillText(
-      `核心等级: Lv.${coreLevel} ${ELEMENT_COLORS[coreLevel]?.name || ''}`,
+      `核心等级: Lv.${coreLevel} ${getLevelNameEn(coreLevel)}`,
       cx, cy - 20
     );
 
