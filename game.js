@@ -14,6 +14,7 @@ const { Items, ITEM_TYPES } = require('./js/items');
 const { GAME_CONFIG, UI_CONFIG, msToFrames, getLevelColor, getLevelNameZh, getLevelNameEn } = require('./js/config');
 const playerData = require('./js/playerData');
 const ui = require('./js/uiHelpers');
+const toast = require('./js/toastNotifications');
 
 // ─── Canvas 初始化 ───
 
@@ -25,6 +26,7 @@ const sysInfo = wx.getSystemInfoSync();
 const dpr = sysInfo.pixelRatio || 2;
 const screenWidth = sysInfo.windowWidth;
 const screenHeight = sysInfo.windowHeight;
+const statusBarHeight = sysInfo.statusBarHeight || 20;
 
 // 设置 Canvas 尺寸（逻辑像素 × 设备像素比）
 canvas.width = screenWidth * dpr;
@@ -281,6 +283,14 @@ function updateMergeFlow() {
       const newCoreLevel = board.doAbsorb(mergeFlowAbsorbSlot);
       // 追踪本局最高核心等级
       if (newCoreLevel > sessionMaxLevel) sessionMaxLevel = newCoreLevel;
+      // 历史首次达到新等级 → 触发 toast + 立即更新存档
+      const storedMaxLevel = playerData.loadPlayerData().maxLevel;
+      if (newCoreLevel > storedMaxLevel) {
+        toast.push(newCoreLevel);
+        const pd = playerData.loadPlayerData();
+        pd.maxLevel = newCoreLevel;
+        playerData.savePlayerData(pd);
+      }
       if (!openingAbsorbActive) {
         score.addAbsorbScore(newCoreLevel);
         // 核心升级赠送道具：进化 Lv.5/7/9...（奇数≥5）、清空 Lv.6/8/10...（偶数≥6）
@@ -938,6 +948,7 @@ function isGameOverBtnHit(tx, ty, key) {
 }
 
 function handleHome() {
+  toast.clear();
   handleRestart();
   gameState = 'menu';
   input.isMenu = true;
@@ -1176,6 +1187,8 @@ function gameLoop() {
     // 粒子更新
     particles.update();
 
+    toast.update();
+
     // === RENDER ===
 
     ctx.save();
@@ -1251,6 +1264,9 @@ function gameLoop() {
 
     // 浮动得分
     renderer.drawScorePopup(score.lastScorePopup);
+
+    // 顶部 toast 浮层（在所有 UI 之上）
+    toast.draw(ctx, screenWidth, statusBarHeight);
 
     ctx.restore();
   } else if (gameState === 'paused') {
