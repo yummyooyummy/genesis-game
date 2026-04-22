@@ -21,7 +21,8 @@ const TOTAL_MS = SLIDE_IN_MS + HOLD_MS + SLIDE_OUT_MS;
 
 const CARD_H = 60;
 const CARD_MARGIN_X = 24;
-const CARD_TOP_OFFSET = 16;
+const CARD_TOP_OFFSET = 48;
+const CAPSULE_RIGHT = 110;
 
 const ToastManager = {
   queue: [],
@@ -71,7 +72,7 @@ const ToastManager = {
       opacity = 1 - t;
     }
 
-    const cardW = screenWidth - CARD_MARGIN_X * 2;
+    const cardW = screenWidth - CARD_MARGIN_X - CAPSULE_RIGHT;
     const cardX = CARD_MARGIN_X;
     const cardY = statusBarHeight + CARD_TOP_OFFSET + translateY;
 
