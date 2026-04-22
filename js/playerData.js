@@ -12,7 +12,6 @@ function _defaultData() {
   return {
     maxScore: 0,
     maxLevel: 1,
-    totalGames: 0,
   };
 }
 
@@ -68,8 +67,6 @@ function updateAfterGame(result) {
     newlyUnlockedLevel = result.maxLevelReached;
     data.maxLevel = result.maxLevelReached;
   }
-
-  data.totalGames += 1;
 
   savePlayerData(data);
   return { isNewRecord, newlyUnlockedLevel };

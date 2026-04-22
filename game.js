@@ -531,10 +531,10 @@ function drawMenuScreen() {
 
   // ── 数据准备 ──
   const data = playerData.loadPlayerData();
-  const totalGames = data.totalGames || 0;
-  // TODO: 等新设计稿出来后删除 — unlockedCount/isVeteran 依赖已删除的 unlockedLevels
+  // TODO: 等新设计稿出来后删除 — totalGames/unlockedCount/isVeteran 已废弃
+  // const totalGames = data.totalGames || 0;
   // const unlockedCount = data.unlockedLevels ? data.unlockedLevels.length : 1;
-  const isNewbie = totalGames === 0;
+  const isNewbie = (data.maxLevel || 1) <= 1;
   // const isVeteran = unlockedCount >= 15;
 
   // ── 星球 ──
@@ -650,7 +650,7 @@ function drawMenuScreen() {
 
     // 底部统计行
     curY += objCardH + 16;
-    const statsText = '最高分 ' + (data.maxScore || 0).toLocaleString() + ' · 已探索 ' + totalGames + ' 局';
+    const statsText = '最高分 ' + (data.maxScore || 0).toLocaleString();
     ui.drawText(ctx, statsText, W / 2, curY, {
       fontSize: UI_CONFIG.font.hintXs,
       color: UI_CONFIG.color.textMuted,
