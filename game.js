@@ -62,7 +62,7 @@ let decorationTimer = 0;   // 装饰粒子计时器
 let comboDisplay = { count: 0, x: 0, y: 0, timer: 0 }; // combo 显示
 
 // 调试开关 — 上线前改为 false，保留按钮代码以备后续调试
-const DEBUG_ITEMS = false;
+const DEBUG_ITEMS = true;
 
 // ─── 存档 + 单局追踪 ───
 
@@ -196,9 +196,13 @@ function handleSlotTap(slot) {
  * combo 达到阈值时触发一次道具掉落
  */
 function checkComboDropTrigger() {
-  if (score.combo === GAME_CONFIG.items.comboTriggerCount) {
-    const type = ITEM_TYPES[Math.floor(Math.random() * ITEM_TYPES.length)];
-    items.spawnDrop(type, lastBurstPos.x, lastBurstPos.y, dropTargetPositions);
+  const combo = score.combo;
+  if (combo === 2) {
+    items.spawnDrop('magnet', lastBurstPos.x, lastBurstPos.y, dropTargetPositions);
+  } else if (combo === 3) {
+    items.spawnDrop('clear', lastBurstPos.x, lastBurstPos.y, dropTargetPositions);
+  } else if (combo === 4) {
+    items.spawnDrop('upgrade', lastBurstPos.x, lastBurstPos.y, dropTargetPositions);
   }
 }
 
@@ -309,10 +313,11 @@ function updateMergeFlow() {
       }
       if (!openingAbsorbActive) {
         score.addAbsorbScore(newCoreLevel);
-        // 核心升级赠送道具（Lv.7+）
-        if (newCoreLevel >= GAME_CONFIG.items.coreLevelForGift) {
-          const type = ITEM_TYPES[Math.floor(Math.random() * ITEM_TYPES.length)];
-          items.spawnDrop(type, centerX, centerY, dropTargetPositions);
+        // 核心升级赠送道具：进化 Lv.5/7/9...（奇数≥5）、清空 Lv.6/8/10...（偶数≥6）
+        if (newCoreLevel >= 5 && newCoreLevel % 2 === 1) {
+          items.spawnDrop('upgrade', centerX, centerY, dropTargetPositions);
+        } else if (newCoreLevel >= 6 && newCoreLevel % 2 === 0) {
+          items.spawnDrop('clear', centerX, centerY, dropTargetPositions);
         }
       }
       mergeFlowAbsorbSlot = null;

@@ -1,23 +1,17 @@
 /**
  * 道具系统
  * 负责：库存管理、掉落物生命周期（flyIn → floating → blinking）、
- *       三种道具效果（清空 / 升级 / 暂停）的执行与动效推进
+ *       三种道具效果（清空 / 进化 / 磁吸）的执行与动效推进
  *
- * 触发来源（由 game.js 调度）：
- *   - combo 连锁达到 comboTriggerCount → spawnDrop
- *   - 核心升级到 coreLevelForGift 及以上 → spawnDrop
- *
- * 拾取流程：floating 悬浮 → 玩家点击 → 飞向底部道具栏对应槽位 → 库存 +1
+ * 统一规则：清空和进化均作用于全场最低等级的粒子
  */
 
 const { GAME_CONFIG, msToFrames } = require('./config');
 const { ELEMENT_COLORS } = require('./board');
+const playerData = require('./playerData');
 
 /** 三种道具类型（顺序即道具栏顺序） */
 const ITEM_TYPES = ['clear', 'upgrade', 'magnet'];
-
-/** 圈层优先级（inner > mid > outer，用于"最密集圈"的 tie-breaker） */
-const RING_ORDER = ['inner', 'mid', 'outer'];
 
 class Items {
   constructor() {
@@ -33,6 +27,9 @@ class Items {
      */
     this.useAnim = null;
 
+    /** 闪光延迟效果（0.2s 闪光 → 执行） */
+    this._pendingEffect = null;
+
     /**
      * 使用失败提示（如"该道具暂时无法使用"）
      * { text: string, frame: number, totalFrames: number }
@@ -45,6 +42,7 @@ class Items {
     this.inventory = { clear: 0, upgrade: 0, magnet: 0 };
     this.drops = [];
     this.useAnim = null;
+    this._pendingEffect = null;
     this.useFailHint = null;
   }
 
@@ -171,6 +169,7 @@ class Items {
    */
   canUse(type, board) {
     if (this.inventory[type] <= 0) return false;
+    if (this._pendingEffect !== null) return false;
     if (this.useAnim !== null) return false;
     if (board.mergeFlowLocked) return false;
     if (board.mergeAnimations.length > 0) return false;
@@ -189,14 +188,7 @@ class Items {
     if (!this.canUse(type, board)) return false;
 
     if (type === 'clear') {
-      const ring = this._findDensestRingWithLv1(board);
-      if (!ring) {
-        this._showFailHint('该道具暂时无法使用');
-        return false;
-      }
-      this.inventory.clear -= 1;
-      this._useClear(board, particles, ring);
-      return true;
+      return this._useClear(board, particles);
     }
 
     if (type === 'upgrade') {
@@ -207,105 +199,60 @@ class Items {
   }
 
   /**
-   * 找"最靠近满"且含有 Lv.1 的圈：
-   *   1. 按"真实空位数"升序排序（空位少 = 更满）
-   *   2. 并列时 inner > mid > outer（内圈更关键）
-   *   3. 从最满开始找第一个有 Lv.1 的圈
-   *   4. 所有圈都没有 Lv.1 → null（上层显示不可用提示）
-   * @returns {'inner'|'mid'|'outer'|null}
+   * 清空道具：全场最低等级粒子全部消失（0.2s 闪光 → 执行）
    */
-  _findDensestRingWithLv1(board) {
-    const targetLevel = GAME_CONFIG.items.clearItemTargetLevel;
-
-    const stats = RING_ORDER.map((ring) => {
-      const slotsInRing = board.slots.filter((s) => s.ring === ring);
-      const empty = slotsInRing.filter((s) => s.level === null && !s.reserved).length;
-      const lv1 = slotsInRing.filter(
-        (s) => s.level === targetLevel && !s.mergeAnimating
-      ).length;
-      return { ring, empty, lv1, order: RING_ORDER.indexOf(ring) };
-    });
-
-    stats.sort((a, b) => {
-      if (a.empty !== b.empty) return a.empty - b.empty;
-      return a.order - b.order;
-    });
-
-    for (const s of stats) {
-      if (s.lv1 > 0) return s.ring;
-    }
-    return null;
-  }
-
-  /**
-   * 清空道具效果：把 ring 上所有 Lv.1 清掉，每个消散时喷粒子，锁输入 18 帧。
-   */
-  _useClear(board, particles, ring) {
-    const targetLevel = GAME_CONFIG.items.clearItemTargetLevel;
-    const victims = board.slots.filter(
-      (s) => s.ring === ring && s.level === targetLevel && !s.mergeAnimating
+  _useClear(board, particles) {
+    const allParticles = board.slots.filter(
+      s => s.level !== null && !s.mergeAnimating && !s.reserved
     );
-
-    for (const slot of victims) {
-      const pos = board.getSlotPosition(slot);
-      const colors = ELEMENT_COLORS[slot.level] || ELEMENT_COLORS[1];
-      particles.spawn(pos.x, pos.y, colors.primary,   12, { speed: 3,   life: 28 });
-      particles.spawn(pos.x, pos.y, colors.secondary,  8, { speed: 1.8, life: 22 });
-      slot.level = null;
-      slot.reserved = false;
-      if (board.selectedSlot === slot) board.clearSelection();
-    }
-
-    this._startUseAnim('clear', board);
-  }
-
-  /**
-   * 升级道具效果：从 Lv.1-upgradeItemMaxSourceLevel 中随机选 N 个 +1。
-   * 升级后可能形成相邻同级，useAnim 结束时通过 onUpgradeComplete 回调给 game.js，
-   * 由 game.js 决定是否立即启动合成连锁。
-   * @returns {boolean} 是否成功使用
-   */
-  _useUpgrade(board, particles) {
-    const maxLevel = GAME_CONFIG.items.upgradeItemMaxSourceLevel;
-    const count    = GAME_CONFIG.items.upgradeItemCount;
-
-    const pool = board.slots.filter(
-      (s) =>
-        s.level !== null &&
-        s.level >= 1 &&
-        s.level <= maxLevel &&
-        !s.mergeAnimating &&
-        !s.reserved
-    );
-
-    if (pool.length === 0) {
-      this._showFailHint('该道具暂时无法使用');
+    if (allParticles.length === 0) {
+      this._showFailHint('场上没有粒子');
       return false;
     }
 
-    this.inventory.upgrade -= 1;
+    const minLevel = Math.min(...allParticles.map(s => s.level));
+    const targets = allParticles.filter(s => s.level === minLevel);
 
-    // Fisher-Yates 洗牌
-    const shuffled = pool.slice();
-    for (let i = shuffled.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
-      [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
-    }
-    const targets = shuffled.slice(0, Math.min(count, shuffled.length));
-
-    // 升级 + 闪光 + 粒子
+    this.inventory.clear -= 1;
     for (const slot of targets) {
-      slot.level += 1;
-      slot._upgradeFlashFrame = GAME_CONFIG.items.itemUseAnimFrames;
-      const pos = board.getSlotPosition(slot);
-      const colors = ELEMENT_COLORS[slot.level] || ELEMENT_COLORS[1];
-      particles.spawn(pos.x, pos.y, colors.primary,   14, { speed: 2.8, life: 30 });
-      particles.spawn(pos.x, pos.y, colors.secondary, 10, { speed: 1.8, life: 24 });
-      particles.spawn(pos.x, pos.y, '#FFFFFF',         6, { speed: 2.2, life: 20, radius: 2 });
+      slot._upgradeFlashFrame = 12;
+    }
+    this._pendingEffect = { type: 'clear', targets, delayFrames: 12 };
+    board.itemUseLocked = true;
+    board._recomputeInputLock();
+    return true;
+  }
+
+  /**
+   * 进化道具：全场最低等级粒子全部 +1 级（0.2s 闪光 → 执行）
+   * 上限：最低等级 > maxLevel - 2 时无法使用
+   */
+  _useUpgrade(board, particles) {
+    const allParticles = board.slots.filter(
+      s => s.level !== null && !s.mergeAnimating && !s.reserved
+    );
+    if (allParticles.length === 0) {
+      this._showFailHint('场上没有粒子');
+      return false;
     }
 
-    this._pendingUpgradedSlots = targets;
-    this._startUseAnim('upgrade', board);
+    const minLevel = Math.min(...allParticles.map(s => s.level));
+    const maxAllowed = playerData.loadPlayerData().maxLevel - 2;
+
+    if (minLevel > maxAllowed) {
+      this._showFailHint(`无法使用：最低 Lv.${minLevel} 超过上限`);
+      return false;
+    }
+
+    const targets = allParticles.filter(s => s.level === minLevel);
+
+    this.inventory.upgrade -= 1;
+    for (const slot of targets) {
+      slot._upgradeFlashFrame = 12;
+    }
+    this._pendingEffect = { type: 'upgrade', targets, delayFrames: 12 };
+    board.itemUseLocked = true;
+    board._recomputeInputLock();
     return true;
   }
 
@@ -329,9 +276,39 @@ class Items {
     };
   }
 
+  /** 闪光延迟到期 → 执行实际效果 + 启动屏幕脉冲 */
+  _executePendingEffect(board, particles) {
+    const { type, targets } = this._pendingEffect;
+
+    if (type === 'clear') {
+      for (const slot of targets) {
+        const pos = board.getSlotPosition(slot);
+        const colors = ELEMENT_COLORS[slot.level] || ELEMENT_COLORS[1];
+        particles.spawn(pos.x, pos.y, colors.primary, 12, { speed: 3, life: 28 });
+        particles.spawn(pos.x, pos.y, colors.secondary, 8, { speed: 1.8, life: 22 });
+        slot.level = null;
+        slot.reserved = false;
+        if (board.selectedSlot === slot) board.clearSelection();
+      }
+      this._startUseAnim('clear', board);
+    } else if (type === 'upgrade') {
+      for (const slot of targets) {
+        slot.level += 1;
+        const pos = board.getSlotPosition(slot);
+        const colors = ELEMENT_COLORS[slot.level] || ELEMENT_COLORS[1];
+        particles.spawn(pos.x, pos.y, colors.primary, 14, { speed: 2.8, life: 30 });
+        particles.spawn(pos.x, pos.y, colors.secondary, 10, { speed: 1.8, life: 24 });
+        particles.spawn(pos.x, pos.y, '#FFFFFF', 6, { speed: 2.2, life: 20, radius: 2 });
+      }
+      this._pendingUpgradedSlots = targets;
+      this._startUseAnim('upgrade', board);
+    }
+
+    this._pendingEffect = null;
+  }
+
   /**
-   * 每帧推进：useAnim 计时 / useFailHint 计时 / 暂停倒计时镜像 / 升级闪光衰减 /
-   * 暂停结束过渡特效。
+   * 每帧推进：闪光延迟 / useAnim 计时 / useFailHint 计时 / 升级闪光衰减。
    * 由 game.js 主循环调用。
    * @param {object} board
    * @param {object} particles
@@ -339,7 +316,18 @@ class Items {
    *   升级道具 useAnim 结束时触发，game.js 用它启动合成连锁
    */
   update(board, particles, onUpgradeComplete) {
-    // 升级闪光帧数衰减
+    // 闪光延迟效果推进（0.2s 闪光 → 执行实际效果）
+    if (this._pendingEffect) {
+      for (const slot of this._pendingEffect.targets) {
+        if (slot._upgradeFlashFrame > 0) slot._upgradeFlashFrame -= 1;
+      }
+      this._pendingEffect.delayFrames -= 1;
+      if (this._pendingEffect.delayFrames <= 0) {
+        this._executePendingEffect(board, particles);
+      }
+    }
+
+    // 升级闪光帧数衰减（useAnim 期间残余）
     if (this._pendingUpgradedSlots) {
       for (const slot of this._pendingUpgradedSlots) {
         if (slot._upgradeFlashFrame > 0) slot._upgradeFlashFrame -= 1;
