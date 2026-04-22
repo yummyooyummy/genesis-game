@@ -513,13 +513,16 @@ class Renderer {
     const cx = this.width / 2;
     const y = this.height - 30;
 
-    ctx.font = '16px Arial';
+    ctx.save();
+    ctx.font = '11px Arial';
     ctx.textBaseline = 'middle';
     ctx.textAlign = 'center';
+    ctx.globalAlpha = 0.5;
     ctx.fillStyle = '#888888';
 
     const text = `核心等级 | Lv.${coreLevel} ${name}`;
     ctx.fillText(text, cx, y);
+    ctx.restore();
   }
 
   /**

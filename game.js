@@ -71,6 +71,7 @@ const DEBUG_ITEMS = true;
 
 const savedData = playerData.loadPlayerData();
 let sessionMaxLevel = 1;
+let sessionStartMaxLevel = 1;
 let lastGameResult = null; // { isNewRecord, newlyUnlockedLevel } 供结束界面用
 console.log('[存档] 读取成功');
 console.log('[存档] 最高分', savedData.maxScore, '最高等级', savedData.maxLevel);
@@ -478,7 +479,7 @@ function _saveOnGameOver() {
     score: score.total,
     maxLevel: sessionMaxLevel,
     isNewRecord: result.isNewRecord,
-    newlyUnlockedLevel: result.newlyUnlockedLevel,
+    newlyUnlockedLevel: sessionMaxLevel > sessionStartMaxLevel ? sessionMaxLevel : null,
   };
   console.log('[存档] 更新完成', JSON.stringify(lastGameResult));
 }
@@ -769,24 +770,24 @@ function drawGameOverScreen() {
   });
   if (isNewRecord) ctx.restore();
 
-  // NEW! 徽章
+  // NEW! 徽章（分数右上角小徽章）
   if (isNewRecord) {
     const badgeText = 'NEW!';
-    const badgeFontSize = UI_CONFIG.font.badge;
-    const badgePadX = 6;
-    const badgePadY = 3;
-    const badgeW = ui.measureText(ctx, badgeText, badgeFontSize, '700') + badgePadX * 2;
-    const badgeH = badgeFontSize + badgePadY * 2;
-    const scoreW = ui.measureText(ctx, String(maxScore), UI_CONFIG.font.scoreLG, 'bold');
-    const badgeX = cardInnerRight - scoreW - 8 - badgeW;
-    const badgeY = row2Y - badgeH / 2;
+    const badgeFontSize = 9;
+    const badgeW = 36;
+    const badgeH = 18;
+    const badgeX = cardInnerRight - 8;
+    const badgeY = row2Y - badgeH - 12;
 
     ctx.save();
     ctx.shadowColor = 'rgba(138,127,209,0.50)';
     ctx.shadowBlur = 10;
-    ctx.fillStyle = UI_CONFIG.color.accentPurple;
-    ctx.beginPath();
+    const grad = ctx.createLinearGradient(badgeX, badgeY, badgeX + badgeW, badgeY + badgeH);
+    grad.addColorStop(0, UI_CONFIG.color.accentPurple);
+    grad.addColorStop(1, UI_CONFIG.color.accentPurpleLight);
+    ctx.fillStyle = grad;
     const r = badgeH / 2;
+    ctx.beginPath();
     ctx.moveTo(badgeX + r, badgeY);
     ctx.lineTo(badgeX + badgeW - r, badgeY);
     ctx.arc(badgeX + badgeW - r, badgeY + r, r, -Math.PI / 2, Math.PI / 2);
@@ -799,7 +800,7 @@ function drawGameOverScreen() {
     ui.drawText(ctx, badgeText, badgeX + badgeW / 2, badgeY + badgeH / 2, {
       fontSize: badgeFontSize,
       color: '#FFFFFF',
-      weight: '700',
+      weight: '600',
     });
   }
 
@@ -860,7 +861,7 @@ function drawGameOverScreen() {
     ctx.restore();
 
     // 底部小字
-    ui.drawText(ctx, zhName + ' · 新形态解锁', bannerX + bannerW / 2, bannerY + bannerH - 10, {
+    ui.drawText(ctx, zhName + ' · 首次达成', bannerX + bannerW / 2, bannerY + bannerH - 10, {
       fontSize: UI_CONFIG.font.hintXs,
       color: UI_CONFIG.color.textMuted,
     });
@@ -1070,6 +1071,7 @@ function handleRestart() {
   pauseDialogButtons = null;
   // 重置单局追踪
   sessionMaxLevel = 1;
+  sessionStartMaxLevel = playerData.loadPlayerData().maxLevel || 1;
   lastGameResult = null;
 }
 
