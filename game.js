@@ -57,6 +57,7 @@ const dropTargetPositions = {
 let gameState = 'menu';
 let gameOverButtons = null; // { restart, home, share } 每个 { x, y, w, h }
 let menuButtons = null;     // { start: { x, y, w, h } }
+let menuOrbitAngle = 0;
 let pauseDialogButtons = null; // { resume, restart, home } 每个 { x, y, w, h }
 let decorationTimer = 0;   // 装饰粒子计时器
 let comboDisplay = { count: 0, x: 0, y: 0, timer: 0 }; // combo 显示
@@ -517,7 +518,7 @@ function drawPlanet(cx, cy, size) {
 }
 
 /**
- * 绘制开始界面（三变体自动切换）
+ * 绘制开始界面 — Stellar Marquee 极简版
  */
 function drawMenuScreen() {
   const W = screenWidth;
@@ -531,16 +532,27 @@ function drawMenuScreen() {
 
   // ── 数据准备 ──
   const data = playerData.loadPlayerData();
-  // TODO: 等新设计稿出来后删除 — totalGames/unlockedCount/isVeteran 已废弃
-  // const totalGames = data.totalGames || 0;
-  // const unlockedCount = data.unlockedLevels ? data.unlockedLevels.length : 1;
-  const isNewbie = (data.maxLevel || 1) <= 1;
-  // const isVeteran = unlockedCount >= 15;
+  const hasRecord = (data.maxScore || 0) > 0;
 
   // ── 星球 ──
-  const planetSize = isNewbie ? UI_CONFIG.size.heroPlanet : UI_CONFIG.size.heroPlanetCompact;
-  const planetY = isNewbie ? H * 0.22 : H * 0.15;
+  const planetSize = hasRecord ? UI_CONFIG.size.heroPlanetCompact : UI_CONFIG.size.heroPlanet;
+  const planetY = hasRecord ? H * 0.15 : H * 0.22;
   drawPlanet(W / 2, planetY, planetSize);
+
+  // ── 虚线轨道环（动画旋转） ──
+  menuOrbitAngle += 0.002;
+  const orbitR = planetSize / 2;
+  ctx.save();
+  ctx.translate(W / 2, planetY);
+  ctx.rotate(-Math.PI / 6 + menuOrbitAngle);
+  ctx.beginPath();
+  ctx.ellipse(0, 0, orbitR * 1.6, orbitR * 0.4, 0, 0, Math.PI * 2);
+  ctx.setLineDash([6, 8]);
+  ctx.strokeStyle = 'rgba(180,165,255,0.3)';
+  ctx.lineWidth = 1;
+  ctx.stroke();
+  ctx.setLineDash([]);
+  ctx.restore();
 
   // ── GENESIS 标题 ──
   const titleY = planetY + planetSize / 2 + 32;
@@ -560,7 +572,7 @@ function drawMenuScreen() {
     weight: 'normal',
   });
 
-  // ── 按钮区（先算位置，三变体共用） ──
+  // ── 按钮区 ──
   const btnH = UI_CONFIG.size.buttonPrimaryHeight;
   const btnW = Math.min(UI_CONFIG.size.buttonPrimaryMaxWidth, W - padX * 2);
   const btnX = (W - btnW) / 2;
@@ -572,92 +584,71 @@ function drawMenuScreen() {
     color: UI_CONFIG.color.textMuted,
   });
 
-  if (isNewbie) {
-    // ═══ 变体 A：新手 ═══
+  if (hasRecord) {
+    // ── 金色最高纪录卡片 ──
     const cardW = W - padX * 2;
-    const cardH = 100;
+    const cardH = 140;
     const cardX = padX;
     const cardY = subY + 30;
-    ui.drawGlassCard(ctx, cardX, cardY, cardW, cardH);
+    ui.drawGoldCard(ctx, cardX, cardY, cardW, cardH);
 
-    ui.drawText(ctx, '开启你的第一次探索', W / 2, cardY + 32, {
-      fontSize: UI_CONFIG.font.cardTitle,
-      color: UI_CONFIG.color.textPrimary,
+    // "最高纪录" 标签
+    ui.drawText(ctx, '✦  最高纪录  ✦', W / 2, cardY + 24, {
+      fontSize: 12,
+      color: 'rgba(255,215,0,0.7)',
       weight: '600',
     });
-    ui.drawText(ctx, 'Begin your first exploration', W / 2, cardY + 56, {
-      fontSize: UI_CONFIG.font.bodySmall,
-      color: UI_CONFIG.color.textMuted,
+
+    // 大号分数
+    ui.drawText(ctx, (data.maxScore || 0).toLocaleString(), W / 2, cardY + 58, {
+      fontSize: 32,
+      color: '#FFFFFF',
+      weight: '700',
+      glow: 8,
+      glowColor: 'rgba(255,215,0,0.3)',
     });
 
-    // 卡片内小粒子示意（静态 5 个小圆点）
-    const dotColors = [UI_CONFIG.codexColors[0], UI_CONFIG.codexColors[2], UI_CONFIG.codexColors[4], UI_CONFIG.codexColors[1], UI_CONFIG.codexColors[3]];
-    const dotBaseY = cardY + 80;
-    for (let i = 0; i < 5; i++) {
-      const dx = W / 2 + (i - 2) * 22;
-      ctx.beginPath();
-      ctx.arc(dx, dotBaseY, 3, 0, Math.PI * 2);
-      ctx.fillStyle = dotColors[i];
-      ctx.globalAlpha = 0.6;
-      ctx.fill();
-      ctx.globalAlpha = 1;
-    }
-  } else {
-    // ═══ 变体 B/C：进阶 / 资深 ═══
-    let curY = subY + 26;
+    // 虚线分隔
+    ctx.save();
+    ctx.setLineDash([4, 4]);
+    ctx.strokeStyle = 'rgba(255,215,0,0.2)';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(cardX + 20, cardY + 82);
+    ctx.lineTo(cardX + cardW - 20, cardY + 82);
+    ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.restore();
 
-    /* TODO: 等新设计稿出来后删除 — 图鉴点阵 + 解锁进度已废弃
-    // 图鉴点阵（15 个圆点）
-    const dotSize = UI_CONFIG.size.codexDotSize;
-    const dotGap = UI_CONFIG.size.codexDotGap;
-    const totalDotsW = 15 * dotSize + 14 * dotGap;
-    const dotsStartX = (W - totalDotsW) / 2;
-
-    for (let i = 0; i < 15; i++) {
-      const dx = dotsStartX + i * (dotSize + dotGap) + dotSize / 2;
-      const dy = curY;
-      const isUnlocked = i < unlockedCount;
-      ctx.beginPath();
-      ctx.arc(dx, dy, dotSize / 2, 0, Math.PI * 2);
-      if (isUnlocked) {
-        ctx.fillStyle = UI_CONFIG.codexColors[i];
-        ctx.shadowColor = UI_CONFIG.codexColors[i];
-        ctx.shadowBlur = UI_CONFIG.glow.codexDot;
-        ctx.fill();
-        ctx.shadowColor = 'transparent';
-        ctx.shadowBlur = 0;
-      } else {
-        ctx.strokeStyle = 'rgba(74,90,158,0.35)';
-        ctx.lineWidth = 1;
-        ctx.stroke();
-      }
-    }
-
-    // 解锁进度文字
-    curY += 22;
-    if (isVeteran) { ... } else { ... }
-    */
-
-    // 本局目标卡片
-    curY += 28;
-    const objCardW = W - padX * 2;
-    const objCardH = 90;
-    const objCardX = padX;
-    ui.drawGlassCard(ctx, objCardX, curY, objCardW, objCardH);
-
-    // TODO: 等新设计稿出来后删除 — 本局目标卡片已废弃
-    // ...
-
-    // 底部统计行
-    curY += objCardH + 16;
-    const statsText = '最高分 ' + (data.maxScore || 0).toLocaleString();
-    ui.drawText(ctx, statsText, W / 2, curY, {
-      fontSize: UI_CONFIG.font.hintXs,
+    // "最高等级" + Lv.X 名字
+    ui.drawText(ctx, '最高等级', W / 2, cardY + 102, {
+      fontSize: 11,
       color: UI_CONFIG.color.textMuted,
+    });
+    const lvl = data.maxLevel || 1;
+    const lvColor = getLevelColor(lvl);
+    const lvName = getLevelNameZh(lvl);
+    ui.drawText(ctx, 'Lv.' + lvl + ' ' + lvName, W / 2, cardY + 122, {
+      fontSize: 16,
+      color: lvColor,
+      weight: '600',
+      glow: 6,
+      glowColor: lvColor,
     });
   }
 
   // ── "开始游戏" 主按钮 ──
+  if (!hasRecord) {
+    // 新玩家呼吸发光 — 在按钮下方画一层脉动光晕
+    const pulse = (Math.sin(Date.now() / 1000) + 1) / 2;
+    const glowRadius = 20 + pulse * 20;
+    ctx.save();
+    ctx.shadowColor = UI_CONFIG.color.accentPurpleLight;
+    ctx.shadowBlur = glowRadius;
+    ctx.fillStyle = 'rgba(0,0,0,0.01)';
+    ctx.fillRect(btnX, btnY, btnW, btnH);
+    ctx.restore();
+  }
   ui.drawPrimaryButton(ctx, btnX, btnY, btnW, btnH, '开始游戏');
   menuButtons = { start: { x: btnX, y: btnY, w: btnW, h: btnH } };
 }
