@@ -178,13 +178,14 @@ function handleSlotTap(slot) {
 
 /**
  * combo 达到阈值时触发一次道具掉落
+ * combo=3: 随机 50% 清空 / 50% 磁吸
+ * combo=4: 进化
  */
 function checkComboDropTrigger() {
   const combo = score.combo;
-  if (combo === 2) {
-    items.spawnDrop('magnet', lastBurstPos.x, lastBurstPos.y, dropTargetPositions);
-  } else if (combo === 3) {
-    items.spawnDrop('clear', lastBurstPos.x, lastBurstPos.y, dropTargetPositions);
+  if (combo === 3) {
+    const type = Math.random() < 0.5 ? 'clear' : 'magnet';
+    items.spawnDrop(type, lastBurstPos.x, lastBurstPos.y, dropTargetPositions);
   } else if (combo === 4) {
     items.spawnDrop('upgrade', lastBurstPos.x, lastBurstPos.y, dropTargetPositions);
   }
