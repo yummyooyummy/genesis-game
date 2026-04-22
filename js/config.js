@@ -14,9 +14,12 @@ const GAME_CONFIG = {
     preSplitWarningSeconds: 1.5,  // 分裂前摇动效时长（秒）
     intervalByLevel: {
       '1-3': 5,   // 核心 Lv.1-3 时的定时分裂间隔（秒）
-      '4-5': 8,
-      '6-7': 8,
-      '8-10': 8,
+      '4-5': 7,
+      '6-7': 7,
+      '8-10': 6,
+      '11-12': 6,
+      '13-15': 7,
+      '16+': 7,
     },
   },
   // 开局连续分裂
@@ -309,17 +312,21 @@ function msToFrames(ms) {
 
 /**
  * 根据核心当前等级获取定时分裂间隔（秒）
- * 范围键形如 '1-3' | '4-5' | '6-7' | '8-10'
+ * 范围键形如 '1-3' | '4-5' | '16+'（开口范围）
  * @param {number} coreLevel
  * @returns {number} 间隔秒数
  */
 function getTimedSplitInterval(coreLevel) {
   const table = GAME_CONFIG.timedSplit.intervalByLevel;
   for (const range in table) {
-    const [lo, hi] = range.split('-').map(Number);
-    if (coreLevel >= lo && coreLevel <= hi) return table[range];
+    if (range.endsWith('+')) {
+      const lo = parseInt(range, 10);
+      if (coreLevel >= lo) return table[range];
+    } else {
+      const [lo, hi] = range.split('-').map(Number);
+      if (coreLevel >= lo && coreLevel <= hi) return table[range];
+    }
   }
-  // fallback：找不到匹配时用第一个
   const firstKey = Object.keys(table)[0];
   return table[firstKey];
 }
