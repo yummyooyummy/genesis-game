@@ -72,6 +72,8 @@ const DEBUG_ITEMS = false;
 const savedData = playerData.loadPlayerData();
 let sessionMaxLevel = 1;
 let sessionStartMaxLevel = 1;
+let sessionMaxCombo = 0;
+let sessionMergeCount = 0;
 let lastGameResult = null; // { isNewRecord, newlyUnlockedLevel } 供结束界面用
 console.log('[存档] 读取成功');
 console.log('[存档] 最高分', savedData.maxScore, '最高等级', savedData.maxLevel);
@@ -214,6 +216,9 @@ function handleMergeBurst(anim, midX, midY) {
   particles.spawn(midX, midY, colors.primary, 16, { speed: 4, life: 32 });
   particles.spawn(midX, midY, colors.secondary, 10, { speed: 2.5, life: 22 });
   lastBurstPos = { x: midX, y: midY };
+
+  sessionMergeCount++;
+  if (score.combo > sessionMaxCombo) sessionMaxCombo = score.combo;
 
   if (score.combo >= 2) {
     comboDisplay = { count: score.combo, x: centerX, y: centerY, timer: 60 };
@@ -465,6 +470,8 @@ function _saveOnGameOver() {
   lastGameResult = {
     score: score.total,
     maxLevel: sessionMaxLevel,
+    maxCombo: sessionMaxCombo,
+    mergeCount: sessionMergeCount,
     isNewRecord: result.isNewRecord,
     newlyUnlockedLevel: sessionMaxLevel > sessionStartMaxLevel ? sessionMaxLevel : null,
   };
@@ -864,8 +871,8 @@ function drawGameOverScreen() {
 
   const details = [
     { label: '核心等级', value: 'Lv.' + maxLevel + ' ' + levelName, valueColor: UI_CONFIG.color.accentCyan },
-    { label: '最高连锁', value: '--', valueColor: UI_CONFIG.color.textPrimary },
-    { label: '合成次数', value: '--', valueColor: UI_CONFIG.color.textPrimary },
+    { label: '最高连锁', value: String(data.maxCombo || 0), valueColor: UI_CONFIG.color.textPrimary },
+    { label: '合成次数', value: String(data.mergeCount || 0), valueColor: UI_CONFIG.color.textPrimary },
   ];
 
   for (let i = 0; i < details.length; i++) {
@@ -1059,6 +1066,8 @@ function handleRestart() {
   // 重置单局追踪
   sessionMaxLevel = 1;
   sessionStartMaxLevel = playerData.loadPlayerData().maxLevel || 1;
+  sessionMaxCombo = 0;
+  sessionMergeCount = 0;
   lastGameResult = null;
 }
 
