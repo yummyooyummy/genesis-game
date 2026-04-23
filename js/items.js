@@ -12,6 +12,50 @@ const { ELEMENT_COLORS, getElementColors } = require('./board');
 /** 三种道具类型（顺序即道具栏顺序） */
 const ITEM_TYPES = ['clear', 'upgrade', 'magnet'];
 
+/** 道具冷却管理 */
+const ItemCooldown = {
+  lastUseTime: { magnet: 0, clear: 0, upgrade: 0 },
+
+  isOnCooldown(itemType, now) {
+    return (now - this.lastUseTime[itemType]) < GAME_CONFIG.items.cooldownMs;
+  },
+
+  getRemainingSeconds(itemType, now) {
+    const remaining = GAME_CONFIG.items.cooldownMs - (now - this.lastUseTime[itemType]);
+    return Math.max(0, Math.ceil(remaining / 1000));
+  },
+
+  getCooldownProgress(itemType, now) {
+    return Math.min(1, (now - this.lastUseTime[itemType]) / GAME_CONFIG.items.cooldownMs);
+  },
+
+  triggerCooldown(itemType, now) {
+    this.lastUseTime[itemType] = now;
+  },
+
+  reset() {
+    this.lastUseTime = { magnet: 0, clear: 0, upgrade: 0 };
+  },
+
+  _pauseStartTime: 0,
+
+  onPause(now) {
+    this._pauseStartTime = now;
+  },
+
+  onResume(now) {
+    if (this._pauseStartTime > 0) {
+      const pausedDuration = now - this._pauseStartTime;
+      for (const key in this.lastUseTime) {
+        if (this.lastUseTime[key] > 0) {
+          this.lastUseTime[key] += pausedDuration;
+        }
+      }
+      this._pauseStartTime = 0;
+    }
+  },
+};
+
 class Items {
   constructor() {
     /** 库存数量（按类型） */
@@ -47,6 +91,7 @@ class Items {
     this._pendingEffect = null;
     this._magnetAnim = null;
     this.useFailHint = null;
+    ItemCooldown.reset();
   }
 
   /** 给某种道具 +N（调试用 / 拾取到位后调用） */
@@ -191,19 +236,20 @@ class Items {
   use(type, board, particles) {
     if (!this.canUse(type, board)) return false;
 
+    const now = Date.now();
+    if (ItemCooldown.isOnCooldown(type, now)) return false;
+
+    let result = false;
     if (type === 'clear') {
-      return this._useClear(board, particles);
+      result = this._useClear(board, particles);
+    } else if (type === 'upgrade') {
+      result = this._useUpgrade(board, particles);
+    } else if (type === 'magnet') {
+      result = this._useMagnet(board, particles);
     }
 
-    if (type === 'upgrade') {
-      return this._useUpgrade(board, particles);
-    }
-
-    if (type === 'magnet') {
-      return this._useMagnet(board, particles);
-    }
-
-    return false;
+    if (result) ItemCooldown.triggerCooldown(type, now);
+    return result;
   }
 
   /**
@@ -494,4 +540,4 @@ class Items {
   }
 }
 
-module.exports = { Items, ITEM_TYPES };
+module.exports = { Items, ITEM_TYPES, ItemCooldown };

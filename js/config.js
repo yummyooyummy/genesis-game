@@ -94,6 +94,9 @@ const GAME_CONFIG = {
 
     // 磁吸升级赠送节点
     magnetRewardLevels: [2, 3, 4, 6, 8, 10, 11, 13, 15, 16, 20],
+
+    // 道具冷却
+    cooldownMs: 5000,             // 所有道具统一 CD（毫秒）
   },
 };
 

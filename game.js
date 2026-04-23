@@ -10,7 +10,7 @@ const Renderer = require('./js/renderer');
 const Particles = require('./js/particles');
 const Input = require('./js/input');
 const Score = require('./js/score');
-const { Items, ITEM_TYPES } = require('./js/items');
+const { Items, ITEM_TYPES, ItemCooldown } = require('./js/items');
 const { GAME_CONFIG, UI_CONFIG, msToFrames, getLevelColor, getLevelNameZh, getLevelNameEn } = require('./js/config');
 const playerData = require('./js/playerData');
 const ui = require('./js/uiHelpers');
@@ -973,6 +973,7 @@ function handlePause() {
   if (gameState !== 'playing') return;
   gameState = 'paused';
   input.isPaused = true;
+  ItemCooldown.onPause(Date.now());
   console.log('[状态] 切换到 paused');
 }
 
@@ -981,6 +982,7 @@ function handleResume() {
   gameState = 'playing';
   input.isPaused = false;
   pauseDialogButtons = null;
+  ItemCooldown.onResume(Date.now());
   console.log('[状态] 从 paused 恢复到 playing');
 }
 
