@@ -571,14 +571,13 @@ function drawMenuScreen() {
   const hasRecord = (data.maxScore || 0) > 0;
 
   // ── 星球 ──
-  const planetSize = hasRecord ? LS.ds(200) : LS.ds(220);
-  const planetCY = hasRecord ? LS.dy(248) : LS.dy(290);
+  const planetSize = LS.ds(220);
+  const planetCY = hasRecord ? LS.dy(210) : LS.dy(290);
   drawPlanet(LS.dx(187.5), planetCY, planetSize);
 
   // ── 虚线轨道环（动画旋转） ──
   menuOrbitAngle += 0.002;
-  const orbitSize = hasRecord ? LS.ds(228) : LS.ds(250);
-  const orbitR = orbitSize / 2;
+  const orbitR = planetSize / 2 * 1.15;
   ctx.save();
   ctx.translate(LS.dx(187.5), planetCY);
   ctx.rotate(-Math.PI / 6 + menuOrbitAngle);
@@ -591,18 +590,18 @@ function drawMenuScreen() {
   ctx.setLineDash([]);
   ctx.restore();
 
-  // ── GENESIS 标题 ──
-  const titleY = hasRecord ? LS.dy(400) : LS.dy(470);
+  // ── GENESIS 标题（发光减弱） ──
+  const titleY = hasRecord ? LS.dy(380) : LS.dy(470);
   ui.drawText(ctx, 'GENESIS', LS.dx(187.5), titleY, {
     fontSize: LS.df(42),
     color: UI_CONFIG.color.textPrimary,
     weight: '600',
-    glow: UI_CONFIG.glow.heroTitle,
-    glowColor: UI_CONFIG.color.accentPurpleLight,
+    glow: 18,
+    glowColor: 'rgba(138,127,209,0.35)',
   });
 
   // ── 副标题 ──
-  const subY = hasRecord ? LS.dy(430) : LS.dy(500);
+  const subY = hasRecord ? LS.dy(415) : LS.dy(500);
   ui.drawText(ctx, '万 物 起 源', LS.dx(187.5), subY, {
     fontSize: LS.df(12),
     color: UI_CONFIG.color.textMuted,
@@ -613,25 +612,27 @@ function drawMenuScreen() {
   const btnW = LS.ds(300);
   const btnH = LS.ds(52);
   const btnX = LS.dx(187.5) - btnW / 2;
-  const btnY = LS.dy(700) - btnH / 2;
+  const btnY = LS.dy(735) - btnH / 2;
 
   // ── 版本号 ──
-  ui.drawText(ctx, '万物起源 v1.0.0', LS.dx(187.5), LS.dy(758), {
+  ui.drawText(ctx, '万物起源 v1.0.0', LS.dx(187.5), LS.dy(788), {
     fontSize: LS.df(10.5),
     color: UI_CONFIG.color.textMuted,
   });
 
   if (hasRecord) {
-    // ── 金色奖牌卡（左右两列布局）──
-    const cardW = LS.ds(300);
-    const cardH = LS.ds(108);
+    // ── 奖牌卡（319×120，中心 y=600）──
+    const cardW = LS.ds(319);
+    const cardH = LS.ds(120);
     const cardX = LS.dx(187.5) - cardW / 2;
-    const cardY = LS.dy(520) - cardH / 2;
+    const cardY = LS.dy(600) - cardH / 2;
+    const cardLeft = LS.dx(187.5 - 159.5 + 20);
+    const cardRight = LS.dx(187.5 + 159.5 - 20);
     ui.drawGoldCard(ctx, cardX, cardY, cardW, cardH);
 
     // 4 点星装饰（卡片右上角内侧）
-    const spkX = LS.dx(320);
-    const spkY = LS.dy(478);
+    const spkX = LS.dx(290);
+    const spkY = LS.dy(555);
     const spkR = LS.ds(6);
     ctx.save();
     ctx.fillStyle = '#FFD887';
@@ -645,75 +646,65 @@ function drawMenuScreen() {
     ctx.fill();
     ctx.restore();
 
-    // 左列："最高纪录" 标签 + 分数
-    ui.drawText(ctx, '最高纪录', LS.dx(108), LS.dy(494), {
+    // 左列标签："最高纪录"
+    ui.drawText(ctx, '最高纪录', cardLeft, LS.dy(566), {
       fontSize: LS.df(11),
       color: '#FFD887',
+      align: 'left',
     });
-    ui.drawText(ctx, (data.maxScore || 0).toLocaleString(), LS.dx(108), LS.dy(518), {
-      fontSize: LS.df(32),
+
+    // 左列数值：分数（48pt）
+    ui.drawText(ctx, (data.maxScore || 0).toLocaleString(), cardLeft, LS.dy(610), {
+      fontSize: LS.df(48),
       color: '#FFD887',
       weight: '700',
+      align: 'left',
       glow: 8,
       glowColor: 'rgba(255,215,0,0.3)',
     });
 
-    // 中间竖线（渐变虚线，高 72，中心 y=520）
-    const lineTop = LS.dy(484);
-    const lineBot = LS.dy(556);
-    ctx.save();
-    ctx.setLineDash([4, 4]);
-    ctx.strokeStyle = 'rgba(180,165,255,0.4)';
-    ctx.lineWidth = 1;
-    ctx.beginPath();
-    ctx.moveTo(LS.dx(187.5), lineTop);
-    ctx.lineTo(LS.dx(187.5), lineBot);
-    ctx.stroke();
-    ctx.setLineDash([]);
-    ctx.restore();
+    // 右列标签："最高等级"
+    ui.drawText(ctx, '最高等级', cardRight, LS.dy(566), {
+      fontSize: LS.df(11),
+      color: UI_CONFIG.color.textMuted,
+      align: 'right',
+    });
 
-    // 右列："最高等级" 标签 + 彩点 + 等级名
+    // 右列数值：彩点 + "Lv.X 名字"
     const lvl = data.maxLevel || 1;
     const lvColor = getLevelColor(lvl);
     const lvName = getLevelNameZh(lvl);
+    const lvText = 'Lv.' + lvl + ' ' + lvName;
 
-    ui.drawText(ctx, '最高等级', LS.dx(267), LS.dy(494), {
-      fontSize: LS.df(11),
-      color: UI_CONFIG.color.textMuted,
+    ui.drawText(ctx, lvText, cardRight, LS.dy(610), {
+      fontSize: LS.df(18),
+      color: lvColor,
+      weight: '600',
+      align: 'right',
+      glow: 6,
+      glowColor: lvColor,
     });
 
-    // 彩色小圆点
+    // 彩色小圆点（等级文字左侧）
+    const lvTextWidth = ui.measureText(ctx, lvText, LS.df(18), '600');
+    const dotX = cardRight - lvTextWidth - LS.ds(10);
     ctx.save();
     ctx.fillStyle = lvColor;
     ctx.shadowColor = lvColor + '99';
     ctx.shadowBlur = 6;
     ctx.beginPath();
-    ctx.arc(LS.dx(224), LS.dy(526), LS.ds(5), 0, Math.PI * 2);
+    ctx.arc(dotX, LS.dy(610), LS.ds(5), 0, Math.PI * 2);
     ctx.fill();
     ctx.restore();
-
-    // "Lv.X 名字"
-    ui.drawText(ctx, 'Lv.' + lvl + ' ' + lvName, LS.dx(277), LS.dy(526), {
-      fontSize: LS.df(18),
-      color: lvColor,
-      weight: '600',
-      glow: 6,
-      glowColor: lvColor,
-    });
   }
 
-  // ── "开始游戏" 主按钮 ──
-  if (!hasRecord) {
-    const breathe = UI_CONFIG.ctaButton.breathe;
-    const pulse = (Math.sin(Date.now() / (breathe.durationMs / 2) * Math.PI) + 1) / 2;
-    const glowRadius = breathe.minGlow + pulse * (breathe.maxGlow - breathe.minGlow);
-    ctx.save();
-    ctx.shadowColor = UI_CONFIG.ctaButton.outerGlow.color;
-    ctx.shadowBlur = glowRadius;
-    ctx.fillStyle = 'rgba(0,0,0,0.01)';
-    ctx.fillRect(btnX, btnY, btnW, btnH);
-    ctx.restore();
-  }
+  // ── "开始游戏" 主按钮（静态发光，无呼吸动画） ──
+  ctx.save();
+  ctx.shadowColor = UI_CONFIG.ctaButton.outerGlow.color;
+  ctx.shadowBlur = 18;
+  ctx.fillStyle = 'rgba(0,0,0,0.01)';
+  ctx.fillRect(btnX, btnY, btnW, btnH);
+  ctx.restore();
   ui.drawPrimaryButton(ctx, btnX, btnY, btnW, btnH, '开始游戏', { useCta: true });
   menuButtons = { start: { x: btnX, y: btnY, w: btnW, h: btnH } };
 }
