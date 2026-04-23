@@ -91,6 +91,9 @@ const GAME_CONFIG = {
     clearDropThreshold: 8,        // 核心 Lv.≤此值算"前期"
     clearDropChanceEarly: 0.2,    // 前期 combo=3 掉清空概率
     clearDropChanceLate: 0.6,     // 后期 combo=3 掉清空概率
+
+    // 磁吸升级赠送节点
+    magnetRewardLevels: [2, 3, 4, 6, 8, 10, 11, 13, 15, 16, 20],
   },
 };
 

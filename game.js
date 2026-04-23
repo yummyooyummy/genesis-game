@@ -311,6 +311,10 @@ function updateMergeFlow() {
         } else if (newCoreLevel >= 6 && newCoreLevel % 2 === 0) {
           items.spawnDrop('clear', centerX, centerY, dropTargetPositions);
         }
+        // 磁吸分阶段赠送
+        if (GAME_CONFIG.items.magnetRewardLevels.includes(newCoreLevel)) {
+          items.spawnDrop('magnet', centerX, centerY, dropTargetPositions);
+        }
       }
       mergeFlowAbsorbSlot = null;
       mergeFlowBurstFired = false;
