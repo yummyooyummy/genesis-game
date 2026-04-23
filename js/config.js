@@ -299,6 +299,21 @@ const UI_CONFIG = {
     cardSoft: 40,
   },
 
+  // 奖牌卡样式
+  medalCard: {
+    fill: 'rgba(30,40,80,0.55)',
+    strokeGradient: [
+      { offset: 0, color: 'rgba(255,216,135,0.6)' },
+      { offset: 1, color: 'rgba(180,165,255,0.4)' },
+    ],
+    strokeWidth: 1,
+    outerGlow: {
+      color: 'rgba(255,216,135,0.15)',
+      blur: 24,
+    },
+    radius: 20,
+  },
+
   // 开始按钮样式
   ctaButton: {
     fill: [

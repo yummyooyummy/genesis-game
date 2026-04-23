@@ -81,18 +81,30 @@ function drawGlassCard(ctx, x, y, w, h, options) {
  * 绘制金色纪念卡片（半透明金色背景 + 金色描边 + 外发光）
  */
 function drawGoldCard(ctx, x, y, w, h) {
+  const mc = UI_CONFIG.medalCard;
   ctx.save();
-  ctx.shadowColor = 'rgba(255,215,0,0.15)';
-  ctx.shadowBlur = 40;
-  _roundRectPath(ctx, x, y, w, h, 16);
-  ctx.fillStyle = 'rgba(255,215,0,0.04)';
+
+  // 外发光
+  ctx.shadowColor = mc.outerGlow.color;
+  ctx.shadowBlur = mc.outerGlow.blur;
+
+  // 半透明深紫填充（通透）
+  _roundRectPath(ctx, x, y, w, h, mc.radius);
+  ctx.fillStyle = mc.fill;
   ctx.fill();
+
+  // 关闭阴影再描边
   ctx.shadowColor = 'transparent';
   ctx.shadowBlur = 0;
-  _roundRectPath(ctx, x, y, w, h, 16);
-  ctx.strokeStyle = 'rgba(255,215,0,0.5)';
-  ctx.lineWidth = 1.5;
+
+  // 金紫渐变描边
+  const grad = ctx.createLinearGradient(x, y, x + w, y + h);
+  for (const s of mc.strokeGradient) grad.addColorStop(s.offset, s.color);
+  _roundRectPath(ctx, x, y, w, h, mc.radius);
+  ctx.strokeStyle = grad;
+  ctx.lineWidth = mc.strokeWidth;
   ctx.stroke();
+
   ctx.restore();
 }
 
