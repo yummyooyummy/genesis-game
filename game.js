@@ -613,7 +613,7 @@ function drawMenuScreen() {
   ctx.restore();
 
   // ── GENESIS 标题（发光减弱） ──
-  const titleY = hasRecord ? LS.dy(440) : LS.dy(470);
+  const titleY = hasRecord ? LS.dy(333) : LS.dy(470);
   ui.drawText(ctx, 'GENESIS', LS.dx(187.5), titleY, {
     fontSize: LS.df(42),
     color: UI_CONFIG.color.textPrimary,
@@ -623,7 +623,7 @@ function drawMenuScreen() {
   });
 
   // ── 副标题 ──
-  const subY = hasRecord ? LS.dy(475) : LS.dy(500);
+  const subY = hasRecord ? LS.dy(359) : LS.dy(500);
   ui.drawText(ctx, '万 物 起 源', LS.dx(187.5), subY, {
     fontSize: LS.df(12),
     color: UI_CONFIG.color.textMuted,
