@@ -676,7 +676,7 @@ function drawMenuScreen() {
     });
 
     // 第 1 行上半：分数（48pt，左对齐）
-    ui.drawText(ctx, (data.maxScore || 0).toLocaleString(), leftX, LS.dy(610), {
+    ui.drawText(ctx, (data.maxScore || 0).toLocaleString(), LS.dx(58), LS.dy(610), {
       fontSize: LS.df(48),
       color: '#FFD887',
       weight: '700',
@@ -700,19 +700,19 @@ function drawMenuScreen() {
 
     ui.drawText(ctx, lvText, rightX, LS.dy(648), {
       fontSize: LS.df(13),
-      color: lvColor,
+      color: '#FFD887',
       weight: '600',
       align: 'right',
       glow: 6,
-      glowColor: lvColor,
+      glowColor: 'rgba(255,215,0,0.3)',
     });
 
-    // 彩色小圆点（等级文字左侧）
+    // 金色小圆点（等级文字左侧）
     const lvTextWidth = ui.measureText(ctx, lvText, LS.df(13), '600');
     const dotX = rightX - lvTextWidth - LS.ds(10);
     ctx.save();
-    ctx.fillStyle = lvColor;
-    ctx.shadowColor = lvColor + '99';
+    ctx.fillStyle = '#FFD887';
+    ctx.shadowColor = 'rgba(255,215,0,0.4)';
     ctx.shadowBlur = 6;
     ctx.beginPath();
     ctx.arc(dotX, LS.dy(648), LS.ds(5), 0, Math.PI * 2);
