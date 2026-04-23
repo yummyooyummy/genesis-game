@@ -460,8 +460,8 @@ class Renderer {
         ctx.fill();
         ctx.restore();
 
-        // 最后 3 秒显示倒计时数字
-        if (remaining <= 3 && remaining > 0) {
+        // CD 期间全程显示倒计时数字
+        if (remaining > 0) {
           ctx.save();
           ctx.fillStyle = '#FFFFFF';
           ctx.font = 'bold 20px Arial';
