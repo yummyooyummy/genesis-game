@@ -186,10 +186,19 @@ function checkComboDropTrigger() {
   if (combo === 3) {
     const coreLv = board.core.level;
     const threshold = GAME_CONFIG.items.clearDropThreshold;
+    const evolveChance = GAME_CONFIG.items.evolveDropChanceOnCombo3;
     const clearChance = coreLv <= threshold
       ? GAME_CONFIG.items.clearDropChanceEarly
       : GAME_CONFIG.items.clearDropChanceLate;
-    const type = Math.random() < clearChance ? 'clear' : 'magnet';
+    const rand = Math.random();
+    let type;
+    if (rand < evolveChance) {
+      type = 'upgrade';
+    } else if (rand < evolveChance + clearChance) {
+      type = 'clear';
+    } else {
+      type = 'magnet';
+    }
     items.spawnDrop(type, lastBurstPos.x, lastBurstPos.y, dropTargetPositions);
   } else if (combo === 4) {
     items.spawnDrop('upgrade', lastBurstPos.x, lastBurstPos.y, dropTargetPositions);
