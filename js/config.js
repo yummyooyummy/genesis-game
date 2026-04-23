@@ -299,6 +299,15 @@ const UI_CONFIG = {
     cardSoft: 40,
   },
 
+  // 背景三段线性渐变
+  backgroundGradient: {
+    stops: [
+      { offset: 0,    color: '#0A0E27' },
+      { offset: 0.55, color: '#141A36' },
+      { offset: 1,    color: '#1A1F3A' },
+    ],
+  },
+
   // 动画时长（ms）
   duration: {
     // 新形态横幅入场时长

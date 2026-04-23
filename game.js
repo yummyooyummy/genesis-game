@@ -542,6 +542,17 @@ function drawPlanet(cx, cy, size) {
 }
 
 /**
+ * 绘制全局三段线性渐变背景
+ */
+function drawBgGradient() {
+  const stops = UI_CONFIG.backgroundGradient.stops;
+  const grad = ctx.createLinearGradient(0, 0, 0, screenHeight);
+  for (const s of stops) grad.addColorStop(s.offset, s.color);
+  ctx.fillStyle = grad;
+  ctx.fillRect(0, 0, screenWidth, screenHeight);
+}
+
+/**
  * 绘制开始界面 — Stellar Marquee 极简版
  */
 function drawMenuScreen() {
@@ -551,8 +562,7 @@ function drawMenuScreen() {
   const padBottom = UI_CONFIG.spacing.screenPaddingBottom;
 
   // ── 背景 ──
-  ctx.fillStyle = UI_CONFIG.color.bgDeep;
-  ctx.fillRect(0, 0, W, H);
+  drawBgGradient();
 
   // ── 数据准备 ──
   const data = playerData.loadPlayerData();
@@ -689,8 +699,7 @@ function drawGameOverScreen() {
   const padTop = UI_CONFIG.spacing.screenPaddingTop;
 
   // ── 背景 ──
-  ctx.fillStyle = UI_CONFIG.color.bgDeep;
-  ctx.fillRect(0, 0, W, H);
+  drawBgGradient();
 
   // ── 数据准备 ──
   const data = lastGameResult || {};

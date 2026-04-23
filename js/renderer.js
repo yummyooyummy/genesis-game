@@ -4,11 +4,8 @@
  */
 
 const { RING_CONFIG, RING_RADIUS_RATIO, ELEMENT_COLORS, getElementColors } = require('./board');
-const { GAME_CONFIG, getLevelNameEn } = require('./config');
+const { GAME_CONFIG, UI_CONFIG, getLevelNameEn } = require('./config');
 const { ItemCooldown } = require('./items');
-
-/** 背景色 */
-const BG_COLOR = '#0a0a1a';
 
 /** 轨道线颜色 */
 const TRACK_COLOR = 'rgba(255, 255, 255, 0.08)';
@@ -31,10 +28,13 @@ class Renderer {
     this.height = canvasHeight;
   }
 
-  /** 清空画布并填充背景 */
+  /** 清空画布并填充渐变背景 */
   clear() {
     const { ctx } = this;
-    ctx.fillStyle = BG_COLOR;
+    const stops = UI_CONFIG.backgroundGradient.stops;
+    const grad = ctx.createLinearGradient(0, 0, 0, this.height);
+    for (const s of stops) grad.addColorStop(s.offset, s.color);
+    ctx.fillStyle = grad;
     ctx.fillRect(0, 0, this.width, this.height);
   }
 
