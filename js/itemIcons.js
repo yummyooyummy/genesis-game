@@ -17,6 +17,7 @@ const ItemIcons = {
       for (const [key, url] of Object.entries(urls)) {
         const img = wx.createImage();
         img.onload = () => {
+          console.log(`[ItemIcons] ${key} loaded:`, img.width, 'x', img.height);
           this[key] = img;
           loadCount++;
           if (loadCount === total) {
@@ -24,8 +25,8 @@ const ItemIcons = {
             resolve();
           }
         };
-        img.onerror = () => {
-          console.warn(`[ItemIcons] Failed to load ${url}`);
+        img.onerror = (e) => {
+          console.warn(`[ItemIcons] ${key} failed:`, e);
           loadCount++;
           if (loadCount === total) {
             this.loaded = true;
