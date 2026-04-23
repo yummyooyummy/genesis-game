@@ -299,6 +299,20 @@ const UI_CONFIG = {
     cardSoft: 40,
   },
 
+  // 破纪录金色粒子飘落
+  newRecordConfetti: {
+    count: 30,
+    particle: {
+      radiusRange: [0.6, 1.8],
+      color: '#FFB648',
+      opacityRange: [0.35, 0.75],
+    },
+    animation: {
+      durationRangeMs: [4000, 9000],
+      horizontalDrift: [-20, 20],
+    },
+  },
+
   // 奖牌卡样式
   medalCard: {
     fill: 'rgba(30,40,80,0.55)',

@@ -16,6 +16,7 @@ const playerData = require('./js/playerData');
 const ui = require('./js/uiHelpers');
 const toast = require('./js/toastNotifications');
 const ItemIcons = require('./js/itemIcons');
+const ConfettiManager = require('./js/confettiParticles');
 
 // ─── Canvas 初始化 ───
 
@@ -710,6 +711,13 @@ function drawGameOverScreen() {
   const maxScore = playerData.loadPlayerData().maxScore || 0;
   const levelName = getLevelNameZh(maxLevel);
 
+  // ── 破纪录金色粒子 ──
+  if (data.isNewRecord) {
+    if (!ConfettiManager.initialized) ConfettiManager.init(W, H);
+    ConfettiManager.update();
+    ConfettiManager.draw(ctx);
+  }
+
   let cursorY = padTop;
 
   // ── 标题 "游戏结束" ──
@@ -1101,6 +1109,7 @@ function handleRestart() {
   sessionMaxCombo = 0;
   sessionMergeCount = 0;
   lastGameResult = null;
+  ConfettiManager.reset();
 }
 
 // ─── 主循环 ───
