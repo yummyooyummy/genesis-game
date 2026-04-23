@@ -6,6 +6,7 @@
 const { RING_CONFIG, RING_RADIUS_RATIO, ELEMENT_COLORS, getElementColors } = require('./board');
 const { GAME_CONFIG, UI_CONFIG, getLevelNameEn } = require('./config');
 const { ItemCooldown } = require('./items');
+const ItemIcons = require('./itemIcons');
 
 /** 轨道线颜色 */
 const TRACK_COLOR = 'rgba(255, 255, 255, 0.08)';
@@ -495,6 +496,19 @@ class Renderer {
     const { ctx } = this;
     const alpha = active ? 1 : 0.7;
 
+    // PNG 图标优先
+    const iconKey = type === 'upgrade' ? 'evolve' : type;
+    const icon = ItemIcons[iconKey];
+    if (icon && icon.width > 0) {
+      ctx.save();
+      ctx.globalAlpha = alpha;
+      const iconSize = 26;
+      ctx.drawImage(icon, cx - iconSize / 2, cy - iconSize / 2, iconSize, iconSize);
+      ctx.restore();
+      return;
+    }
+
+    // Canvas fallback
     ctx.save();
     ctx.globalAlpha = alpha;
 

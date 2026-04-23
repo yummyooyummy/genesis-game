@@ -1,0 +1,42 @@
+const ItemIcons = {
+  magnet: null,
+  clear: null,
+  evolve: null,
+  loaded: false,
+
+  preload() {
+    return new Promise((resolve) => {
+      const urls = {
+        magnet: 'assets/icons/icon_magnet.png',
+        clear: 'assets/icons/icon_clear.png',
+        evolve: 'assets/icons/icon_evolve.png',
+      };
+      let loadCount = 0;
+      const total = Object.keys(urls).length;
+
+      for (const [key, url] of Object.entries(urls)) {
+        const img = wx.createImage();
+        img.onload = () => {
+          this[key] = img;
+          loadCount++;
+          if (loadCount === total) {
+            this.loaded = true;
+            resolve();
+          }
+        };
+        img.onerror = () => {
+          console.warn(`[ItemIcons] Failed to load ${url}`);
+          loadCount++;
+          if (loadCount === total) {
+            this.loaded = true;
+            resolve();
+          }
+        };
+        img.src = url;
+      }
+    });
+  },
+};
+
+GameGlobal.ItemIcons = ItemIcons;
+module.exports = ItemIcons;

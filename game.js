@@ -15,6 +15,7 @@ const { GAME_CONFIG, UI_CONFIG, msToFrames, getLevelColor, getLevelNameZh, getLe
 const playerData = require('./js/playerData');
 const ui = require('./js/uiHelpers');
 const toast = require('./js/toastNotifications');
+const ItemIcons = require('./js/itemIcons');
 
 // ─── Canvas 初始化 ───
 
@@ -1342,4 +1343,7 @@ function gameLoop() {
 
 // ─── 启动游戏 ───
 
-requestAnimationFrame(gameLoop);
+ItemIcons.preload().then(() => {
+  console.log('[ItemIcons] 预加载完成');
+  requestAnimationFrame(gameLoop);
+});
