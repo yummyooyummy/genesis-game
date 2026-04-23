@@ -566,16 +566,38 @@ function drawMenuScreen() {
   // ── 背景 ──
   drawBgGradient();
 
+  // ── 星空粒子（静态随机种子，每帧重绘） ──
+  if (!drawMenuScreen._stars) {
+    drawMenuScreen._stars = [];
+    for (let i = 0; i < 140; i++) {
+      drawMenuScreen._stars.push({
+        x: Math.random(),
+        y: Math.random(),
+        r: 0.25 + Math.random() * 0.45,
+        a: 0.15 + Math.random() * 0.4,
+      });
+    }
+  }
+  ctx.save();
+  for (const s of drawMenuScreen._stars) {
+    ctx.globalAlpha = s.a;
+    ctx.fillStyle = '#FFFFFF';
+    ctx.beginPath();
+    ctx.arc(s.x * screenWidth, s.y * screenHeight, s.r, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  ctx.restore();
+
   // ── 数据准备 ──
   const data = playerData.loadPlayerData();
   const hasRecord = (data.maxScore || 0) > 0;
 
-  // ── 星球 ──
-  const planetSize = LS.ds(220);
+  // ── 星球（缩小到 170） ──
+  const planetSize = LS.ds(170);
   const planetCY = hasRecord ? LS.dy(210) : LS.dy(290);
   drawPlanet(LS.dx(187.5), planetCY, planetSize);
 
-  // ── 虚线轨道环（动画旋转） ──
+  // ── 虚线轨道环（极淡） ──
   menuOrbitAngle += 0.002;
   const orbitR = planetSize / 2 * 1.15;
   ctx.save();
@@ -584,7 +606,7 @@ function drawMenuScreen() {
   ctx.beginPath();
   ctx.ellipse(0, 0, orbitR, orbitR * 0.25, 0, 0, Math.PI * 2);
   ctx.setLineDash([6, 8]);
-  ctx.strokeStyle = 'rgba(180,165,255,0.3)';
+  ctx.strokeStyle = 'rgba(180,165,255,0.12)';
   ctx.lineWidth = 1;
   ctx.stroke();
   ctx.setLineDash([]);
@@ -621,17 +643,17 @@ function drawMenuScreen() {
   });
 
   if (hasRecord) {
-    // ── 奖牌卡（319×120，中心 y=600）──
+    // ── 奖牌卡（319×130，中心 y=600，上下两行结构）──
     const cardW = LS.ds(319);
-    const cardH = LS.ds(120);
+    const cardH = LS.ds(130);
     const cardX = LS.dx(187.5) - cardW / 2;
     const cardY = LS.dy(600) - cardH / 2;
-    const cardLeft = LS.dx(187.5 - 159.5 + 20);
-    const cardRight = LS.dx(187.5 + 159.5 - 20);
+    const leftX = LS.dx(48);
+    const rightX = LS.dx(327);
     ui.drawGoldCard(ctx, cardX, cardY, cardW, cardH);
 
-    // 4 点星装饰（卡片右上角内侧）
-    const spkX = LS.dx(290);
+    // sparkle 装饰（卡片右上角内侧）
+    const spkX = LS.dx(308);
     const spkY = LS.dy(555);
     const spkR = LS.ds(6);
     ctx.save();
@@ -646,15 +668,15 @@ function drawMenuScreen() {
     ctx.fill();
     ctx.restore();
 
-    // 左列标签："最高纪录"
-    ui.drawText(ctx, '最高纪录', cardLeft, LS.dy(566), {
+    // 第 1 行上半："最高纪录"标签（左对齐）
+    ui.drawText(ctx, '最高纪录', leftX, LS.dy(565), {
       fontSize: LS.df(11),
       color: '#FFD887',
       align: 'left',
     });
 
-    // 左列数值：分数（48pt）
-    ui.drawText(ctx, (data.maxScore || 0).toLocaleString(), cardLeft, LS.dy(610), {
+    // 第 1 行上半：分数（48pt，左对齐）
+    ui.drawText(ctx, (data.maxScore || 0).toLocaleString(), leftX, LS.dy(610), {
       fontSize: LS.df(48),
       color: '#FFD887',
       weight: '700',
@@ -663,21 +685,21 @@ function drawMenuScreen() {
       glowColor: 'rgba(255,215,0,0.3)',
     });
 
-    // 右列标签："最高等级"
-    ui.drawText(ctx, '最高等级', cardRight, LS.dy(566), {
+    // 第 2 行下半："最高等级"标签（左对齐）
+    ui.drawText(ctx, '最高等级', leftX, LS.dy(648), {
       fontSize: LS.df(11),
       color: UI_CONFIG.color.textMuted,
-      align: 'right',
+      align: 'left',
     });
 
-    // 右列数值：彩点 + "Lv.X 名字"
+    // 第 2 行下半："Lv.X 等级名"（右对齐）+ 彩点
     const lvl = data.maxLevel || 1;
     const lvColor = getLevelColor(lvl);
     const lvName = getLevelNameZh(lvl);
     const lvText = 'Lv.' + lvl + ' ' + lvName;
 
-    ui.drawText(ctx, lvText, cardRight, LS.dy(610), {
-      fontSize: LS.df(18),
+    ui.drawText(ctx, lvText, rightX, LS.dy(648), {
+      fontSize: LS.df(13),
       color: lvColor,
       weight: '600',
       align: 'right',
@@ -686,19 +708,19 @@ function drawMenuScreen() {
     });
 
     // 彩色小圆点（等级文字左侧）
-    const lvTextWidth = ui.measureText(ctx, lvText, LS.df(18), '600');
-    const dotX = cardRight - lvTextWidth - LS.ds(10);
+    const lvTextWidth = ui.measureText(ctx, lvText, LS.df(13), '600');
+    const dotX = rightX - lvTextWidth - LS.ds(10);
     ctx.save();
     ctx.fillStyle = lvColor;
     ctx.shadowColor = lvColor + '99';
     ctx.shadowBlur = 6;
     ctx.beginPath();
-    ctx.arc(dotX, LS.dy(610), LS.ds(5), 0, Math.PI * 2);
+    ctx.arc(dotX, LS.dy(648), LS.ds(5), 0, Math.PI * 2);
     ctx.fill();
     ctx.restore();
   }
 
-  // ── "开始游戏" 主按钮（静态发光，无呼吸动画） ──
+  // ── "开始游戏" 主按钮（静态发光） ──
   ctx.save();
   ctx.shadowColor = UI_CONFIG.ctaButton.outerGlow.color;
   ctx.shadowBlur = 18;
