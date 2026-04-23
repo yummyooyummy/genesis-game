@@ -17,6 +17,7 @@ const ui = require('./js/uiHelpers');
 const toast = require('./js/toastNotifications');
 const ItemIcons = require('./js/itemIcons');
 const ConfettiManager = require('./js/confettiParticles');
+const ComboTextManager = require('./js/comboTextManager');
 
 // ─── Canvas 初始化 ───
 
@@ -69,10 +70,11 @@ let menuButtons = null;     // { start: { x, y, w, h } }
 let menuOrbitAngle = 0;
 let pauseDialogButtons = null; // { resume, restart, home } 每个 { x, y, w, h }
 let decorationTimer = 0;   // 装饰粒子计时器
-let comboDisplay = { count: 0, x: 0, y: 0, timer: 0 }; // combo 显示
 
 // 调试开关 — 上线前改为 false
 const DEBUG_ITEMS = false;
+const DEBUG_COMBO = false;
+let debugComboCounter = 1;
 
 // ─── 存档 + 单局追踪 ───
 
@@ -104,6 +106,7 @@ const renderer = new Renderer(ctx, screenWidth, screenHeight);
 const particles = new Particles();
 const score = new Score();
 const items = new Items();
+const comboText = new ComboTextManager();
 
 const input = new Input(
   canvas,
@@ -126,6 +129,12 @@ input.onMenuTouch = function (x, y) {
   }
 };
 input.onPauseTap = handlePause;
+if (DEBUG_COMBO) {
+  input.onDebugComboTap = function () {
+    debugComboCounter++;
+    comboText.push(debugComboCounter);
+  };
+}
 input.onPausedTouch = function (x, y) {
   if (!pauseDialogButtons) return;
   if (ui.isPointInRect(x, y, pauseDialogButtons.resume.x, pauseDialogButtons.resume.y, pauseDialogButtons.resume.w, pauseDialogButtons.resume.h)) {
@@ -222,7 +231,9 @@ function checkComboDropTrigger() {
 function performMerge(slotA, slotB) {
   // 合法性已由 handleSlotTap 校验（相邻 + 同级 + 非空）
   score.resetCombo();
+  comboText.reset();
   const combo = score.incrementCombo();
+  if (combo >= 2) comboText.push(combo);
   const newLevel = slotA.level + 1;
   score.addMergeScore(newLevel, combo);
 
@@ -241,10 +252,6 @@ function handleMergeBurst(anim, midX, midY) {
 
   sessionMergeCount++;
   if (score.combo > sessionMaxCombo) sessionMaxCombo = score.combo;
-
-  if (score.combo >= 2) {
-    comboDisplay = { count: score.combo, x: centerX, y: centerY, timer: 60 };
-  }
 }
 
 /**
@@ -256,6 +263,7 @@ function handleMergeComplete(slotA, newLevel) {
   const nextPartner = board.findNearestAdjacentSameLevel(slotA);
   if (nextPartner) {
     const c = score.incrementCombo();
+    if (c >= 2) comboText.push(c);
     const chainedLevel = slotA.level + 1;
     score.addMergeScore(chainedLevel, c);
     checkComboDropTrigger();
@@ -441,7 +449,9 @@ function handleUpgradeComplete(upgradedSlots) {
     const partner = board.findNearestAdjacentSameLevel(slot);
     if (partner && !partner.mergeAnimating) {
       score.resetCombo();
+      comboText.reset();
       const combo = score.incrementCombo();
+      if (combo >= 2) comboText.push(combo);
       const newLevel = slot.level + 1;
       score.addMergeScore(newLevel, combo);
       board.startMergeAnimation(slot, partner);
@@ -470,7 +480,9 @@ function handleMagnetComplete(mergedSlots) {
     const partner = board.findNearestAdjacentSameLevel(slot);
     if (partner && !partner.mergeAnimating) {
       score.resetCombo();
+      comboText.reset();
       const combo = score.incrementCombo();
+      if (combo >= 2) comboText.push(combo);
       const newLevel = slot.level + 1;
       score.addMergeScore(newLevel, combo);
       board.startMergeAnimation(slot, partner);
@@ -1111,15 +1123,20 @@ function drawPauseDialog() {
 
 /** 处理重新开始 */
 function handleRestart() {
+  // 强制清零 combo 状态（防止残留）
+  score.resetCombo();
+  comboText.reset();
+  debugComboCounter = 1;
+
   board.reset();
   score.reset();
   particles.clear();
+  comboText.reset();
   items.reset();
   gameState = 'playing';
   input.isGameOver = false;
   input.isMenu = false;
   input.isPaused = false;
-  comboDisplay = { count: 0, x: 0, y: 0, timer: 0 };
   decorationTimer = 0;
   mergeFlowState = null;
   mergeFlowTimer = 0;
@@ -1232,11 +1249,6 @@ function gameLoop() {
       _saveOnGameOver();
     }
 
-    // combo 显示计时
-    if (comboDisplay.timer > 0) {
-      comboDisplay.timer -= 1;
-    }
-
     // 装饰粒子（每 30 帧生成一轮）
     decorationTimer += 1;
     if (decorationTimer >= 30) {
@@ -1251,6 +1263,8 @@ function gameLoop() {
 
     // 粒子更新
     particles.update();
+
+    comboText.update();
 
     toast.update();
 
@@ -1319,16 +1333,29 @@ function gameLoop() {
 
 
 
-    // combo 显示
-    if (comboDisplay.timer > 0) {
-      renderer.drawCombo(comboDisplay.count, comboDisplay.x, comboDisplay.y);
-    }
+    comboText.render(ctx);
 
     // 浮动得分
     renderer.drawScorePopup(score.lastScorePopup);
 
     // 顶部 toast 浮层（在所有 UI 之上）
     toast.draw(ctx, screenWidth, statusBarHeight);
+
+    // ── 临时调试按钮 ──
+    if (DEBUG_COMBO) {
+      const dbx = LS.dx(335), dby = LS.dy(60), dbr = LS.ds(18);
+      ctx.save();
+      ctx.fillStyle = 'rgba(255,180,0,0.7)';
+      ctx.beginPath();
+      ctx.arc(dbx, dby, dbr, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = '#000';
+      ctx.font = `bold ${LS.df(13)}px Arial`;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText('C+', dbx, dby);
+      ctx.restore();
+    }
 
     ctx.restore();
   } else if (gameState === 'paused') {

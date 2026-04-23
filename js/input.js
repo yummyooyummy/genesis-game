@@ -114,6 +114,17 @@ class Input {
       }
     }
 
+    // 临时调试按钮
+    if (this.onDebugComboTap) {
+      const LS = require('./layoutScale');
+      const dbx = LS.dx(335), dby = LS.dy(60), dbr = LS.ds(24);
+      const ddx = x - dbx, ddy = y - dby;
+      if (ddx * ddx + ddy * ddy <= dbr * dbr) {
+        this.onDebugComboTap();
+        return;
+      }
+    }
+
 
 
     // 悬浮掉落物命中（优先于道具栏和棋盘）

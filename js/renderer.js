@@ -679,15 +679,12 @@ class Renderer {
 
     ctx.save();
     ctx.globalAlpha = alpha;
-    ctx.fillStyle = popup.combo > 1 ? '#FFD700' : '#fff';
+    ctx.fillStyle = '#fff';
     ctx.font = `bold ${LS.df(18)}px Arial`;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
 
-    const text = popup.combo > 1
-      ? `+${popup.points} (x${popup.combo})`
-      : `+${popup.points}`;
-    ctx.fillText(text, LS.dx(187.5), LS.dy(300) + yOffset);
+    ctx.fillText(`+${popup.points}`, LS.dx(187.5), LS.dy(300) + yOffset);
     ctx.restore();
   }
 

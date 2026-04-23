@@ -13,7 +13,7 @@ const GAME_CONFIG = {
     safePeriodSeconds: 5,         // 游戏开始后的安全期（秒）— 0 表示立即启动定时分裂
     preSplitWarningSeconds: 1.5,  // 分裂前摇动效时长（秒）
     intervalByLevel: {
-      '1-3': 5,   // 核心 Lv.1-3 时的定时分裂间隔（秒）
+      '1-3': 1,   // 核心 Lv.1-3 时的定时分裂间隔（秒）
       '4-5': 7,
       '6-7': 7,
       '8-10': 6,
