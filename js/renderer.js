@@ -5,6 +5,7 @@
 
 const { RING_CONFIG, RING_RADIUS_RATIO, ELEMENT_COLORS, getElementColors } = require('./board');
 const { GAME_CONFIG, getLevelNameEn } = require('./config');
+const { ItemCooldown } = require('./items');
 
 /** 背景色 */
 const BG_COLOR = '#0a0a1a';
@@ -432,6 +433,44 @@ class Renderer {
       // 图标
       const iconColor = active ? '#FFFFFF' : '#5A5A5A';
       this._drawItemIcon(type, cx, cy, iconColor, active);
+
+      // CD 视觉反馈
+      const now = Date.now();
+      if (ItemCooldown.isOnCooldown(type, now)) {
+        const progress = ItemCooldown.getCooldownProgress(type, now);
+        const remaining = ItemCooldown.getRemainingSeconds(type, now);
+
+        // 灰色半透明遮罩
+        ctx.save();
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
+        ctx.beginPath();
+        ctx.arc(cx, cy, slotRadius, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+
+        // 扇形扫描（从满到空，顺时针）
+        ctx.save();
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.2)';
+        ctx.beginPath();
+        ctx.moveTo(cx, cy);
+        const startAngle = -Math.PI / 2;
+        const endAngle = startAngle + Math.PI * 2 * (1 - progress);
+        ctx.arc(cx, cy, slotRadius, startAngle, endAngle);
+        ctx.closePath();
+        ctx.fill();
+        ctx.restore();
+
+        // 最后 3 秒显示倒计时数字
+        if (remaining <= 3 && remaining > 0) {
+          ctx.save();
+          ctx.fillStyle = '#FFFFFF';
+          ctx.font = 'bold 20px Arial';
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'middle';
+          ctx.fillText(remaining, cx, cy);
+          ctx.restore();
+        }
+      }
 
       // 数量文字（下方居中）
       ctx.fillStyle = active ? '#FFFFFF' : '#6A6A6A';
