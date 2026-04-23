@@ -622,51 +622,78 @@ function drawMenuScreen() {
   });
 
   if (hasRecord) {
-    // ── 金色最高纪录卡片 ──
+    // ── 金色奖牌卡（左右两列布局）──
     const cardW = LS.ds(300);
     const cardH = LS.ds(108);
     const cardX = LS.dx(187.5) - cardW / 2;
     const cardY = LS.dy(520) - cardH / 2;
     ui.drawGoldCard(ctx, cardX, cardY, cardW, cardH);
 
-    // "最高纪录" 标签
-    ui.drawText(ctx, '✦  最高纪录  ✦', LS.dx(187.5), LS.dy(490), {
-      fontSize: LS.df(11),
-      color: 'rgba(255,215,0,0.7)',
-      weight: '600',
-    });
+    // 4 点星装饰（卡片右上角内侧）
+    const spkX = LS.dx(320);
+    const spkY = LS.dy(478);
+    const spkR = LS.ds(6);
+    ctx.save();
+    ctx.fillStyle = '#FFD887';
+    ctx.beginPath();
+    ctx.moveTo(spkX, spkY - spkR);
+    ctx.quadraticCurveTo(spkX + spkR * 0.25, spkY - spkR * 0.25, spkX + spkR, spkY);
+    ctx.quadraticCurveTo(spkX + spkR * 0.25, spkY + spkR * 0.25, spkX, spkY + spkR);
+    ctx.quadraticCurveTo(spkX - spkR * 0.25, spkY + spkR * 0.25, spkX - spkR, spkY);
+    ctx.quadraticCurveTo(spkX - spkR * 0.25, spkY - spkR * 0.25, spkX, spkY - spkR);
+    ctx.closePath();
+    ctx.fill();
+    ctx.restore();
 
-    // 大号分数
-    ui.drawText(ctx, (data.maxScore || 0).toLocaleString(), LS.dx(187.5), LS.dy(520), {
+    // 左列："最高纪录" 标签 + 分数
+    ui.drawText(ctx, '最高纪录', LS.dx(108), LS.dy(494), {
+      fontSize: LS.df(11),
+      color: '#FFD887',
+    });
+    ui.drawText(ctx, (data.maxScore || 0).toLocaleString(), LS.dx(108), LS.dy(518), {
       fontSize: LS.df(32),
-      color: '#FFFFFF',
+      color: '#FFD887',
       weight: '700',
       glow: 8,
       glowColor: 'rgba(255,215,0,0.3)',
     });
 
-    // 虚线分隔
-    const divLineW = LS.ds(280);
+    // 中间竖线（渐变虚线，高 72，中心 y=520）
+    const lineTop = LS.dy(484);
+    const lineBot = LS.dy(556);
     ctx.save();
     ctx.setLineDash([4, 4]);
-    ctx.strokeStyle = 'rgba(255,215,0,0.2)';
+    ctx.strokeStyle = 'rgba(180,165,255,0.4)';
     ctx.lineWidth = 1;
     ctx.beginPath();
-    ctx.moveTo(LS.dx(187.5) - divLineW / 2, LS.dy(555));
-    ctx.lineTo(LS.dx(187.5) + divLineW / 2, LS.dy(555));
+    ctx.moveTo(LS.dx(187.5), lineTop);
+    ctx.lineTo(LS.dx(187.5), lineBot);
     ctx.stroke();
     ctx.setLineDash([]);
     ctx.restore();
 
-    // "最高等级"
-    ui.drawText(ctx, '最高等级', LS.dx(187.5), LS.dy(575), {
-      fontSize: LS.df(11),
-      color: UI_CONFIG.color.textMuted,
-    });
+    // 右列："最高等级" 标签 + 彩点 + 等级名
     const lvl = data.maxLevel || 1;
     const lvColor = getLevelColor(lvl);
     const lvName = getLevelNameZh(lvl);
-    ui.drawText(ctx, 'Lv.' + lvl + ' ' + lvName, LS.dx(187.5), LS.dy(595), {
+
+    ui.drawText(ctx, '最高等级', LS.dx(267), LS.dy(494), {
+      fontSize: LS.df(11),
+      color: UI_CONFIG.color.textMuted,
+    });
+
+    // 彩色小圆点
+    ctx.save();
+    ctx.fillStyle = lvColor;
+    ctx.shadowColor = lvColor + '99';
+    ctx.shadowBlur = 6;
+    ctx.beginPath();
+    ctx.arc(LS.dx(224), LS.dy(526), LS.ds(5), 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+
+    // "Lv.X 名字"
+    ui.drawText(ctx, 'Lv.' + lvl + ' ' + lvName, LS.dx(277), LS.dy(526), {
       fontSize: LS.df(18),
       color: lvColor,
       weight: '600',
