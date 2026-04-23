@@ -674,17 +674,18 @@ function drawMenuScreen() {
 
   // ── "开始游戏" 主按钮 ──
   if (!hasRecord) {
-    // 新玩家呼吸发光 — 在按钮下方画一层脉动光晕
-    const pulse = (Math.sin(Date.now() / 1000) + 1) / 2;
-    const glowRadius = 20 + pulse * 20;
+    // 新玩家呼吸发光（幅度减半）
+    const breathe = UI_CONFIG.ctaButton.breathe;
+    const pulse = (Math.sin(Date.now() / (breathe.durationMs / 2) * Math.PI) + 1) / 2;
+    const glowRadius = breathe.minGlow + pulse * (breathe.maxGlow - breathe.minGlow);
     ctx.save();
-    ctx.shadowColor = UI_CONFIG.color.accentPurpleLight;
+    ctx.shadowColor = UI_CONFIG.ctaButton.outerGlow.color;
     ctx.shadowBlur = glowRadius;
     ctx.fillStyle = 'rgba(0,0,0,0.01)';
     ctx.fillRect(btnX, btnY, btnW, btnH);
     ctx.restore();
   }
-  ui.drawPrimaryButton(ctx, btnX, btnY, btnW, btnH, '开始游戏');
+  ui.drawPrimaryButton(ctx, btnX, btnY, btnW, btnH, '开始游戏', { useCta: true });
   menuButtons = { start: { x: btnX, y: btnY, w: btnW, h: btnH } };
 }
 

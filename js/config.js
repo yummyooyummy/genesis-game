@@ -299,6 +299,31 @@ const UI_CONFIG = {
     cardSoft: 40,
   },
 
+  // 开始按钮样式
+  ctaButton: {
+    fill: [
+      { offset: 0,    color: '#9789DC' },
+      { offset: 0.55, color: '#8A7FD1' },
+      { offset: 1,    color: '#6E63B8' },
+    ],
+    strokeColor: 'rgba(180,165,255,0.4)',
+    strokeWidth: 1,
+    outerGlow: {
+      color: 'rgba(138,127,209,0.45)',
+      blur: 24,
+    },
+    innerHighlight: {
+      color: 'rgba(255,255,255,0.3)',
+      offset: 1.5,
+      blur: 1,
+    },
+    breathe: {
+      minGlow: 16,
+      maxGlow: 28,
+      durationMs: 2000,
+    },
+  },
+
   // 背景三段线性渐变
   backgroundGradient: {
     stops: [

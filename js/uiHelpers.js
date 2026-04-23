@@ -111,29 +111,51 @@ function drawPrimaryButton(ctx, x, y, w, h, text, options) {
     glow: true,
     pressed: false,
     fontSize: UI_CONFIG.font.buttonPrimary,
+    useCta: false,
   }, options);
 
   ctx.save();
 
+  const cta = UI_CONFIG.ctaButton;
+
   // 光晕
   if (o.glow) {
-    ctx.shadowColor = o.pressed
-      ? UI_CONFIG.color.accentPurple
-      : UI_CONFIG.color.accentPurpleLight;
-    ctx.shadowBlur = o.pressed
-      ? UI_CONFIG.glow.buttonPrimary * 0.5
-      : UI_CONFIG.glow.buttonPrimary;
+    if (o.useCta) {
+      ctx.shadowColor = cta.outerGlow.color;
+      ctx.shadowBlur = o.pressed ? cta.outerGlow.blur * 0.5 : cta.outerGlow.blur;
+    } else {
+      ctx.shadowColor = o.pressed
+        ? UI_CONFIG.color.accentPurple
+        : UI_CONFIG.color.accentPurpleLight;
+      ctx.shadowBlur = o.pressed
+        ? UI_CONFIG.glow.buttonPrimary * 0.5
+        : UI_CONFIG.glow.buttonPrimary;
+    }
   }
 
   // 渐变填充
   const grad = ctx.createLinearGradient(x, y, x + w, y + h);
-  grad.addColorStop(0, UI_CONFIG.color.accentPurple);
-  grad.addColorStop(1, UI_CONFIG.color.accentPurpleLight);
+  if (o.useCta) {
+    for (const s of cta.fill) grad.addColorStop(s.offset, s.color);
+  } else {
+    grad.addColorStop(0, UI_CONFIG.color.accentPurple);
+    grad.addColorStop(1, UI_CONFIG.color.accentPurpleLight);
+  }
 
   const r = UI_CONFIG.radius.button;
   _roundRectPath(ctx, x, y, w, h, r);
   ctx.fillStyle = grad;
   ctx.fill();
+
+  // 描边（CTA 模式）
+  if (o.useCta) {
+    ctx.shadowColor = 'transparent';
+    ctx.shadowBlur = 0;
+    _roundRectPath(ctx, x, y, w, h, r);
+    ctx.strokeStyle = cta.strokeColor;
+    ctx.lineWidth = cta.strokeWidth;
+    ctx.stroke();
+  }
 
   // 按下态叠加半透明暗层
   if (o.pressed) {
