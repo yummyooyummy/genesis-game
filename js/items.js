@@ -219,7 +219,14 @@ class Items {
     }
 
     const minLevel = Math.min(...allParticles.map(s => s.level));
-    const targets = allParticles.filter(s => s.level === minLevel);
+    const remaining = allParticles.filter(s => s.level !== minLevel);
+    let secondMinLevel = null;
+    if (remaining.length > 0) {
+      secondMinLevel = Math.min(...remaining.map(s => s.level));
+    }
+    const targets = allParticles.filter(
+      s => s.level === minLevel || s.level === secondMinLevel
+    );
 
     this.inventory.clear -= 1;
     for (const slot of targets) {
