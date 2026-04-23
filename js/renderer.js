@@ -4,9 +4,10 @@
  */
 
 const { RING_CONFIG, RING_RADIUS_RATIO, ELEMENT_COLORS, getElementColors } = require('./board');
-const { GAME_CONFIG, UI_CONFIG, getLevelNameEn } = require('./config');
+const { GAME_CONFIG, UI_CONFIG, getLevelNameEn, getLevelColor } = require('./config');
 const { ItemCooldown } = require('./items');
 const ItemIcons = require('./itemIcons');
+const LS = require('./layoutScale');
 
 /** 轨道线颜色 */
 const TRACK_COLOR = 'rgba(255, 255, 255, 0.08)';
@@ -375,29 +376,25 @@ class Renderer {
    */
   drawScoreUI(score, highScore = 0) {
     const { ctx } = this;
-    const leftMargin = 24;
-    const topMargin = 20;
 
     // 当前分数（大号白色，带千位分隔符）
     ctx.fillStyle = '#FFFFFF';
-    ctx.font = 'bold 58px Arial';
+    ctx.font = `600 ${LS.df(32)}px Arial`;
     ctx.textAlign = 'left';
     ctx.textBaseline = 'top';
-    ctx.fillText(this._formatNumber(score), leftMargin, topMargin);
+    ctx.fillText(this._formatNumber(score), LS.dx(20), LS.dy(60));
 
     // 历史最高分（皇冠 + 小号金色）
-    const crownSize = 16;
-    const scoreHeight = 58;
-    const highY = topMargin + scoreHeight + 6;
-    const crownX = leftMargin + crownSize / 2;
-    const crownY = highY;
+    const crownSize = LS.ds(11);
+    const crownX = LS.dx(26);
+    const crownY = LS.dy(92);
     this._drawCrown(crownX, crownY, crownSize, '#EF9F27');
 
     ctx.fillStyle = '#EF9F27';
-    ctx.font = '14px Arial';
+    ctx.font = `${LS.df(11)}px Arial`;
     ctx.textAlign = 'left';
     ctx.textBaseline = 'middle';
-    ctx.fillText(this._formatNumber(highScore), leftMargin + crownSize + 6, crownY);
+    ctx.fillText(this._formatNumber(highScore), LS.dx(44), LS.dy(92));
   }
 
   /**
@@ -410,20 +407,19 @@ class Renderer {
   drawItemBar(items) {
     const { ctx } = this;
 
-    const slotRadius = 30;
-    const slotSpacing = 92;        // 槽位中心间距（直径 60 + 间距 32）
-    const centerX = this.width / 2;
-    const centerY = this.height - 115;
-    const types = ['clear', 'upgrade', 'magnet'];
+    const slotRadius = LS.ds(29);
+    const slotCenters = [
+      { type: 'magnet',  cx: LS.dx(92),    cy: LS.dy(642) },
+      { type: 'clear',   cx: LS.dx(187.5), cy: LS.dy(642) },
+      { type: 'upgrade', cx: LS.dx(283),   cy: LS.dy(642) },
+    ];
 
     this.itemBarSlots = [];
 
-    for (let i = 0; i < types.length; i++) {
-      const type = types[i];
+    for (const slot of slotCenters) {
+      const { type, cx, cy } = slot;
       const count = items.inventory[type];
       const active = count > 0;
-      const cx = centerX + (i - 1) * slotSpacing;
-      const cy = centerY;
 
       // 圆盘底色
       ctx.fillStyle = active ? '#6B6B6B' : '#3A3A3A';
@@ -441,7 +437,6 @@ class Renderer {
         const progress = ItemCooldown.getCooldownProgress(type, now);
         const remaining = ItemCooldown.getRemainingSeconds(type, now);
 
-        // 灰色半透明遮罩
         ctx.save();
         ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
         ctx.beginPath();
@@ -449,7 +444,6 @@ class Renderer {
         ctx.fill();
         ctx.restore();
 
-        // 扇形扫描（从满到空，顺时针）
         ctx.save();
         ctx.fillStyle = 'rgba(255, 255, 255, 0.2)';
         ctx.beginPath();
@@ -461,11 +455,10 @@ class Renderer {
         ctx.fill();
         ctx.restore();
 
-        // CD 期间全程显示倒计时数字
         if (remaining > 0) {
           ctx.save();
           ctx.fillStyle = '#FFFFFF';
-          ctx.font = 'bold 20px Arial';
+          ctx.font = `bold ${LS.df(20)}px Arial`;
           ctx.textAlign = 'center';
           ctx.textBaseline = 'middle';
           ctx.fillText(remaining, cx, cy);
@@ -475,10 +468,10 @@ class Renderer {
 
       // 数量文字（下方居中）
       ctx.fillStyle = active ? '#FFFFFF' : '#6A6A6A';
-      ctx.font = '16px Arial';
+      ctx.font = `${LS.df(14)}px Arial`;
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
-      ctx.fillText(`x${count}`, cx, cy + slotRadius + 16);
+      ctx.fillText(`x${count}`, cx, cy + slotRadius + LS.ds(14));
 
       this.itemBarSlots.push({ type, x: cx, y: cy, r: slotRadius });
     }
@@ -563,18 +556,32 @@ class Renderer {
   drawCoreLevelUI(coreLevel) {
     const { ctx } = this;
     const name = getLevelNameEn(coreLevel);
-    const cx = this.width / 2;
-    const y = this.height - 30;
+    const fontSize = LS.df(13);
 
+    // "核心等级"
     ctx.save();
-    ctx.font = '11px Arial';
+    ctx.font = `${fontSize}px Arial`;
     ctx.textBaseline = 'middle';
-    ctx.textAlign = 'center';
-    ctx.globalAlpha = 0.5;
-    ctx.fillStyle = '#888888';
+    ctx.textAlign = 'left';
+    ctx.fillStyle = UI_CONFIG.color.textMuted;
+    ctx.fillText('核心等级', LS.dx(24), LS.dy(755));
 
-    const text = `核心等级 | Lv.${coreLevel} ${name}`;
-    ctx.fillText(text, cx, y);
+    // 分隔符
+    ctx.fillText('|', LS.dx(88), LS.dy(755));
+
+    // "Lv.X Name" 彩色
+    ctx.fillStyle = getLevelColor(coreLevel);
+    ctx.fillText(`Lv.${coreLevel} ${name}`, LS.dx(100), LS.dy(755));
+    ctx.restore();
+
+    // 底部分隔线
+    ctx.save();
+    ctx.strokeStyle = 'rgba(255,255,255,0.06)';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(0, LS.dy(720));
+    ctx.lineTo(LS.dx(375), LS.dy(720));
+    ctx.stroke();
     ctx.restore();
   }
 
@@ -583,20 +590,20 @@ class Renderer {
    */
   drawPauseButton() {
     const { ctx } = this;
-    const x = this.width - 24 - 12;
-    const y = this.height - 40;
-    const half = 12;
+    const cx = LS.dx(339);
+    const cy = LS.dy(755);
+    const half = LS.ds(17);
 
     ctx.save();
     ctx.fillStyle = '#888888';
-    const barW = 4;
-    const barH = 16;
-    const gap = 6;
-    ctx.fillRect(x - gap / 2 - barW, y - barH / 2, barW, barH);
-    ctx.fillRect(x + gap / 2, y - barH / 2, barW, barH);
+    const barW = LS.ds(4);
+    const barH = LS.ds(16);
+    const gap = LS.ds(6);
+    ctx.fillRect(cx - gap / 2 - barW, cy - barH / 2, barW, barH);
+    ctx.fillRect(cx + gap / 2, cy - barH / 2, barW, barH);
     ctx.restore();
 
-    this.pauseBtnPos = { x, y, r: half + 6 };
+    this.pauseBtnPos = { x: cx, y: cy, r: half + LS.ds(6) };
   }
 
   /**
@@ -648,11 +655,11 @@ class Renderer {
     const { ctx } = this;
     ctx.save();
     ctx.fillStyle = '#FFD700';
-    ctx.font = `bold ${20 + combo * 2}px Arial`;
+    ctx.font = `bold ${LS.df(20 + combo * 2)}px Arial`;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     ctx.globalAlpha = 0.9;
-    ctx.fillText(`COMBO x${combo}!`, x, y - 40);
+    ctx.fillText(`COMBO x${combo}!`, x, y - LS.ds(40));
     ctx.restore();
   }
 
@@ -673,14 +680,14 @@ class Renderer {
     ctx.save();
     ctx.globalAlpha = alpha;
     ctx.fillStyle = popup.combo > 1 ? '#FFD700' : '#fff';
-    ctx.font = `bold 18px Arial`;
+    ctx.font = `bold ${LS.df(18)}px Arial`;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
 
     const text = popup.combo > 1
       ? `+${popup.points} (x${popup.combo})`
       : `+${popup.points}`;
-    ctx.fillText(text, this.width / 2, this.height / 2 - 100 + yOffset);
+    ctx.fillText(text, LS.dx(187.5), LS.dy(300) + yOffset);
     ctx.restore();
   }
 
@@ -813,10 +820,10 @@ class Renderer {
     ctx.save();
     ctx.globalAlpha = alpha;
     ctx.fillStyle = '#FF6464';
-    ctx.font = 'bold 17px Arial';
+    ctx.font = `bold ${LS.df(17)}px Arial`;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    ctx.fillText(hint.text, this.width / 2, this.height * 0.68);
+    ctx.fillText(hint.text, LS.dx(187.5), LS.dy(560));
     ctx.restore();
   }
 

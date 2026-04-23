@@ -35,15 +35,20 @@ canvas.width = screenWidth * dpr;
 canvas.height = screenHeight * dpr;
 ctx.scale(dpr, dpr);
 
+// 初始化坐标缩放系统（必须在任何绘制函数之前）
+const LayoutScale = require('./js/layoutScale');
+const LS = LayoutScale;
+LayoutScale.init(screenWidth, screenHeight);
+console.log(`[LayoutScale] screen=${screenWidth}x${screenHeight}, scaleX=${LayoutScale.scaleX.toFixed(3)}, scaleY=${LayoutScale.scaleY.toFixed(3)}, scaleMin=${LayoutScale.scaleMin.toFixed(3)}`);
+
 // ─── 游戏参数 ───
 
 /** 棋盘中心坐标（逻辑像素） */
-const centerX = screenWidth / 2;
-// 棋盘垂直中心：在顶部分数区（~110px）和底部等级栏（~55px from bottom）之间居中
-const centerY = screenHeight * 0.42;
+const centerX = LS.dx(187.5);
+const centerY = LS.dy(400);
 
-/** 棋盘半径（逻辑像素）— 外圈轨道贴近屏宽，留约 20px 边距 */
-const boardRadius = Math.min(screenWidth * 0.445, (screenHeight - 165) * 0.5);
+/** 棋盘半径（逻辑像素）— 设计稿 319/2 ≈ 159.5 */
+const boardRadius = LS.ds(159.5);
 
 /** 掉落物左右悬浮位坐标（固定） */
 const dropTargetPositions = {
@@ -558,11 +563,6 @@ function drawBgGradient() {
  * 绘制开始界面 — Stellar Marquee 极简版
  */
 function drawMenuScreen() {
-  const W = screenWidth;
-  const H = screenHeight;
-  const padX = UI_CONFIG.spacing.screenPaddingX;
-  const padBottom = UI_CONFIG.spacing.screenPaddingBottom;
-
   // ── 背景 ──
   drawBgGradient();
 
@@ -571,18 +571,19 @@ function drawMenuScreen() {
   const hasRecord = (data.maxScore || 0) > 0;
 
   // ── 星球 ──
-  const planetSize = hasRecord ? UI_CONFIG.size.heroPlanetCompact : UI_CONFIG.size.heroPlanet;
-  const planetY = hasRecord ? H * 0.15 : H * 0.22;
-  drawPlanet(W / 2, planetY, planetSize);
+  const planetSize = hasRecord ? LS.ds(200) : LS.ds(220);
+  const planetCY = hasRecord ? LS.dy(248) : LS.dy(290);
+  drawPlanet(LS.dx(187.5), planetCY, planetSize);
 
   // ── 虚线轨道环（动画旋转） ──
   menuOrbitAngle += 0.002;
-  const orbitR = planetSize / 2;
+  const orbitSize = hasRecord ? LS.ds(228) : LS.ds(250);
+  const orbitR = orbitSize / 2;
   ctx.save();
-  ctx.translate(W / 2, planetY);
+  ctx.translate(LS.dx(187.5), planetCY);
   ctx.rotate(-Math.PI / 6 + menuOrbitAngle);
   ctx.beginPath();
-  ctx.ellipse(0, 0, orbitR * 1.6, orbitR * 0.4, 0, 0, Math.PI * 2);
+  ctx.ellipse(0, 0, orbitR, orbitR * 0.25, 0, 0, Math.PI * 2);
   ctx.setLineDash([6, 8]);
   ctx.strokeStyle = 'rgba(180,165,255,0.3)';
   ctx.lineWidth = 1;
@@ -591,53 +592,53 @@ function drawMenuScreen() {
   ctx.restore();
 
   // ── GENESIS 标题 ──
-  const titleY = planetY + planetSize / 2 + 32;
-  ui.drawText(ctx, 'GENESIS', W / 2, titleY, {
-    fontSize: UI_CONFIG.font.heroLogo,
+  const titleY = hasRecord ? LS.dy(400) : LS.dy(470);
+  ui.drawText(ctx, 'GENESIS', LS.dx(187.5), titleY, {
+    fontSize: LS.df(42),
     color: UI_CONFIG.color.textPrimary,
-    weight: '700',
+    weight: '600',
     glow: UI_CONFIG.glow.heroTitle,
     glowColor: UI_CONFIG.color.accentPurpleLight,
   });
 
   // ── 副标题 ──
-  const subY = titleY + 24;
-  ui.drawText(ctx, '万 物 起 源', W / 2, subY, {
-    fontSize: UI_CONFIG.font.heroSubtitle,
+  const subY = hasRecord ? LS.dy(430) : LS.dy(500);
+  ui.drawText(ctx, '万 物 起 源', LS.dx(187.5), subY, {
+    fontSize: LS.df(12),
     color: UI_CONFIG.color.textMuted,
     weight: 'normal',
   });
 
-  // ── 按钮区 ──
-  const btnH = UI_CONFIG.size.buttonPrimaryHeight;
-  const btnW = Math.min(UI_CONFIG.size.buttonPrimaryMaxWidth, W - padX * 2);
-  const btnX = (W - btnW) / 2;
-  const btnY = H - padBottom - btnH - 30;
+  // ── 开始按钮 ──
+  const btnW = LS.ds(300);
+  const btnH = LS.ds(52);
+  const btnX = LS.dx(187.5) - btnW / 2;
+  const btnY = LS.dy(700) - btnH / 2;
 
   // ── 版本号 ──
-  ui.drawText(ctx, '万物起源 v1.0.0', W / 2, H - padBottom - 6, {
-    fontSize: UI_CONFIG.font.hintXs,
+  ui.drawText(ctx, '万物起源 v1.0.0', LS.dx(187.5), LS.dy(758), {
+    fontSize: LS.df(10.5),
     color: UI_CONFIG.color.textMuted,
   });
 
   if (hasRecord) {
     // ── 金色最高纪录卡片 ──
-    const cardW = W - padX * 2;
-    const cardH = 140;
-    const cardX = padX;
-    const cardY = subY + 30;
+    const cardW = LS.ds(300);
+    const cardH = LS.ds(108);
+    const cardX = LS.dx(187.5) - cardW / 2;
+    const cardY = LS.dy(520) - cardH / 2;
     ui.drawGoldCard(ctx, cardX, cardY, cardW, cardH);
 
     // "最高纪录" 标签
-    ui.drawText(ctx, '✦  最高纪录  ✦', W / 2, cardY + 24, {
-      fontSize: 12,
+    ui.drawText(ctx, '✦  最高纪录  ✦', LS.dx(187.5), LS.dy(490), {
+      fontSize: LS.df(11),
       color: 'rgba(255,215,0,0.7)',
       weight: '600',
     });
 
     // 大号分数
-    ui.drawText(ctx, (data.maxScore || 0).toLocaleString(), W / 2, cardY + 58, {
-      fontSize: 32,
+    ui.drawText(ctx, (data.maxScore || 0).toLocaleString(), LS.dx(187.5), LS.dy(520), {
+      fontSize: LS.df(32),
       color: '#FFFFFF',
       weight: '700',
       glow: 8,
@@ -645,27 +646,28 @@ function drawMenuScreen() {
     });
 
     // 虚线分隔
+    const divLineW = LS.ds(280);
     ctx.save();
     ctx.setLineDash([4, 4]);
     ctx.strokeStyle = 'rgba(255,215,0,0.2)';
     ctx.lineWidth = 1;
     ctx.beginPath();
-    ctx.moveTo(cardX + 20, cardY + 82);
-    ctx.lineTo(cardX + cardW - 20, cardY + 82);
+    ctx.moveTo(LS.dx(187.5) - divLineW / 2, LS.dy(555));
+    ctx.lineTo(LS.dx(187.5) + divLineW / 2, LS.dy(555));
     ctx.stroke();
     ctx.setLineDash([]);
     ctx.restore();
 
-    // "最高等级" + Lv.X 名字
-    ui.drawText(ctx, '最高等级', W / 2, cardY + 102, {
-      fontSize: 11,
+    // "最高等级"
+    ui.drawText(ctx, '最高等级', LS.dx(187.5), LS.dy(575), {
+      fontSize: LS.df(11),
       color: UI_CONFIG.color.textMuted,
     });
     const lvl = data.maxLevel || 1;
     const lvColor = getLevelColor(lvl);
     const lvName = getLevelNameZh(lvl);
-    ui.drawText(ctx, 'Lv.' + lvl + ' ' + lvName, W / 2, cardY + 122, {
-      fontSize: 16,
+    ui.drawText(ctx, 'Lv.' + lvl + ' ' + lvName, LS.dx(187.5), LS.dy(595), {
+      fontSize: LS.df(18),
       color: lvColor,
       weight: '600',
       glow: 6,
@@ -675,7 +677,6 @@ function drawMenuScreen() {
 
   // ── "开始游戏" 主按钮 ──
   if (!hasRecord) {
-    // 新玩家呼吸发光（幅度减半）
     const breathe = UI_CONFIG.ctaButton.breathe;
     const pulse = (Math.sin(Date.now() / (breathe.durationMs / 2) * Math.PI) + 1) / 2;
     const glowRadius = breathe.minGlow + pulse * (breathe.maxGlow - breathe.minGlow);
@@ -695,12 +696,6 @@ function drawMenuScreen() {
  * 数据来源：lastGameResult + playerData
  */
 function drawGameOverScreen() {
-  const W = screenWidth;
-  const H = screenHeight;
-  const padX = UI_CONFIG.spacing.screenPaddingX;
-  const padBottom = UI_CONFIG.spacing.screenPaddingBottom;
-  const padTop = UI_CONFIG.spacing.screenPaddingTop;
-
   // ── 背景 ──
   drawBgGradient();
 
@@ -710,106 +705,94 @@ function drawGameOverScreen() {
   const maxLevel = data.maxLevel || 1;
   const maxScore = playerData.loadPlayerData().maxScore || 0;
   const levelName = getLevelNameZh(maxLevel);
+  const isNewRecord = !!(data.isNewRecord);
 
   // ── 破纪录金色粒子 ──
   if (data.isNewRecord) {
-    if (!ConfettiManager.initialized) ConfettiManager.init(W, H);
+    if (!ConfettiManager.initialized) ConfettiManager.init(screenWidth, screenHeight);
     ConfettiManager.update();
     ConfettiManager.draw(ctx);
   }
 
-  let cursorY = padTop;
-
   // ── 标题 "游戏结束" ──
-  ui.drawText(ctx, '游戏结束', W / 2, cursorY, {
-    fontSize: UI_CONFIG.font.screenTitle,
+  ui.drawText(ctx, '游戏结束', LS.dx(187.5), LS.dy(125), {
+    fontSize: LS.df(26),
     color: UI_CONFIG.color.textPrimary,
     weight: '600',
   });
 
-  // ── 短横线分隔符 ──
-  cursorY += 20;
+  // ── 标题渐变线 ──
   ctx.save();
   ctx.strokeStyle = UI_CONFIG.color.borderSoft;
   ctx.lineWidth = 1;
   ctx.beginPath();
-  ctx.moveTo(W / 2 - 20, cursorY);
-  ctx.lineTo(W / 2 + 20, cursorY);
+  ctx.moveTo(LS.dx(187.5) - LS.ds(30), LS.dy(150));
+  ctx.lineTo(LS.dx(187.5) + LS.ds(30), LS.dy(150));
   ctx.stroke();
   ctx.restore();
 
-  // ── 分数卡片 ──
-  cursorY += 20;
-  const cardX = padX;
-  const cardW = W - padX * 2;
-  const cardH = 130;
-  ui.drawGlassCard(ctx, cardX, cursorY, cardW, cardH);
-
-  const cardPadX = 20;
-  const cardInnerLeft = cardX + cardPadX;
-  const cardInnerRight = cardX + cardW - cardPadX;
-  const rowH = cardH / 2;
+  // ── 分数卡片（中心 187.5, 230，尺寸 319×108）──
+  const cardW = LS.ds(319);
+  const cardH = LS.ds(108);
+  const cardX = LS.dx(187.5) - cardW / 2;
+  const cardY = LS.dy(230) - cardH / 2;
+  ui.drawGlassCard(ctx, cardX, cardY, cardW, cardH);
 
   // 第 1 行：本局分数
-  const row1Y = cursorY + rowH / 2;
-  ui.drawText(ctx, '本局分数', cardInnerLeft, row1Y, {
-    fontSize: UI_CONFIG.font.cardLabel,
+  ui.drawText(ctx, '本局分数', LS.dx(48), LS.dy(204), {
+    fontSize: LS.df(12.5),
     color: UI_CONFIG.color.textMuted,
     align: 'left',
   });
-  ui.drawText(ctx, String(curScore), cardInnerRight, row1Y, {
-    fontSize: UI_CONFIG.font.scoreLG,
+  ui.drawText(ctx, String(curScore), LS.dx(327), LS.dy(204), {
+    fontSize: LS.df(26),
     color: UI_CONFIG.color.textPrimary,
     align: 'right',
-    weight: 'bold',
+    weight: '700',
   });
 
-  // 虚线 divider
-  const divY = cursorY + rowH;
+  // 卡内分隔线
+  const divW = LS.ds(291);
   ctx.save();
   ctx.strokeStyle = UI_CONFIG.color.borderSoft;
   ctx.lineWidth = 1;
   ctx.setLineDash([4, 4]);
   ctx.beginPath();
-  ctx.moveTo(cardInnerLeft, divY);
-  ctx.lineTo(cardInnerRight, divY);
+  ctx.moveTo(LS.dx(187.5) - divW / 2, LS.dy(234));
+  ctx.lineTo(LS.dx(187.5) + divW / 2, LS.dy(234));
   ctx.stroke();
   ctx.setLineDash([]);
   ctx.restore();
 
   // 第 2 行：最高分数
-  const row2Y = cursorY + rowH + rowH / 2;
-  const isNewRecord = !!(data.isNewRecord);
   const highScoreColor = isNewRecord ? UI_CONFIG.color.accentGold : UI_CONFIG.color.textPrimary;
 
-  ui.drawText(ctx, '最高分数', cardInnerLeft, row2Y, {
-    fontSize: UI_CONFIG.font.cardLabel,
+  ui.drawText(ctx, '最高分数', LS.dx(48), LS.dy(260), {
+    fontSize: LS.df(12.5),
     color: UI_CONFIG.color.textMuted,
     align: 'left',
   });
 
-  // 金色发光分数
   if (isNewRecord) {
     ctx.save();
     ctx.shadowColor = 'rgba(255,182,72,0.60)';
     ctx.shadowBlur = UI_CONFIG.glow.recordGold;
   }
-  ui.drawText(ctx, String(maxScore), cardInnerRight, row2Y, {
-    fontSize: UI_CONFIG.font.scoreLG,
+  ui.drawText(ctx, String(maxScore), LS.dx(327), LS.dy(260), {
+    fontSize: LS.df(22),
     color: highScoreColor,
     align: 'right',
-    weight: 'bold',
+    weight: '700',
   });
   if (isNewRecord) ctx.restore();
 
-  // NEW! 徽章（分数右上角小徽章）
+  // NEW! 徽章
   if (isNewRecord) {
-    const badgeText = 'NEW!';
-    const badgeFontSize = 9;
-    const badgeW = 36;
-    const badgeH = 18;
-    const badgeX = cardInnerRight - 8;
-    const badgeY = row2Y - badgeH - 12;
+    const badgeFontSize = LS.df(9);
+    const badgeW = LS.ds(38);
+    const badgeH = LS.ds(18);
+    const badgeX = LS.dx(236);
+    const badgeY = LS.dy(260) - badgeH / 2;
 
     ctx.save();
     ctx.shadowColor = 'rgba(138,127,209,0.50)';
@@ -829,23 +812,56 @@ function drawGameOverScreen() {
     ctx.fill();
     ctx.restore();
 
-    ui.drawText(ctx, badgeText, badgeX + badgeW / 2, badgeY + badgeH / 2, {
+    ui.drawText(ctx, 'NEW!', badgeX + badgeW / 2, badgeY + badgeH / 2, {
       fontSize: badgeFontSize,
       color: '#FFFFFF',
       weight: '600',
     });
   }
 
+  // ── 详情区（3 行）──
+  const details = [
+    { label: '核心等级', value: 'Lv.' + maxLevel + ' ' + levelName, valueColor: UI_CONFIG.color.accentCyan, y: 328 },
+    { label: '最高连锁', value: String(data.maxCombo || 0), valueColor: UI_CONFIG.color.textPrimary, y: 358 },
+    { label: '合成次数', value: String(data.mergeCount || 0), valueColor: UI_CONFIG.color.textPrimary, y: 388 },
+  ];
+
+  for (let i = 0; i < details.length; i++) {
+    const d = details[i];
+    ui.drawText(ctx, d.label, LS.dx(52), LS.dy(d.y), {
+      fontSize: LS.df(12),
+      color: UI_CONFIG.color.textMuted,
+      align: 'left',
+    });
+    ui.drawText(ctx, d.value, LS.dx(323), LS.dy(d.y), {
+      fontSize: LS.df(12),
+      color: d.valueColor,
+      align: 'right',
+    });
+
+    if (i < details.length - 1) {
+      const lineY = LS.dy(d.y + 15);
+      ctx.save();
+      ctx.strokeStyle = UI_CONFIG.color.borderSoft;
+      ctx.lineWidth = 1;
+      ctx.setLineDash([4, 4]);
+      ctx.beginPath();
+      ctx.moveTo(LS.dx(52), lineY);
+      ctx.lineTo(LS.dx(323), lineY);
+      ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.restore();
+    }
+  }
+
   // ── 发现新形态横幅 ──
   const newLevel = data.newlyUnlockedLevel;
   if (newLevel != null) {
-    const bannerGap = UI_CONFIG.spacing.cardGap;
-    const bannerH = UI_CONFIG.size.newFormBannerHeight;
-    const bannerY = cursorY + cardH + bannerGap;
-    const bannerX = padX;
-    const bannerW = W - padX * 2;
+    const bannerW = LS.ds(319);
+    const bannerH = LS.ds(92);
+    const bannerX = LS.dx(187.5) - bannerW / 2;
+    const bannerY = LS.dy(578) - bannerH / 2;
 
-    // 金色发光毛玻璃卡片
     ctx.save();
     ctx.shadowColor = 'rgba(255,182,72,0.28)';
     ctx.shadowBlur = 24;
@@ -855,10 +871,9 @@ function drawGameOverScreen() {
     });
     ctx.restore();
 
-    // 左侧等级圆点
-    const dotR = 20;
-    const dotCX = bannerX + 16 + dotR;
-    const dotCY = bannerY + bannerH / 2 - 4;
+    const dotR = LS.ds(20);
+    const dotCX = bannerX + LS.ds(16) + dotR;
+    const dotCY = bannerY + bannerH / 2 - LS.ds(4);
     const dotColor = getLevelColor(newLevel);
 
     ctx.save();
@@ -870,13 +885,12 @@ function drawGameOverScreen() {
     ctx.fill();
     ctx.restore();
 
-    // 右侧文字
-    const textLeft = dotCX + dotR + 14;
+    const textLeft = dotCX + dotR + LS.ds(14);
     const enName = getLevelNameEn(newLevel);
     const zhName = getLevelNameZh(newLevel);
 
-    ui.drawText(ctx, '发现新形态', textLeft, bannerY + 24, {
-      fontSize: UI_CONFIG.font.cardLabel,
+    ui.drawText(ctx, '发现新形态', textLeft, bannerY + LS.ds(24), {
+      fontSize: LS.df(13),
       color: UI_CONFIG.color.accentGoldSoft,
       align: 'left',
     });
@@ -884,93 +898,45 @@ function drawGameOverScreen() {
     ctx.save();
     ctx.shadowColor = 'rgba(255,216,135,0.50)';
     ctx.shadowBlur = 14;
-    ui.drawText(ctx, 'Lv.' + newLevel + ' ' + enName + ' ' + zhName, textLeft, bannerY + 46, {
-      fontSize: UI_CONFIG.font.cardTitle,
+    ui.drawText(ctx, 'Lv.' + newLevel + ' ' + enName + ' ' + zhName, textLeft, bannerY + LS.ds(46), {
+      fontSize: LS.df(15.5),
       color: UI_CONFIG.color.accentGold,
       align: 'left',
       weight: '600',
     });
     ctx.restore();
 
-    // 底部小字
-    ui.drawText(ctx, zhName + ' · 首次达成', bannerX + bannerW / 2, bannerY + bannerH - 10, {
-      fontSize: UI_CONFIG.font.hintXs,
+    ui.drawText(ctx, zhName + ' · 首次达成', bannerX + bannerW / 2, bannerY + bannerH - LS.ds(10), {
+      fontSize: LS.df(11),
       color: UI_CONFIG.color.textMuted,
     });
-
-    cursorY += bannerH + bannerGap;
-  }
-
-  // ── 详情区 ──
-  cursorY += cardH + 18;
-  const detailLeft = padX + 8;
-  const detailRight = W - padX - 8;
-  const detailRowH = 32;
-
-  const details = [
-    { label: '核心等级', value: 'Lv.' + maxLevel + ' ' + levelName, valueColor: UI_CONFIG.color.accentCyan },
-    { label: '最高连锁', value: String(data.maxCombo || 0), valueColor: UI_CONFIG.color.textPrimary },
-    { label: '合成次数', value: String(data.mergeCount || 0), valueColor: UI_CONFIG.color.textPrimary },
-  ];
-
-  for (let i = 0; i < details.length; i++) {
-    const rowY = cursorY + detailRowH * i + detailRowH / 2;
-
-    ui.drawText(ctx, details[i].label, detailLeft, rowY, {
-      fontSize: UI_CONFIG.font.cardLabel,
-      color: UI_CONFIG.color.textMuted,
-      align: 'left',
-    });
-    ui.drawText(ctx, details[i].value, detailRight, rowY, {
-      fontSize: UI_CONFIG.font.cardLabel,
-      color: details[i].valueColor,
-      align: 'right',
-    });
-
-    // 行间虚线（最后一行不画）
-    if (i < details.length - 1) {
-      const lineY = cursorY + detailRowH * (i + 1);
-      ctx.save();
-      ctx.strokeStyle = UI_CONFIG.color.borderSoft;
-      ctx.lineWidth = 1;
-      ctx.setLineDash([4, 4]);
-      ctx.beginPath();
-      ctx.moveTo(detailLeft, lineY);
-      ctx.lineTo(detailRight, lineY);
-      ctx.stroke();
-      ctx.setLineDash([]);
-      ctx.restore();
-    }
   }
 
   // ── 按钮区 ──
-  const btnH = UI_CONFIG.size.buttonPrimaryHeight;
-  const btnMaxW = UI_CONFIG.size.buttonPrimaryMaxWidth;
-  const shareW = UI_CONFIG.size.shareSquareWidth;
-  const gap = UI_CONFIG.spacing.cardGap;
-  const btnW = Math.min(btnMaxW, W - padX * 2);
+  // 重新开始主按钮（中心 187.5, 700，尺寸 319×52）
+  const restartW = LS.ds(319);
+  const restartH = LS.ds(52);
+  const restartX = LS.dx(187.5) - restartW / 2;
+  const restartY = LS.dy(700) - restartH / 2;
+  ui.drawPrimaryButton(ctx, restartX, restartY, restartW, restartH, '重新开始');
 
-  const secondaryBtnY = H - padBottom - btnH;
-  const primaryBtnY = secondaryBtnY - gap - btnH;
-  const primaryBtnX = (W - btnW) / 2;
+  // 返回主页（中心 156, 756，尺寸 257×44）+ 分享（中心 320, 756，尺寸 54×44）
+  const homeW = LS.ds(257);
+  const homeH = LS.ds(44);
+  const homeX = LS.dx(156) - homeW / 2;
+  const homeY = LS.dy(756) - homeH / 2;
+  ui.drawSecondaryButton(ctx, homeX, homeY, homeW, homeH, '返回主页');
 
-  // 主按钮 "重新开始"
-  ui.drawPrimaryButton(ctx, primaryBtnX, primaryBtnY, btnW, btnH, '重新开始');
-
-  // 次要按钮 "返回主页" + 分享按钮
-  const secondaryW = btnW - shareW - gap;
-  const secondaryX = primaryBtnX;
-  const shareX = secondaryX + secondaryW + gap;
-
-  ui.drawSecondaryButton(ctx, secondaryX, secondaryBtnY, secondaryW, btnH, '返回主页');
-
-  // 分享按钮（描边方块占位）
-  ui.drawSecondaryButton(ctx, shareX, secondaryBtnY, shareW, btnH, '分享');
+  const shareW = LS.ds(54);
+  const shareH = LS.ds(44);
+  const shareX = LS.dx(320) - shareW / 2;
+  const shareY = LS.dy(756) - shareH / 2;
+  ui.drawSecondaryButton(ctx, shareX, shareY, shareW, shareH, '分享');
 
   gameOverButtons = {
-    restart: { x: primaryBtnX, y: primaryBtnY, w: btnW, h: btnH },
-    home:    { x: secondaryX, y: secondaryBtnY, w: secondaryW, h: btnH },
-    share:   { x: shareX, y: secondaryBtnY, w: shareW, h: btnH },
+    restart: { x: restartX, y: restartY, w: restartW, h: restartH },
+    home:    { x: homeX, y: homeY, w: homeW, h: homeH },
+    share:   { x: shareX, y: shareY, w: shareW, h: shareH },
   };
 }
 
@@ -1015,22 +981,18 @@ function handleResume() {
 }
 
 /**
- * 绘制暂停弹窗（遮罩 + 毛玻璃卡片 + 状态 + 三按钮）
+ * 绘制暂停弹窗（遮罩 + 毛玻璃卡片 + 内嵌统计卡 + 三按钮）
  */
 function drawPauseDialog() {
-  const W = screenWidth;
-  const H = screenHeight;
-
   // 半透明遮罩
   ctx.fillStyle = UI_CONFIG.color.bgOverlay;
-  ctx.fillRect(0, 0, W, H);
+  ctx.fillRect(0, 0, screenWidth, screenHeight);
 
-  // 卡片尺寸与位置
-  const padX = UI_CONFIG.spacing.screenPaddingX;
-  const cardW = W - padX * 2;
-  const cardH = 290;
-  const cardX = padX;
-  const cardY = (H - cardH) / 2;
+  // 弹窗卡片（中心 187.5, 406，尺寸 284×286）
+  const cardW = LS.ds(284);
+  const cardH = LS.ds(286);
+  const cardX = LS.dx(187.5) - cardW / 2;
+  const cardY = LS.dy(406) - cardH / 2;
 
   ui.drawGlassCard(ctx, cardX, cardY, cardW, cardH, {
     radius: UI_CONFIG.radius.dialog,
@@ -1038,48 +1000,72 @@ function drawPauseDialog() {
     borderColor: UI_CONFIG.color.borderGlass,
   });
 
-  // 标题
-  const titleY = cardY + 40;
-  ui.drawText(ctx, '游戏暂停', W / 2, titleY, {
-    fontSize: UI_CONFIG.font.screenTitle,
+  // "游戏暂停" 标题（左对齐）
+  ui.drawText(ctx, '游戏暂停', LS.dx(67), LS.dy(293), {
+    fontSize: LS.df(17),
     color: UI_CONFIG.color.textPrimary,
+    weight: '600',
+    align: 'left',
+  });
+
+  // 内嵌统计卡（中心 187.5, 356，尺寸 240×66）
+  const statW = LS.ds(240);
+  const statH = LS.ds(66);
+  const statX = LS.dx(187.5) - statW / 2;
+  const statY = LS.dy(356) - statH / 2;
+  ui.drawGlassCard(ctx, statX, statY, statW, statH, {
+    radius: UI_CONFIG.radius.md,
+    fillColor: 'rgba(20,30,60,0.5)',
+    borderColor: UI_CONFIG.color.borderSoft,
+  });
+
+  // "当前分数" + 数值
+  ui.drawText(ctx, '当前分数', LS.dx(83), LS.dy(343), {
+    fontSize: LS.df(13),
+    color: UI_CONFIG.color.textMuted,
+    align: 'left',
+  });
+  ui.drawText(ctx, String(score.total), LS.dx(292), LS.dy(343), {
+    fontSize: LS.df(13),
+    color: UI_CONFIG.color.textPrimary,
+    align: 'right',
     weight: '600',
   });
 
-  // 状态行 1：当前分数
-  const row1Y = titleY + 40;
-  ui.drawText(ctx, '当前分数  ' + score.total, W / 2, row1Y, {
-    fontSize: UI_CONFIG.font.cardTitle,
-    color: UI_CONFIG.color.textSecondary,
-  });
-
-  // 状态行 2：核心等级
-  const row2Y = row1Y + 28;
+  // "核心等级" + 等级名
   const lvName = getLevelNameZh(board.core.level);
-  ui.drawText(ctx, '核心等级  Lv.' + board.core.level + ' ' + lvName, W / 2, row2Y, {
-    fontSize: UI_CONFIG.font.cardTitle,
+  ui.drawText(ctx, '核心等级', LS.dx(83), LS.dy(369), {
+    fontSize: LS.df(13),
+    color: UI_CONFIG.color.textMuted,
+    align: 'left',
+  });
+  ui.drawText(ctx, 'Lv.' + board.core.level + ' ' + lvName, LS.dx(292), LS.dy(369), {
+    fontSize: LS.df(13),
     color: UI_CONFIG.color.accentCyan,
+    align: 'right',
+    weight: '600',
   });
 
   // 按钮区
-  const btnH = UI_CONFIG.size.buttonPrimaryHeight;
-  const btnW = cardW - 40;
-  const btnX = cardX + 20;
-  const gap = UI_CONFIG.spacing.cardGap;
+  const btnW = LS.ds(240);
+  const btnX = LS.dx(187.5) - btnW / 2;
 
-  const resumeBtnY = row2Y + 36;
-  ui.drawPrimaryButton(ctx, btnX, resumeBtnY, btnW, btnH, '继续游戏');
+  const primaryH = LS.ds(42);
+  const secondaryH = LS.ds(38);
 
-  const restartBtnY = resumeBtnY + btnH + gap;
-  ui.drawSecondaryButton(ctx, btnX, restartBtnY, btnW, btnH, '重新开始');
+  const resumeBtnY = LS.dy(418) - primaryH / 2;
+  ui.drawPrimaryButton(ctx, btnX, resumeBtnY, btnW, primaryH, '继续游戏');
 
-  const homeBtnY = restartBtnY + btnH + gap;
-  ui.drawSecondaryButton(ctx, btnX, homeBtnY, btnW, btnH, '返回主页');
+  const restartBtnY = LS.dy(464) - secondaryH / 2;
+  ui.drawSecondaryButton(ctx, btnX, restartBtnY, btnW, secondaryH, '重新开始');
+
+  const homeBtnY = LS.dy(510) - secondaryH / 2;
+  ui.drawSecondaryButton(ctx, btnX, homeBtnY, btnW, secondaryH, '返回主页');
 
   pauseDialogButtons = {
-    resume:  { x: btnX, y: resumeBtnY, w: btnW, h: btnH },
-    restart: { x: btnX, y: restartBtnY, w: btnW, h: btnH },
-    home:    { x: btnX, y: homeBtnY, w: btnW, h: btnH },
+    resume:  { x: btnX, y: resumeBtnY, w: btnW, h: primaryH },
+    restart: { x: btnX, y: restartBtnY, w: btnW, h: secondaryH },
+    home:    { x: btnX, y: homeBtnY, w: btnW, h: secondaryH },
   };
 }
 
