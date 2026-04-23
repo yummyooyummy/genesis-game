@@ -505,7 +505,12 @@ class Renderer {
         ctx.save();
         ctx.fillStyle = 'rgba(10,14,39,0.85)';
         ctx.beginPath();
-        ctx.roundRect(bx - bw / 2, by - bh / 2, bw, bh, br);
+        const rx = bx - bw / 2, ry = by - bh / 2;
+        ctx.moveTo(rx + br, ry);
+        ctx.arcTo(rx + bw, ry, rx + bw, ry + bh, br);
+        ctx.arcTo(rx + bw, ry + bh, rx, ry + bh, br);
+        ctx.arcTo(rx, ry + bh, rx, ry, br);
+        ctx.arcTo(rx, ry, rx + bw, ry, br);
         ctx.fill();
         ctx.strokeStyle = `rgba(${cr},${cg},${cb},0.67)`;
         ctx.lineWidth = LS.ds(1);
