@@ -408,6 +408,11 @@ class Renderer {
     const { ctx } = this;
 
     const slotRadius = LS.ds(29);
+    const slotStyles = {
+      magnet:  { r: 123, g: 208, b: 224, label: '磁吸' },
+      clear:   { r: 180, g: 165, b: 255, label: '清空' },
+      upgrade: { r: 255, g: 182, b: 72,  label: '进化' },
+    };
     const slotCenters = [
       { type: 'magnet',  cx: LS.dx(92),    cy: LS.dy(642) },
       { type: 'clear',   cx: LS.dx(187.5), cy: LS.dy(642) },
@@ -418,14 +423,38 @@ class Renderer {
 
     for (const slot of slotCenters) {
       const { type, cx, cy } = slot;
+      const style = slotStyles[type];
+      const { r: cr, g: cg, b: cb } = style;
       const count = items.inventory[type];
       const active = count > 0;
 
-      // 圆盘底色
-      ctx.fillStyle = active ? '#6B6B6B' : '#3A3A3A';
+      // 玻璃态圆形背景
+      ctx.save();
+      if (active) {
+        ctx.shadowBlur = LS.ds(14);
+        ctx.shadowColor = `rgba(${cr},${cg},${cb},0.55)`;
+      }
+      const grad = ctx.createRadialGradient(cx, cy, 0, cx, cy, slotRadius);
+      if (active) {
+        grad.addColorStop(0, `rgba(${cr},${cg},${cb},0.8)`);
+        grad.addColorStop(0.65, `rgba(${cr},${cg},${cb},0.33)`);
+        grad.addColorStop(1, `rgba(${cr},${cg},${cb},0.13)`);
+      } else {
+        grad.addColorStop(0, 'rgba(60,60,60,0.8)');
+        grad.addColorStop(0.65, 'rgba(60,60,60,0.33)');
+        grad.addColorStop(1, 'rgba(60,60,60,0.13)');
+      }
+      ctx.fillStyle = grad;
       ctx.beginPath();
       ctx.arc(cx, cy, slotRadius, 0, Math.PI * 2);
       ctx.fill();
+      ctx.shadowBlur = 0;
+      ctx.strokeStyle = active
+        ? `rgba(${cr},${cg},${cb},0.67)`
+        : 'rgba(100,100,100,0.4)';
+      ctx.lineWidth = LS.ds(1);
+      ctx.stroke();
+      ctx.restore();
 
       // 图标
       const iconColor = active ? '#FFFFFF' : '#5A5A5A';
@@ -466,12 +495,35 @@ class Renderer {
         }
       }
 
-      // 数量文字（下方居中）
-      ctx.fillStyle = active ? '#FFFFFF' : '#6A6A6A';
-      ctx.font = `${LS.df(14)}px Arial`;
+      // 数量徽章（右上角，count > 0 时才画）
+      if (count > 0) {
+        const bx = cx + LS.ds(20);
+        const by = cy - LS.ds(24);
+        const bw = LS.ds(18);
+        const bh = LS.ds(18);
+        const br = LS.ds(9);
+        ctx.save();
+        ctx.fillStyle = 'rgba(10,14,39,0.85)';
+        ctx.beginPath();
+        ctx.roundRect(bx - bw / 2, by - bh / 2, bw, bh, br);
+        ctx.fill();
+        ctx.strokeStyle = `rgba(${cr},${cg},${cb},0.67)`;
+        ctx.lineWidth = LS.ds(1);
+        ctx.stroke();
+        ctx.fillStyle = '#E8ECFF';
+        ctx.font = `${LS.df(11)}px 'Space Grotesk', Arial`;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(`×${count}`, bx, by);
+        ctx.restore();
+      }
+
+      // 底部中文标签
+      ctx.fillStyle = '#8891B8';
+      ctx.font = `${LS.df(11)}px 'Noto Sans SC', Arial`;
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
-      ctx.fillText(`x${count}`, cx, cy + slotRadius + LS.ds(14));
+      ctx.fillText(style.label, cx, cy + slotRadius + LS.ds(14));
 
       this.itemBarSlots.push({ type, x: cx, y: cy, r: slotRadius });
     }
@@ -556,7 +608,7 @@ class Renderer {
   drawCoreLevelUI(coreLevel) {
     const { ctx } = this;
     const name = getLevelNameEn(coreLevel);
-    const fontSize = LS.df(13);
+    const fontSize = LS.df(14);
 
     // "核心等级"
     ctx.save();
@@ -592,18 +644,30 @@ class Renderer {
     const { ctx } = this;
     const cx = LS.dx(339);
     const cy = LS.dy(755);
-    const half = LS.ds(17);
+    const r = LS.ds(17);
 
+    // 圆形背景
     ctx.save();
-    ctx.fillStyle = '#888888';
-    const barW = LS.ds(4);
-    const barH = LS.ds(16);
-    const gap = LS.ds(6);
+    ctx.fillStyle = 'rgba(30,40,80,0.5)';
+    ctx.beginPath();
+    ctx.arc(cx, cy, r, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(74,90,158,0.6)';
+    ctx.lineWidth = LS.ds(1);
+    ctx.stroke();
+    ctx.restore();
+
+    // 双竖条
+    ctx.save();
+    ctx.fillStyle = '#E8ECFF';
+    const barW = LS.ds(3);
+    const barH = LS.ds(12);
+    const gap = LS.ds(5);
     ctx.fillRect(cx - gap / 2 - barW, cy - barH / 2, barW, barH);
     ctx.fillRect(cx + gap / 2, cy - barH / 2, barW, barH);
     ctx.restore();
 
-    this.pauseBtnPos = { x: cx, y: cy, r: half + LS.ds(6) };
+    this.pauseBtnPos = { x: cx, y: cy, r: r + LS.ds(6) };
   }
 
   /**
