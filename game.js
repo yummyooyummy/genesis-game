@@ -184,7 +184,12 @@ function handleSlotTap(slot) {
 function checkComboDropTrigger() {
   const combo = score.combo;
   if (combo === 3) {
-    const type = Math.random() < 0.5 ? 'clear' : 'magnet';
+    const coreLv = board.core.level;
+    const threshold = GAME_CONFIG.items.clearDropThreshold;
+    const clearChance = coreLv <= threshold
+      ? GAME_CONFIG.items.clearDropChanceEarly
+      : GAME_CONFIG.items.clearDropChanceLate;
+    const type = Math.random() < clearChance ? 'clear' : 'magnet';
     items.spawnDrop(type, lastBurstPos.x, lastBurstPos.y, dropTargetPositions);
   } else if (combo === 4) {
     items.spawnDrop('upgrade', lastBurstPos.x, lastBurstPos.y, dropTargetPositions);

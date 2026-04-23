@@ -86,6 +86,11 @@ const GAME_CONFIG = {
     itemUseAnimFrames: 18,        // 清空/升级使用后输入锁帧数
     dropSlotOffsetY: 0.92,        // 掉落位 y = centerY + boardRadius * 此值
     dropSlotOffsetX: 0.58,        // 掉落位 x = centerX ± boardRadius * 此值
+
+    // 清空掉落概率分阶段
+    clearDropThreshold: 8,        // 核心 Lv.≤此值算"前期"
+    clearDropChanceEarly: 0.2,    // 前期 combo=3 掉清空概率
+    clearDropChanceLate: 0.6,     // 后期 combo=3 掉清空概率
   },
 };
 
