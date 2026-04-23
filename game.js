@@ -613,7 +613,7 @@ function drawMenuScreen() {
   ctx.restore();
 
   // ── GENESIS 标题（发光减弱） ──
-  const titleY = hasRecord ? LS.dy(380) : LS.dy(470);
+  const titleY = hasRecord ? LS.dy(440) : LS.dy(470);
   ui.drawText(ctx, 'GENESIS', LS.dx(187.5), titleY, {
     fontSize: LS.df(42),
     color: UI_CONFIG.color.textPrimary,
@@ -623,7 +623,7 @@ function drawMenuScreen() {
   });
 
   // ── 副标题 ──
-  const subY = hasRecord ? LS.dy(415) : LS.dy(500);
+  const subY = hasRecord ? LS.dy(475) : LS.dy(500);
   ui.drawText(ctx, '万 物 起 源', LS.dx(187.5), subY, {
     fontSize: LS.df(12),
     color: UI_CONFIG.color.textMuted,
@@ -675,9 +675,9 @@ function drawMenuScreen() {
       align: 'left',
     });
 
-    // 第 1 行上半：分数（48pt，左对齐）
-    ui.drawText(ctx, (data.maxScore || 0).toLocaleString(), LS.dx(58), LS.dy(610), {
-      fontSize: LS.df(48),
+    // 第 1 行上半：分数（42pt，左对齐）
+    ui.drawText(ctx, (data.maxScore || 0).toLocaleString(), LS.dx(58), LS.dy(605), {
+      fontSize: LS.df(42),
       color: '#FFD887',
       weight: '700',
       align: 'left',
@@ -686,7 +686,7 @@ function drawMenuScreen() {
     });
 
     // 第 2 行下半："最高等级"标签（左对齐）
-    ui.drawText(ctx, '最高等级', leftX, LS.dy(648), {
+    ui.drawText(ctx, '最高等级', leftX, LS.dy(645), {
       fontSize: LS.df(11),
       color: UI_CONFIG.color.textMuted,
       align: 'left',
@@ -698,24 +698,24 @@ function drawMenuScreen() {
     const lvName = getLevelNameZh(lvl);
     const lvText = 'Lv.' + lvl + ' ' + lvName;
 
-    ui.drawText(ctx, lvText, rightX, LS.dy(648), {
+    ui.drawText(ctx, lvText, rightX, LS.dy(645), {
       fontSize: LS.df(13),
-      color: '#FFD887',
+      color: lvColor,
       weight: '600',
       align: 'right',
       glow: 6,
-      glowColor: 'rgba(255,215,0,0.3)',
+      glowColor: lvColor,
     });
 
-    // 金色小圆点（等级文字左侧）
+    // 彩色小圆点（等级文字左侧）
     const lvTextWidth = ui.measureText(ctx, lvText, LS.df(13), '600');
     const dotX = rightX - lvTextWidth - LS.ds(10);
     ctx.save();
-    ctx.fillStyle = '#FFD887';
-    ctx.shadowColor = 'rgba(255,215,0,0.4)';
+    ctx.fillStyle = lvColor;
+    ctx.shadowColor = lvColor + '99';
     ctx.shadowBlur = 6;
     ctx.beginPath();
-    ctx.arc(dotX, LS.dy(648), LS.ds(5), 0, Math.PI * 2);
+    ctx.arc(dotX, LS.dy(645), LS.ds(5), 0, Math.PI * 2);
     ctx.fill();
     ctx.restore();
   }
