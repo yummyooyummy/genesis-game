@@ -29,7 +29,7 @@ class ComboTextManager {
 
   render(ctx) {
     const centerX = LS.dx(187.5);
-    const baseY = LS.dy(200);
+    const baseY = LS.dy(150);
     const slotGap = LS.ds(42);
 
     ctx.save();

@@ -46,10 +46,10 @@ console.log(`[LayoutScale] screen=${screenWidth}x${screenHeight}, scaleX=${Layou
 
 /** 棋盘中心坐标（逻辑像素） */
 const centerX = LS.dx(187.5);
-const centerY = LS.dy(400);
+const centerY = LS.dy(350);
 
 /** 棋盘半径（逻辑像素）— 设计稿 319/2 ≈ 159.5 */
-const boardRadius = LS.ds(159.5);
+const boardRadius = LS.ds(210);
 
 /** 掉落物左右悬浮位坐标（固定） */
 const dropTargetPositions = {
@@ -72,8 +72,8 @@ let pauseDialogButtons = null; // { resume, restart, home } 每个 { x, y, w, h 
 let decorationTimer = 0;   // 装饰粒子计时器
 
 // 调试开关 — 上线前改为 false
-const DEBUG_ITEMS = false;
-const DEBUG_COMBO = false;
+const DEBUG_ITEMS = true;
+const DEBUG_COMBO = true;
 let debugComboCounter = 1;
 
 // ─── 存档 + 单局追踪 ───
