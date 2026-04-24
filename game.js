@@ -93,6 +93,7 @@ let mergeFlowTimer = 0;
 let mergeFlowAbsorbSlot = null;
 let mergeFlowAbsorbProgress = 0;
 let mergeFlowBurstFired = false;
+let absorbJustSpawned = false;
 let lastBurstPos = { x: centerX, y: centerY }; // 最近一次合成爆发中点（供 combo 掉落定位）
 
 // 开局自动吸附状态：初始分裂落地后自动吸附 1 个 Lv.1 → 核心升 Lv.2
@@ -306,6 +307,7 @@ function updateMergeFlow() {
         mergeFlowState = 'absorb';
         mergeFlowTimer = msToFrames(GAME_CONFIG.mergeFlow.absorbAnimMs);
       } else {
+        absorbJustSpawned = false;
         mergeFlowState = 'recovery';
         mergeFlowTimer = msToFrames(GAME_CONFIG.mergeFlow.recoveryMs);
       }
@@ -340,7 +342,10 @@ function updateMergeFlow() {
       }
       if (!openingAbsorbActive) {
         const absorbPoints = score.addAbsorbScore(newCoreLevel);
-        scoreText.spawn(centerX, centerY - LS.ds(40), absorbPoints, 'absorb');
+        if (!absorbJustSpawned) {
+          absorbJustSpawned = true;
+          scoreText.spawn(centerX, centerY - LS.ds(40), absorbPoints, 'absorb');
+        }
         // 核心升级赠送道具：进化 Lv.5/7/9...（奇数≥5）、清空 Lv.6/8/10...（偶数≥6）
         if (newCoreLevel >= 5 && newCoreLevel % 2 === 1) {
           items.spawnDrop('upgrade', centerX, centerY, dropTargetPositions);
@@ -377,6 +382,7 @@ function updateMergeFlow() {
         mergeFlowState = 'absorb';
         mergeFlowTimer = msToFrames(GAME_CONFIG.mergeFlow.absorbAnimMs);
       } else {
+        absorbJustSpawned = false;
         mergeFlowState = 'recovery';
         mergeFlowTimer = msToFrames(GAME_CONFIG.mergeFlow.recoveryMs);
       }
@@ -1158,6 +1164,7 @@ function handleRestart() {
   mergeFlowAbsorbSlot = null;
   mergeFlowAbsorbProgress = 0;
   mergeFlowBurstFired = false;
+  absorbJustSpawned = false;
   openingAbsorbPending = true;
   openingAbsorbActive = false;
   pauseDialogButtons = null;
