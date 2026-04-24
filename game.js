@@ -248,10 +248,11 @@ function performMerge(slotA, slotB) {
  */
 function handleMergeBurst(anim, midX, midY) {
   const colors = getElementColors(anim.newLevel);
-  particles.spawn(midX, midY, colors.primary, 14, { speed: 5, life: 35, radius: 2 });
-  particles.spawn(midX, midY, colors.secondary, 10, { speed: 2.5, life: 22 });
-  lastBurstPos = { x: midX, y: midY };
-  GameGlobal.ShockwaveManager.spawn(midX, midY);
+  const slotAPos = board.getSlotPosition(anim.slotA);
+  particles.spawn(slotAPos.x, slotAPos.y, colors.primary, 14, { speed: 5, life: 35, radius: 2 });
+  particles.spawn(slotAPos.x, slotAPos.y, colors.secondary, 10, { speed: 2.5, life: 22 });
+  lastBurstPos = { x: slotAPos.x, y: slotAPos.y };
+  GameGlobal.ShockwaveManager.spawn(slotAPos.x, slotAPos.y, colors.primary);
 
   sessionMergeCount++;
   if (score.combo > sessionMaxCombo) sessionMaxCombo = score.combo;

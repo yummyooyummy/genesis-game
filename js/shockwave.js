@@ -1,13 +1,21 @@
+function hexToRgba(hex, alpha) {
+  const r = parseInt(hex.slice(1, 3), 16);
+  const g = parseInt(hex.slice(3, 5), 16);
+  const b = parseInt(hex.slice(5, 7), 16);
+  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+}
+
 class ShockwaveManager {
   constructor() {
     this.waves = [];
   }
 
-  spawn(x, y) {
+  spawn(x, y, color) {
     this.waves.push({
       x, y,
-      life: 18,
-      maxLife: 18,
+      color: color || '#FFD887',
+      life: 10,
+      maxLife: 10,
     });
   }
 
@@ -33,10 +41,10 @@ class ShockwaveManager {
 
       ctx.beginPath();
       ctx.arc(w.x, w.y, radius, 0, Math.PI * 2);
-      ctx.strokeStyle = `rgba(255, 216, 135, ${alpha})`;
+      ctx.strokeStyle = hexToRgba(w.color, alpha);
       ctx.lineWidth = lineWidth;
       ctx.shadowBlur = LS.ds(10);
-      ctx.shadowColor = 'rgba(255, 182, 72, 0.8)';
+      ctx.shadowColor = hexToRgba(w.color, 0.8);
       ctx.stroke();
     }
     ctx.restore();
