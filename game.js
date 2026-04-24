@@ -249,6 +249,13 @@ function performMerge(slotA, slotB) {
  * 每一步 combo 都会触发一次（包含玩家主动合成和自动连锁）。
  */
 function handleMergeBurst(anim, midX, midY) {
+  console.log('[handleMergeBurst called]', {
+    newLevel: anim.newLevel,
+    slotA: anim.slotA && anim.slotA.id,
+    pendingPoints: GameGlobal.pendingMergePoints,
+    combo: score.combo,
+    stack: new Error().stack.split('\n').slice(2, 6).join('\n  <- ')
+  });
   const colors = getElementColors(anim.newLevel);
   const slotAPos = board.getSlotPosition(anim.slotA);
   particles.spawn(slotAPos.x, slotAPos.y, colors.primary, 14, { speed: 5, life: 35, radius: 2 });
