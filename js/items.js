@@ -98,6 +98,25 @@ class Items {
   grant(type, count = 1) {
     if (!ITEM_TYPES.includes(type)) return;
     this.inventory[type] += count;
+    this._triggerGainEffect(type);
+  }
+
+  _triggerGainEffect(type) {
+    const GAIN_COLORS = {
+      magnet:  'rgba(123,208,224,0.9)',
+      clear:   'rgba(180,165,255,0.9)',
+      upgrade: 'rgba(255,182,72,0.9)',
+    };
+    GameGlobal.itemGainState = GameGlobal.itemGainState || {};
+    GameGlobal.itemGainState[type] = { gainedAt: Date.now() };
+    const p = GameGlobal.particles;
+    const slots = GameGlobal._rendererItemBarSlots;
+    if (p && slots) {
+      const slot = slots.find(s => s.type === type);
+      if (slot) {
+        p.spawn(slot.x, slot.y, GAIN_COLORS[type] || '#FFFFFF', 10, { speed: 4, life: 40, radius: 2 });
+      }
+    }
   }
 
   // ─── 掉落物系统 ───
@@ -186,6 +205,7 @@ class Items {
         drop.pickupFrame += 1;
         if (drop.pickupFrame >= drop.pickupTotalFrames) {
           this.inventory[drop.type] += 1;
+          this._triggerGainEffect(drop.type);
           this.drops.splice(i, 1);
         }
         continue;

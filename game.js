@@ -103,6 +103,7 @@ let openingAbsorbActive = false; // 开局吸附流程进行中（recovery 阶�
 const board = new Board(boardRadius, centerX, centerY);
 const renderer = new Renderer(ctx, screenWidth, screenHeight);
 const particles = new Particles();
+GameGlobal.particles = particles;
 const score = new Score();
 const items = new Items();
 const comboText = new ComboTextManager();
@@ -1134,6 +1135,7 @@ function handleRestart() {
   particles.clear();
   comboText.reset();
   GameGlobal.ShockwaveManager.reset();
+  GameGlobal.itemGainState = {};
   items.reset();
   gameState = 'playing';
   input.isGameOver = false;

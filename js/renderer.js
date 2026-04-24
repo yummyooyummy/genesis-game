@@ -447,6 +447,9 @@ class Renderer {
       pressedType = pressState.type;
     }
 
+    const GAIN_DURATION_MS = 300;
+    const gainState = GameGlobal.itemGainState || {};
+
     for (const slot of slotCenters) {
       const { type, cx, cy } = slot;
       const style = slotStyles[type];
@@ -551,7 +554,29 @@ class Renderer {
         const bw = LS.ds(18);
         const bh = LS.ds(18);
         const br = LS.ds(9);
+
+        let badgeScale = 1.0;
+        let extraGlow = 0;
+        const gs = gainState[type];
+        if (gs && pressNow - gs.gainedAt < GAIN_DURATION_MS) {
+          const gt = (pressNow - gs.gainedAt) / GAIN_DURATION_MS;
+          if (gt < 0.3) {
+            badgeScale = 0.5 + (1.6 - 0.5) * (gt / 0.3);
+          } else {
+            const k = (gt - 0.3) / 0.7;
+            badgeScale = 1.6 - 0.6 * (1 - Math.pow(1 - k, 3));
+          }
+          extraGlow = (1 - gt) * 10;
+        }
+
         ctx.save();
+        ctx.translate(bx, by);
+        ctx.scale(badgeScale, badgeScale);
+        ctx.translate(-bx, -by);
+        if (extraGlow > 0) {
+          ctx.shadowColor = '#FFD887';
+          ctx.shadowBlur = LS.ds(extraGlow);
+        }
         ctx.fillStyle = 'rgba(10,14,39,0.85)';
         ctx.beginPath();
         const rx = bx - bw / 2, ry = by - bh / 2;
@@ -561,6 +586,7 @@ class Renderer {
         ctx.arcTo(rx, ry + bh, rx, ry, br);
         ctx.arcTo(rx, ry, rx + bw, ry, br);
         ctx.fill();
+        ctx.shadowBlur = 0;
         ctx.strokeStyle = `rgba(${cr},${cg},${cb},0.67)`;
         ctx.lineWidth = LS.ds(1);
         ctx.stroke();
@@ -581,6 +607,7 @@ class Renderer {
 
       this.itemBarSlots.push({ type, x: cx, y: cy, r: slotRadius });
     }
+    GameGlobal._rendererItemBarSlots = this.itemBarSlots;
   }
 
   /**
