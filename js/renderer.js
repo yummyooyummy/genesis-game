@@ -964,7 +964,7 @@ class Renderer {
    */
   drawItemUseBurst(items) {
     if (!items.useAnim) return;
-    if (items.useAnim.type === 'clear') return;
+    if (items.useAnim.type === 'clear' || items.useAnim.type === 'upgrade') return;
     const { ctx } = this;
     const anim = items.useAnim;
     const progress = anim.frame / anim.totalFrames;
