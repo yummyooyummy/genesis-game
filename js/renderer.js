@@ -133,25 +133,6 @@ class Renderer {
     ctx.arc(cx, cy, radius, 0, Math.PI * 2);
     ctx.stroke();
 
-    // 迸发白环（corePulse 触发时从核心向外扩散）
-    if (pulse > 0) {
-      const ringT = 1 - pulse;
-      const ringRadius = radius * (1 + ringT * 1.8);
-      const ringAlpha = pulse * 0.85;
-      const ringLineWidth = LS.ds(3) * pulse;
-
-      ctx.save();
-      ctx.globalAlpha = ringAlpha;
-      ctx.strokeStyle = 'rgba(255, 255, 255, 1)';
-      ctx.lineWidth = ringLineWidth;
-      ctx.shadowColor = 'rgba(255, 240, 200, 0.9)';
-      ctx.shadowBlur = LS.ds(12) * pulse;
-      ctx.beginPath();
-      ctx.arc(cx, cy, ringRadius, 0, Math.PI * 2);
-      ctx.stroke();
-      ctx.restore();
-    }
-
     // 等级文字
     ctx.fillStyle = '#fff';
     ctx.font = 'bold 14px Arial';
