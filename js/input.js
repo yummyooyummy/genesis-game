@@ -140,6 +140,10 @@ class Input {
     if (this.onItemTap) {
       const itemType = this._hitTestItemBar(x, y);
       if (itemType) {
+        GameGlobal.itemPressState = {
+          type: itemType,
+          pressedAt: Date.now(),
+        };
         this.onItemTap(itemType);
         return;
       }

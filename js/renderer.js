@@ -439,6 +439,14 @@ class Renderer {
 
     this.itemBarSlots = [];
 
+    const PRESS_DURATION_MS = 180;
+    const pressState = GameGlobal.itemPressState;
+    const pressNow = Date.now();
+    let pressedType = null;
+    if (pressState && pressNow - pressState.pressedAt < PRESS_DURATION_MS) {
+      pressedType = pressState.type;
+    }
+
     for (const slot of slotCenters) {
       const { type, cx, cy } = slot;
       const style = slotStyles[type];
@@ -446,13 +454,20 @@ class Renderer {
       const count = items.inventory[type];
       const active = count > 0;
 
+      const isPressed = pressedType === type;
+      const pressT = isPressed ? (pressNow - pressState.pressedAt) / PRESS_DURATION_MS : 1;
+      const easeOut = 1 - Math.pow(1 - pressT, 2);
+      const pressScale = isPressed ? (0.88 + 0.12 * easeOut) : 1.0;
+      const pressBrightness = isPressed ? (1 + 0.3 * (1 - pressT)) : 1.0;
+      const sr = slotRadius * pressScale;
+
       // 玻璃态圆形背景
       ctx.save();
       if (active) {
         ctx.shadowBlur = LS.ds(14);
-        ctx.shadowColor = `rgba(${cr},${cg},${cb},0.55)`;
+        ctx.shadowColor = `rgba(${cr},${cg},${cb},${Math.min(0.55 * pressBrightness, 1.0)})`;
       }
-      const grad = ctx.createRadialGradient(cx, cy, 0, cx, cy, slotRadius);
+      const grad = ctx.createRadialGradient(cx, cy, 0, cx, cy, sr);
       if (active) {
         grad.addColorStop(0, `rgba(${cr},${cg},${cb},0.8)`);
         grad.addColorStop(0.65, `rgba(${cr},${cg},${cb},0.33)`);
@@ -464,11 +479,11 @@ class Renderer {
       }
       ctx.fillStyle = grad;
       ctx.beginPath();
-      ctx.arc(cx, cy, slotRadius, 0, Math.PI * 2);
+      ctx.arc(cx, cy, sr, 0, Math.PI * 2);
       ctx.fill();
       ctx.shadowBlur = 0;
       ctx.strokeStyle = active
-        ? `rgba(${cr},${cg},${cb},0.67)`
+        ? `rgba(${cr},${cg},${cb},${Math.min(0.67 * pressBrightness, 1.0)})`
         : 'rgba(100,100,100,0.4)';
       ctx.lineWidth = LS.ds(1);
       ctx.stroke();
@@ -487,7 +502,7 @@ class Renderer {
         ctx.save();
         ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
         ctx.beginPath();
-        ctx.arc(cx, cy, slotRadius, 0, Math.PI * 2);
+        ctx.arc(cx, cy, sr, 0, Math.PI * 2);
         ctx.fill();
         ctx.restore();
 
@@ -497,7 +512,7 @@ class Renderer {
         ctx.moveTo(cx, cy);
         const startAngle = -Math.PI / 2;
         const endAngle = startAngle + Math.PI * 2 * (1 - progress);
-        ctx.arc(cx, cy, slotRadius, startAngle, endAngle);
+        ctx.arc(cx, cy, sr, startAngle, endAngle);
         ctx.closePath();
         ctx.fill();
         ctx.restore();
