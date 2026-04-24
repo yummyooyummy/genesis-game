@@ -24,6 +24,7 @@ class ShockwaveManager {
   }
 
   update() {
+    if (GameGlobal.TimeFreeze && GameGlobal.TimeFreeze.isFrozen()) return;
     for (const w of this.waves) {
       w.life -= 1;
     }

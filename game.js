@@ -19,6 +19,7 @@ const ItemIcons = require('./js/itemIcons');
 const ConfettiManager = require('./js/confettiParticles');
 const ComboTextManager = require('./js/comboTextManager');
 const ShockwaveManager = require('./js/shockwave');
+const TimeFreeze = require('./js/timeFreeze');
 
 // ─── Canvas 初始化 ───
 
@@ -108,6 +109,8 @@ const score = new Score();
 const items = new Items();
 const comboText = new ComboTextManager();
 GameGlobal.ShockwaveManager = new ShockwaveManager();
+const timeFreeze = new TimeFreeze();
+GameGlobal.TimeFreeze = timeFreeze;
 
 const input = new Input(
   canvas,
@@ -286,6 +289,7 @@ function handleMergeComplete(slotA, newLevel) {
  */
 function updateMergeFlow() {
   if (mergeFlowState === null) return;
+  if (timeFreeze.isFrozen()) return;
 
   mergeFlowTimer -= 1;
 
@@ -320,6 +324,7 @@ function updateMergeFlow() {
     if (mergeFlowTimer <= 0) {
       mergeFlowAbsorbSlot.mergeAnimating = false;
       const newCoreLevel = board.doAbsorb(mergeFlowAbsorbSlot);
+      timeFreeze.start();
       // 追踪本局最高核心等级
       if (newCoreLevel > sessionMaxLevel) sessionMaxLevel = newCoreLevel;
       // 历史首次达到新等级 → 触发 toast + 立即更新存档
@@ -1135,6 +1140,7 @@ function handleRestart() {
   particles.clear();
   comboText.reset();
   GameGlobal.ShockwaveManager.reset();
+  timeFreeze.reset();
   GameGlobal.itemGainState = {};
   items.reset();
   gameState = 'playing';
@@ -1166,6 +1172,9 @@ function gameLoop() {
     drawMenuScreen();
   } else if (gameState === 'playing') {
     // === UPDATE ===
+
+    timeFreeze.update();
+    const frozen = timeFreeze.isFrozen();
 
     // 旋转
     board.updateRotation();
@@ -1233,9 +1242,11 @@ function gameLoop() {
     items.updateDrops();
 
     // 为每个飞行中的元素沿路径撒尾迹粒子
-    for (const fly of board.flyingElements) {
-      const pos = board.getFlyingPosition(fly);
-      particles.spawnTrail(pos.x, pos.y, ELEMENT_COLORS[1].primary);
+    if (!frozen) {
+      for (const fly of board.flyingElements) {
+        const pos = board.getFlyingPosition(fly);
+        particles.spawnTrail(pos.x, pos.y, ELEMENT_COLORS[1].primary);
+      }
     }
 
     // 所有暂态都清空后若棋盘仍满 → 游戏结束
@@ -1254,14 +1265,16 @@ function gameLoop() {
     }
 
     // 装饰粒子（每 30 帧生成一轮）
-    decorationTimer += 1;
-    if (decorationTimer >= 30) {
-      decorationTimer = 0;
-      for (const slot of board.slots) {
-        if (slot.level === null) continue;
-        const pos = board.getSlotPosition(slot);
-        const colors = getElementColors(slot.level);
-        particles.spawnDecoration(pos.x, pos.y, colors.secondary, board.getElementRadius(slot.level));
+    if (!frozen) {
+      decorationTimer += 1;
+      if (decorationTimer >= 30) {
+        decorationTimer = 0;
+        for (const slot of board.slots) {
+          if (slot.level === null) continue;
+          const pos = board.getSlotPosition(slot);
+          const colors = getElementColors(slot.level);
+          particles.spawnDecoration(pos.x, pos.y, colors.secondary, board.getElementRadius(slot.level));
+        }
       }
     }
 

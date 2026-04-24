@@ -1,7 +1,7 @@
 const LS = require('./layoutScale');
 
 const MAX_SLOTS = 3;
-const LIFE_FRAMES = 60;
+const LIFE_FRAMES = 40;
 const SPAWN_FRAMES = 10;
 const FADE_FRAMES = 20;
 
@@ -20,6 +20,7 @@ class ComboTextManager {
   }
 
   update() {
+    if (GameGlobal.TimeFreeze && GameGlobal.TimeFreeze.isFrozen()) return;
     for (const it of this.items) {
       it.life -= 1;
       it.age += 1;
