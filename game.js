@@ -324,6 +324,7 @@ function updateMergeFlow() {
       mergeFlowAbsorbSlot.mergeAnimating = false;
       const newCoreLevel = board.doAbsorb(mergeFlowAbsorbSlot);
       timeFreeze.start();
+      board.coreLevelUpFrame = 48;
       // 追踪本局最高核心等级
       if (newCoreLevel > sessionMaxLevel) sessionMaxLevel = newCoreLevel;
       // 历史首次达到新等级 → 触发 toast + 立即更新存档
@@ -1300,7 +1301,7 @@ function gameLoop() {
     renderer.drawSelectionHighlight(board);
 
     // 绘制核心（带脉冲缩放/发光 + 定时分裂前摇呼吸环）
-    renderer.drawCore(centerX, centerY, board.core.level, board.getCorePulseRatio(), board.timedSplitWarningProgress);
+    renderer.drawCore(centerX, centerY, board.core.level, board.getCorePulseRatio(), board.timedSplitWarningProgress, board.getCoreLevelUpScale());
 
     // 绘制从核心飞向目标格的新元素
     renderer.drawFlyingElements(board);
@@ -1379,7 +1380,7 @@ function gameLoop() {
     renderer.drawConnectionLines(board);
     renderer.drawSlots(board, items);
     renderer.drawSelectionHighlight(board);
-    renderer.drawCore(centerX, centerY, board.core.level, board.getCorePulseRatio(), board.timedSplitWarningProgress);
+    renderer.drawCore(centerX, centerY, board.core.level, board.getCorePulseRatio(), board.timedSplitWarningProgress, board.getCoreLevelUpScale());
     renderer.drawFlyingElements(board);
 
     if (mergeFlowState === 'absorb' && mergeFlowAbsorbSlot) {

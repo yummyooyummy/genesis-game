@@ -67,12 +67,12 @@ class Renderer {
    * @param {number} [pulse=0] - 0..1 脉冲强度（分裂瞬间 1，衰减到 0）
    * @param {number} [warningProgress=0] - 0..1 定时分裂前摇进度（0=无；1=即将触发）
    */
-  drawCore(centerX, centerY, coreLevel, pulse = 0, warningProgress = 0) {
+  drawCore(centerX, centerY, coreLevel, pulse = 0, warningProgress = 0, levelUpScale = 1) {
     const { ctx } = this;
     const colors = getElementColors(coreLevel);
     const baseRadius = 24;
-    // 脉冲放大：最大 +25% 尺寸
-    const radius = baseRadius * (1 + pulse * 0.25);
+    // 脉冲放大：最大 +25% 尺寸，再叠加升级放大
+    const radius = baseRadius * (1 + pulse * 0.25) * levelUpScale;
 
     // 前摇震动偏移（严格 ≤2px，频率 ~18Hz）
     let shakeX = 0, shakeY = 0;

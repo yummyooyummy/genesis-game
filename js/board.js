@@ -77,6 +77,7 @@ class Board {
     this.splitTimer = 0;           // 距离下一次分裂的帧数
     this.flyingElements = [];      // 正在从核心飞向目标格的元素
     this.corePulse = 0;            // 核心脉冲动画剩余帧数
+    this.coreLevelUpFrame = 0;     // 核心升级放大动效剩余帧数
     this.inputLocked = false;      // 初始分裂/合成动画期间屏蔽输入
     this.initialSplitsComplete = false; // 初始 4 次分裂是否已全部完成（锁输入的判据之一）
 
@@ -306,6 +307,7 @@ class Board {
 
     // 3) 核心脉冲衰减
     if (this.corePulse > 0) this.corePulse -= 1;
+    if (this.coreLevelUpFrame > 0) this.coreLevelUpFrame -= 1;
 
     // 4) 首次完成初始 4 次分裂：标记完成
     if (!this.initialSplitsComplete && this.queuedSplits === 0 && this.flyingElements.length === 0) {
@@ -606,6 +608,17 @@ class Board {
     return CORE_PULSE_FRAMES > 0 ? this.corePulse / CORE_PULSE_FRAMES : 0;
   }
 
+  getCoreLevelUpScale() {
+    const total = 48;
+    if (this.coreLevelUpFrame <= 0) return 1.0;
+    const t = 1 - (this.coreLevelUpFrame / total);
+    if (t < 0.3) {
+      return 1.0 + 0.5 * (t / 0.3);
+    }
+    const k = (t - 0.3) / 0.7;
+    return 1.5 - 0.5 * (1 - Math.pow(1 - k, 3));
+  }
+
   /**
    * Lv.1 元素总数（含棋盘上已有 + 飞行中 + 队列待分裂）
    * 用于合成后的死锁保险：保证至少有 2 个 Lv.1 可合成
@@ -873,6 +886,7 @@ class Board {
     this.splitTimer = 0;
     this.flyingElements = [];
     this.corePulse = 0;
+    this.coreLevelUpFrame = 0;
     this.initialSplitsComplete = false;
     this.inputLocked = true;
     // 定时分裂状态也重置
