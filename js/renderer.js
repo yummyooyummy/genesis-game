@@ -106,17 +106,46 @@ class Renderer {
     ctx.arc(cx, cy, radius, 0, Math.PI * 2);
     ctx.fill();
 
-    // 前摇内部脉冲发光（严格限制在核心范围内）
+    // 前摇动效：内部涟漪 + 弱能量外溢
     if (warningProgress > 0) {
-      const heartbeat = Math.sin(warningProgress * Math.PI) * (0.5 + 0.5 * Math.sin(warningProgress * 90 * 0.4));
-      const innerGlow = ctx.createRadialGradient(cx, cy, 0, cx, cy, radius * 0.95);
-      innerGlow.addColorStop(0, `rgba(255, 240, 200, ${0.6 * heartbeat})`);
-      innerGlow.addColorStop(0.6, `rgba(239, 159, 39, ${0.4 * heartbeat})`);
-      innerGlow.addColorStop(1, 'transparent');
-      ctx.fillStyle = innerGlow;
-      ctx.beginPath();
-      ctx.arc(cx, cy, radius * 0.95, 0, Math.PI * 2);
-      ctx.fill();
+      const wp = warningProgress;
+
+      // Phase 1: 内部涟漪（全程，强度随 wp 增强）
+      for (let i = 0; i < 3; i++) {
+        const rippleT = (wp * 1.5 + i * 0.33) % 1;
+        const rippleRadius = radius * (0.25 + rippleT * 0.7);
+        const rippleAlpha = (1 - rippleT) * 0.55 * wp;
+
+        ctx.save();
+        ctx.globalAlpha = rippleAlpha;
+        ctx.strokeStyle = 'rgba(255, 216, 135, 0.9)';
+        ctx.lineWidth = LS.ds(1.3);
+        ctx.beginPath();
+        ctx.arc(cx, cy, rippleRadius, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.restore();
+      }
+
+      // Phase 2: 能量外溢（弱）（wp 0.67 → 1.0）
+      if (wp >= 0.67) {
+        const t = (wp - 0.67) / (1 - 0.67);
+        const swellRadius = radius * (1 + t * 0.12);
+
+        const glow = ctx.createRadialGradient(
+          cx, cy, radius * 0.9,
+          cx, cy, swellRadius * 1.3
+        );
+        glow.addColorStop(0, `rgba(255, 216, 135, ${0.3 + t * 0.2})`);
+        glow.addColorStop(0.7, `rgba(255, 182, 72, ${0.15 * (1 - t * 0.5)})`);
+        glow.addColorStop(1, 'transparent');
+
+        ctx.save();
+        ctx.fillStyle = glow;
+        ctx.beginPath();
+        ctx.arc(cx, cy, swellRadius * 1.3, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+      }
     }
 
     // 核心边框（脉冲时更亮）
