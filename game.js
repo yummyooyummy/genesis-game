@@ -74,8 +74,6 @@ let decorationTimer = 0;   // 装饰粒子计时器
 
 // 调试开关 — 上线前改为 false
 const DEBUG_ITEMS = true;
-const DEBUG_COMBO = true;
-let debugComboCounter = 1;
 
 // ─── 存档 + 单局追踪 ───
 
@@ -115,7 +113,6 @@ const input = new Input(
   dpr,
   handleSlotTap,
   handleRestart,
-  null,
   handleItemTap,
   handleDropTap
 );
@@ -131,12 +128,6 @@ input.onMenuTouch = function (x, y) {
   }
 };
 input.onPauseTap = handlePause;
-if (DEBUG_COMBO) {
-  input.onDebugComboTap = function () {
-    debugComboCounter++;
-    comboText.push(debugComboCounter);
-  };
-}
 input.onPausedTouch = function (x, y) {
   if (!pauseDialogButtons) return;
   if (ui.isPointInRect(x, y, pauseDialogButtons.resume.x, pauseDialogButtons.resume.y, pauseDialogButtons.resume.w, pauseDialogButtons.resume.h)) {
@@ -1130,7 +1121,6 @@ function handleRestart() {
   // 强制清零 combo 状态（防止残留）
   score.resetCombo();
   comboText.reset();
-  debugComboCounter = 1;
 
   board.reset();
   score.reset();
@@ -1347,22 +1337,6 @@ function gameLoop() {
 
     // 顶部 toast 浮层（在所有 UI 之上）
     toast.draw(ctx, screenWidth, statusBarHeight);
-
-    // ── 临时调试按钮 ──
-    if (DEBUG_COMBO) {
-      const dbx = LS.dx(335), dby = LS.dy(60), dbr = LS.ds(18);
-      ctx.save();
-      ctx.fillStyle = 'rgba(255,180,0,0.7)';
-      ctx.beginPath();
-      ctx.arc(dbx, dby, dbr, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.fillStyle = '#000';
-      ctx.font = `bold ${LS.df(13)}px Arial`;
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-      ctx.fillText('C+', dbx, dby);
-      ctx.restore();
-    }
 
     ctx.restore();
   } else if (gameState === 'paused') {

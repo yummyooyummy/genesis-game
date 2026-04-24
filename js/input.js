@@ -13,16 +13,14 @@ class Input {
    * @param {number} dpr - 设备像素比
    * @param {Function} onSlotTap - 点击格子回调 (slot)
    * @param {Function} onRestartTap - 点击重新开始回调 ()
-   * @param {Function} [onDebugTap] - 已废弃，保留参数位置兼容
    * @param {Function} [onItemTap] - 点击道具栏图标回调 (type:'clear'|'upgrade'|'pause')
    * @param {Function} [onDropTap] - 点击悬浮掉落物回调 (drop)
    */
-  constructor(canvas, dpr, onSlotTap, onRestartTap, onDebugTap, onItemTap, onDropTap) {
+  constructor(canvas, dpr, onSlotTap, onRestartTap, onItemTap, onDropTap) {
     this.canvas = canvas;
     this.dpr = dpr;
     this.onSlotTap = onSlotTap;
     this.onRestartTap = onRestartTap;
-    this.onDebugTap = onDebugTap || null;
     this.onItemTap = onItemTap || null;
     this.onDropTap = onDropTap || null;
 
@@ -114,16 +112,6 @@ class Input {
       }
     }
 
-    // 临时调试按钮
-    if (this.onDebugComboTap) {
-      const LS = require('./layoutScale');
-      const dbx = LS.dx(335), dby = LS.dy(60), dbr = LS.ds(24);
-      const ddx = x - dbx, ddy = y - dby;
-      if (ddx * ddx + ddy * ddy <= dbr * dbr) {
-        this.onDebugComboTap();
-        return;
-      }
-    }
 
 
 

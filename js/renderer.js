@@ -457,9 +457,25 @@ class Renderer {
       const isPressed = pressedType === type;
       const pressT = isPressed ? (pressNow - pressState.pressedAt) / PRESS_DURATION_MS : 1;
       const easeOut = 1 - Math.pow(1 - pressT, 2);
-      const pressScale = isPressed ? (0.88 + 0.12 * easeOut) : 1.0;
-      const pressBrightness = isPressed ? (1 + 0.3 * (1 - pressT)) : 1.0;
+      const pressScale = isPressed ? (0.82 + 0.18 * easeOut) : 1.0;
+      const pressBrightness = isPressed ? (1 + 0.5 * (1 - pressT)) : 1.0;
       const sr = slotRadius * pressScale;
+
+      if (isPressed) {
+        const haloRadius = slotRadius * (1.0 + pressT * 0.6);
+        const haloAlpha = 0.6 * (1 - pressT);
+        ctx.save();
+        ctx.globalAlpha = haloAlpha;
+        ctx.strokeStyle = `rgb(${cr},${cg},${cb})`;
+        ctx.lineWidth = LS.ds(3);
+        ctx.shadowBlur = LS.ds(16);
+        ctx.shadowColor = `rgb(${cr},${cg},${cb})`;
+        ctx.beginPath();
+        ctx.arc(cx, cy, haloRadius, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.restore();
+        ctx.shadowBlur = 0;
+      }
 
       // 玻璃态圆形背景
       ctx.save();
@@ -932,7 +948,7 @@ class Renderer {
    */
   drawDrops(items) {
     const { ctx } = this;
-    const iconColors = { clear: '#EF9F27', upgrade: '#5DCAA5', magnet: '#9B7FDD' };
+    const iconColors = { magnet: '#7BD0E0', clear: '#B4A5FF', upgrade: '#FFB648' };
 
     for (const drop of items.drops) {
       let x, y, scale, alpha;
