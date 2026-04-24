@@ -12,7 +12,6 @@ class Score {
   constructor() {
     this.total = 0;
     this.combo = 0;             // 当前连锁计数
-    this.lastScorePopup = null; // 用于渲染浮动分数
     this.highScore = this._loadHighScore();
   }
 
@@ -60,11 +59,6 @@ class Score {
     const multiplier = 1 + comboIncrement * Math.max(0, comboCount - 1);
     const points = Math.round(baseScore * multiplier);
     this.total += points;
-    this.lastScorePopup = {
-      points,
-      combo: comboCount,
-      time: Date.now(),
-    };
     this._maybeUpdateHighScore();
     return points;
   }
@@ -77,11 +71,6 @@ class Score {
   addAbsorbScore(newCoreLevel) {
     const points = newCoreLevel * GAME_CONFIG.scoring.absorbMultiplier;
     this.total += points;
-    this.lastScorePopup = {
-      points,
-      combo: 0,
-      time: Date.now(),
-    };
     this._maybeUpdateHighScore();
     return points;
   }
@@ -101,7 +90,6 @@ class Score {
   reset() {
     this.total = 0;
     this.combo = 0;
-    this.lastScorePopup = null;
   }
 }
 

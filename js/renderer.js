@@ -863,51 +863,6 @@ class Renderer {
   }
 
   /**
-   * 绘制 combo 提示
-   * @param {number} combo
-   * @param {number} x
-   * @param {number} y
-   */
-  drawCombo(combo, x, y) {
-    if (combo < 2) return;
-
-    const { ctx } = this;
-    ctx.save();
-    ctx.fillStyle = '#FFD700';
-    ctx.font = `bold ${LS.df(20 + combo * 2)}px Arial`;
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    ctx.globalAlpha = 0.9;
-    ctx.fillText(`COMBO x${combo}!`, x, y - LS.ds(40));
-    ctx.restore();
-  }
-
-  /**
-   * 绘制浮动得分
-   * @param {object|null} popup - { points, combo, time }
-   */
-  drawScorePopup(popup) {
-    if (!popup) return;
-
-    const { ctx } = this;
-    const elapsed = Date.now() - popup.time;
-    if (elapsed > 1500) return; // 1.5 秒后消失
-
-    const alpha = Math.max(0, 1 - elapsed / 1500);
-    const yOffset = -elapsed * 0.03;
-
-    ctx.save();
-    ctx.globalAlpha = alpha;
-    ctx.fillStyle = '#fff';
-    ctx.font = `bold ${LS.df(18)}px Arial`;
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-
-    ctx.fillText(`+${popup.points}`, LS.dx(187.5), LS.dy(300) + yOffset);
-    ctx.restore();
-  }
-
-  /**
    * 绘制游戏结束界面
    * @param {number} coreLevel
    * @param {number} score

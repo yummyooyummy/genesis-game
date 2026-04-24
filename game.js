@@ -395,12 +395,6 @@ function updateMergeFlow() {
 
   if (mergeFlowState === 'recovery') {
     if (mergeFlowTimer <= 0) {
-      const t = Date.now() % 100000;
-      console.log(`[RECOVERY END t=${t}ms]`, {
-        mergePoints: pendingActionMergePoints,
-        absorbPoints: pendingActionAbsorbPoints,
-        hasLastBurstPos: !!pendingActionLastBurstPos
-      });
       mergeFlowState = null;
       board.mergeFlowLocked = false;
       board._recomputeInputLock();
@@ -1394,9 +1388,6 @@ function gameLoop() {
 
 
     comboText.render(ctx);
-
-    // 浮动得分
-    renderer.drawScorePopup(score.lastScorePopup);
 
     // 顶部 toast 浮层（在所有 UI 之上）
     toast.draw(ctx, screenWidth, statusBarHeight);
