@@ -256,6 +256,11 @@ function handleMergeBurst(anim, midX, midY) {
   lastBurstPos = { x: slotAPos.x, y: slotAPos.y };
   GameGlobal.ShockwaveManager.spawn(slotAPos.x, slotAPos.y, colors.primary);
 
+  const points = GameGlobal.pendingMergePoints || 0;
+  if (points > 0) {
+    scoreText.spawn(slotAPos.x, slotAPos.y - LS.ds(20), points);
+  }
+
   sessionMergeCount++;
   if (score.combo > sessionMaxCombo) sessionMaxCombo = score.combo;
 }
