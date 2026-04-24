@@ -198,12 +198,14 @@ class Renderer {
 
         if (isUpgradeExec) {
           const t = upgradeExec.frame / upgradeExec.executeFrames;
-          const w = Math.sin(t * Math.PI);
+          const g = Math.sin(t * Math.PI);
           ctx.save();
-          ctx.globalAlpha = w * 0.85;
-          ctx.fillStyle = '#FFFFFF';
+          ctx.globalAlpha = g * 0.95;
+          ctx.fillStyle = 'rgba(255,216,135,1)';
+          ctx.shadowColor = 'rgba(255,182,72,0.9)';
+          ctx.shadowBlur = 12 * g;
           ctx.beginPath();
-          ctx.arc(pos.x, pos.y, r * (1 + w * 0.15), 0, Math.PI * 2);
+          ctx.arc(pos.x, pos.y, r * (1 + g * 0.15), 0, Math.PI * 2);
           ctx.fill();
           ctx.restore();
         }

@@ -319,7 +319,7 @@ class Items {
     this.inventory.upgrade -= 1;
     this._pendingEffect = {
       type: 'upgrade', targets, preFrames: 30, frame: -30,
-      executeFrames: 10, afterFrames: 12,
+      executeFrames: 14, afterFrames: 12,
       executed: false, afterTriggered: false,
     };
     board.itemUseLocked = true;
@@ -541,7 +541,7 @@ class Items {
             for (const slot of pe.targets) {
               const pos = board.getSlotPosition(slot);
               particles.spawnConverge(pos.x, pos.y, 'rgba(255,216,135,0.95)', 2,
-                { life: 20, minDistance: 70, maxDistance: 110, radius: 2 });
+                { life: 20, minDistance: 30, maxDistance: 55, radius: 2 });
             }
           }
         } else if (pe.frame < pe.executeFrames) {
@@ -555,7 +555,7 @@ class Items {
             for (const slot of pe.targets) {
               const pos = board.getSlotPosition(slot);
               particles.spawn(pos.x, pos.y, 'rgba(255,216,135,0.85)', 7,
-                { speed: 0.6, life: 40, radius: 2.5 });
+                { speed: 0.35, life: 28, radius: 2.5 });
             }
           }
         } else {
