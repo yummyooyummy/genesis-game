@@ -19,6 +19,7 @@ const ItemIcons = require('./js/itemIcons');
 const ConfettiManager = require('./js/confettiParticles');
 const ComboTextManager = require('./js/comboTextManager');
 const ShockwaveManager = require('./js/shockwave');
+const ScoreTextManager = require('./js/scoreTextManager');
 
 // ─── Canvas 初始化 ───
 
@@ -108,6 +109,7 @@ const score = new Score();
 const items = new Items();
 const comboText = new ComboTextManager();
 GameGlobal.ShockwaveManager = new ShockwaveManager();
+const scoreText = new ScoreTextManager();
 
 const input = new Input(
   canvas,
@@ -236,7 +238,7 @@ function performMerge(slotA, slotB) {
   const combo = score.incrementCombo();
   if (combo >= 2) comboText.push(combo);
   const newLevel = slotA.level + 1;
-  score.addMergeScore(newLevel, combo);
+  GameGlobal.pendingMergePoints = score.addMergeScore(newLevel, combo);
 
   board.startMergeAnimation(slotA, slotB);
 }
@@ -253,6 +255,11 @@ function handleMergeBurst(anim, midX, midY) {
   lastBurstPos = { x: slotAPos.x, y: slotAPos.y };
   GameGlobal.ShockwaveManager.spawn(slotAPos.x, slotAPos.y, colors.primary);
 
+  const points = GameGlobal.pendingMergePoints || 0;
+  if (points > 0) {
+    scoreText.spawn(slotAPos.x, slotAPos.y - LS.ds(20), points);
+  }
+
   sessionMergeCount++;
   if (score.combo > sessionMaxCombo) sessionMaxCombo = score.combo;
 }
@@ -268,7 +275,7 @@ function handleMergeComplete(slotA, newLevel) {
     const c = score.incrementCombo();
     if (c >= 2) comboText.push(c);
     const chainedLevel = slotA.level + 1;
-    score.addMergeScore(chainedLevel, c);
+    GameGlobal.pendingMergePoints = score.addMergeScore(chainedLevel, c);
     checkComboDropTrigger();
     board.startMergeAnimation(slotA, nextPartner);
     return;
@@ -457,7 +464,7 @@ function handleUpgradeComplete(upgradedSlots) {
       const combo = score.incrementCombo();
       if (combo >= 2) comboText.push(combo);
       const newLevel = slot.level + 1;
-      score.addMergeScore(newLevel, combo);
+      GameGlobal.pendingMergePoints = score.addMergeScore(newLevel, combo);
       board.startMergeAnimation(slot, partner);
       return;  // 启动一个链就够了，handleMergeComplete 会继续 combo
     }
@@ -488,7 +495,7 @@ function handleMagnetComplete(mergedSlots) {
       const combo = score.incrementCombo();
       if (combo >= 2) comboText.push(combo);
       const newLevel = slot.level + 1;
-      score.addMergeScore(newLevel, combo);
+      GameGlobal.pendingMergePoints = score.addMergeScore(newLevel, combo);
       board.startMergeAnimation(slot, partner);
       return;
     }
@@ -1136,6 +1143,8 @@ function handleRestart() {
   particles.clear();
   comboText.reset();
   GameGlobal.ShockwaveManager.reset();
+  scoreText.reset();
+  GameGlobal.pendingMergePoints = 0;
   GameGlobal.itemGainState = {};
   items.reset();
   gameState = 'playing';
@@ -1269,6 +1278,7 @@ function gameLoop() {
     // 粒子更新
     particles.update();
     GameGlobal.ShockwaveManager.update();
+    scoreText.update();
 
     comboText.update();
 
@@ -1320,6 +1330,7 @@ function gameLoop() {
     // 绘制粒子
     particles.draw(ctx);
     GameGlobal.ShockwaveManager.render(ctx);
+    scoreText.render(ctx);
 
     // 道具使用期间的屏幕边缘脉冲（清空=暖金/升级=绿松）
     renderer.drawItemUseBurst(items);
@@ -1390,6 +1401,7 @@ function gameLoop() {
     renderer.drawMergeAnimations(board);
     renderer.drawMagnetAnimation(items, board);
     particles.draw(ctx);
+    scoreText.render(ctx);
     renderer.drawItemUseBurst(items);
     renderer.drawDrops(items);
     const storedMax2 = playerData.loadPlayerData().maxScore;
