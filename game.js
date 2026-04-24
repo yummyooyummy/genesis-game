@@ -128,6 +128,13 @@ input.onMenuTouch = function (x, y) {
   }
 };
 input.onPauseTap = handlePause;
+if (DEBUG_ITEMS) {
+  input.onDebugItemTap = function () {
+    items.grant('magnet', 1);
+    items.grant('clear', 1);
+    items.grant('upgrade', 1);
+  };
+}
 input.onPausedTouch = function (x, y) {
   if (!pauseDialogButtons) return;
   if (ui.isPointInRect(x, y, pauseDialogButtons.resume.x, pauseDialogButtons.resume.y, pauseDialogButtons.resume.w, pauseDialogButtons.resume.h)) {
@@ -1337,6 +1344,21 @@ function gameLoop() {
 
     // 顶部 toast 浮层（在所有 UI 之上）
     toast.draw(ctx, screenWidth, statusBarHeight);
+
+    if (DEBUG_ITEMS) {
+      const dbx = LS.dx(335), dby = LS.dy(60), dbr = LS.ds(18);
+      ctx.save();
+      ctx.fillStyle = 'rgba(100,220,180,0.7)';
+      ctx.beginPath();
+      ctx.arc(dbx, dby, dbr, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = '#000';
+      ctx.font = `bold ${LS.df(13)}px Arial`;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText('+1', dbx, dby);
+      ctx.restore();
+    }
 
     ctx.restore();
   } else if (gameState === 'paused') {

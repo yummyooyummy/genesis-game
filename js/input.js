@@ -115,6 +115,17 @@ class Input {
 
 
 
+    // 调试：快速加道具
+    if (this.onDebugItemTap) {
+      const LS = require('./layoutScale');
+      const dbx = LS.dx(335), dby = LS.dy(60), dbr = LS.ds(24);
+      const ddx = x - dbx, ddy = y - dby;
+      if (ddx * ddx + ddy * ddy <= dbr * dbr) {
+        this.onDebugItemTap();
+        return;
+      }
+    }
+
     // 悬浮掉落物命中（优先于道具栏和棋盘）
     if (this.onDropTap && this.items) {
       const drop = this._hitTestDrop(x, y);
