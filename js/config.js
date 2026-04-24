@@ -46,10 +46,9 @@ const GAME_CONFIG = {
   },
   // 计分
   scoring: {
-    baseMultiplier: 5,            // 基础分 = 等级 × 此值
-    comboBase: 1,                 // combo 倍率基数
-    comboIncrement: 0.5,          // 每次连锁增加的倍率
-    absorbMultiplier: 20,         // 吸附奖励 = 新核心等级 × 此值
+    baseMultiplier: 3,            // 基础分 = 等级 × 此值
+    comboIncrement: 0.5,          // 每次连锁增加的倍率（combo≥2 起生效）
+    absorbMultiplier: 10,         // 吸附奖励 = 新核心等级 × 此值
   },
   // 合成后分裂位置分布（按核心等级分阶段）
   spawnDistribution: {

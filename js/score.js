@@ -55,9 +55,9 @@ class Score {
    * @returns {number} 本次得分
    */
   addMergeScore(newLevel, comboCount) {
-    const { baseMultiplier, comboBase, comboIncrement } = GAME_CONFIG.scoring;
+    const { baseMultiplier, comboIncrement } = GAME_CONFIG.scoring;
     const baseScore = newLevel * baseMultiplier;
-    const multiplier = comboBase + comboIncrement * Math.max(1, comboCount);
+    const multiplier = 1 + comboIncrement * Math.max(0, comboCount - 1);
     const points = Math.round(baseScore * multiplier);
     this.total += points;
     this.lastScorePopup = {

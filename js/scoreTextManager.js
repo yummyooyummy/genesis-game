@@ -8,8 +8,8 @@ class ScoreTextManager {
     this.items = [];
   }
 
-  spawn(x, y, points) {
-    this.items.push({ x, y, points, age: 0 });
+  spawn(x, y, points, kind = 'merge') {
+    this.items.push({ x, y, points, kind, age: 0 });
   }
 
   update() {
@@ -30,15 +30,27 @@ class ScoreTextManager {
       else alpha = (1 - t) / 0.3;
 
       const scale = t < 0.3 ? (0.9 + 0.1 * (t / 0.3)) : 1.0;
-      const fontSize = LS.df(18) * scale;
+
+      let fontSize, fillStyle, shadowColor, shadowBlur;
+      if (it.kind === 'absorb') {
+        fontSize = LS.df(24) * scale;
+        fillStyle = '#FFD887';
+        shadowColor = 'rgba(255, 182, 72, 0.8)';
+        shadowBlur = LS.ds(8);
+      } else {
+        fontSize = LS.df(18) * scale;
+        fillStyle = '#FFFFFF';
+        shadowColor = 'rgba(0, 0, 0, 0.6)';
+        shadowBlur = LS.ds(4);
+      }
 
       ctx.globalAlpha = alpha;
       ctx.font = `700 ${fontSize}px "Space Grotesk", sans-serif`;
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
-      ctx.fillStyle = '#FFFFFF';
-      ctx.shadowColor = 'rgba(0, 0, 0, 0.6)';
-      ctx.shadowBlur = LS.ds(4);
+      ctx.fillStyle = fillStyle;
+      ctx.shadowColor = shadowColor;
+      ctx.shadowBlur = shadowBlur;
       ctx.fillText(`+${it.points}`, it.x, it.y + LS.ds(offsetY));
     }
     ctx.restore();

@@ -339,7 +339,8 @@ function updateMergeFlow() {
         playerData.savePlayerData(pd);
       }
       if (!openingAbsorbActive) {
-        score.addAbsorbScore(newCoreLevel);
+        const absorbPoints = score.addAbsorbScore(newCoreLevel);
+        scoreText.spawn(centerX, centerY - LS.ds(40), absorbPoints, 'absorb');
         // 核心升级赠送道具：进化 Lv.5/7/9...（奇数≥5）、清空 Lv.6/8/10...（偶数≥6）
         if (newCoreLevel >= 5 && newCoreLevel % 2 === 1) {
           items.spawnDrop('upgrade', centerX, centerY, dropTargetPositions);
