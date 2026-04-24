@@ -20,7 +20,6 @@ class ComboTextManager {
   }
 
   update() {
-    if (GameGlobal.TimeFreeze && GameGlobal.TimeFreeze.isFrozen()) return;
     for (const it of this.items) {
       it.life -= 1;
       it.age += 1;

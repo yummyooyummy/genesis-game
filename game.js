@@ -289,7 +289,6 @@ function handleMergeComplete(slotA, newLevel) {
  */
 function updateMergeFlow() {
   if (mergeFlowState === null) return;
-  if (timeFreeze.isFrozen()) return;
 
   mergeFlowTimer -= 1;
 
@@ -1174,7 +1173,6 @@ function gameLoop() {
     // === UPDATE ===
 
     timeFreeze.update();
-    const frozen = timeFreeze.isFrozen();
 
     // 旋转
     board.updateRotation();
@@ -1242,11 +1240,9 @@ function gameLoop() {
     items.updateDrops();
 
     // 为每个飞行中的元素沿路径撒尾迹粒子
-    if (!frozen) {
-      for (const fly of board.flyingElements) {
-        const pos = board.getFlyingPosition(fly);
-        particles.spawnTrail(pos.x, pos.y, ELEMENT_COLORS[1].primary);
-      }
+    for (const fly of board.flyingElements) {
+      const pos = board.getFlyingPosition(fly);
+      particles.spawnTrail(pos.x, pos.y, ELEMENT_COLORS[1].primary);
     }
 
     // 所有暂态都清空后若棋盘仍满 → 游戏结束
@@ -1265,16 +1261,14 @@ function gameLoop() {
     }
 
     // 装饰粒子（每 30 帧生成一轮）
-    if (!frozen) {
-      decorationTimer += 1;
-      if (decorationTimer >= 30) {
-        decorationTimer = 0;
-        for (const slot of board.slots) {
-          if (slot.level === null) continue;
-          const pos = board.getSlotPosition(slot);
-          const colors = getElementColors(slot.level);
-          particles.spawnDecoration(pos.x, pos.y, colors.secondary, board.getElementRadius(slot.level));
-        }
+    decorationTimer += 1;
+    if (decorationTimer >= 30) {
+      decorationTimer = 0;
+      for (const slot of board.slots) {
+        if (slot.level === null) continue;
+        const pos = board.getSlotPosition(slot);
+        const colors = getElementColors(slot.level);
+        particles.spawnDecoration(pos.x, pos.y, colors.secondary, board.getElementRadius(slot.level));
       }
     }
 

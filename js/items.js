@@ -193,7 +193,6 @@ class Items {
    * 每帧推进所有掉落物的生命周期。
    */
   updateDrops() {
-    if (GameGlobal.TimeFreeze && GameGlobal.TimeFreeze.isFrozen()) return;
     const cfg = GAME_CONFIG.items;
     const floatFrames = msToFrames(cfg.dropDurationMs);
     const blinkFrames = msToFrames(cfg.blinkDurationMs);
@@ -502,7 +501,6 @@ class Items {
    *   升级道具 useAnim 结束时触发，game.js 用它启动合成连锁
    */
   update(board, particles, onUpgradeComplete, onMagnetComplete) {
-    if (GameGlobal.TimeFreeze && GameGlobal.TimeFreeze.isFrozen()) return;
     // 磁吸动画推进
     if (this._magnetAnim) {
       this._magnetAnim.frame += 1;

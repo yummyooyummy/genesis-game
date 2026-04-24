@@ -267,59 +267,52 @@ class Board {
    * @param {(slot:object) => void} [onLand] - 飞行元素到达目标格时回调（用于落地粒子）
    */
   updateSplits(onSplitStart, onLand) {
-    const frozen = GameGlobal.TimeFreeze && GameGlobal.TimeFreeze.isFrozen();
-
-    if (!frozen) {
-      // 1) 队列计时：到点就从核心发射一个元素
-      if (this.queuedSplits > 0) {
-        if (this.splitTimer <= 0) {
-          const target = this._findEmptyForSplit();
-          if (target) {
-            target.reserved = true;
-            this.corePulse = CORE_PULSE_FRAMES;
-            this.flyingElements.push({
-              startX: this.centerX,
-              startY: this.centerY,
-              targetSlot: target,
-              frame: 0,
-              totalFrames: FLY_FRAMES,
-            });
-            this.queuedSplits -= 1;
-            this.splitTimer = SPLIT_INTERVAL_FRAMES;
-            if (onSplitStart) onSplitStart(target);
-          }
-        } else {
-          this.splitTimer -= 1;
+    // 1) 队列计时：到点就从核心发射一个元素
+    if (this.queuedSplits > 0) {
+      if (this.splitTimer <= 0) {
+        const target = this._findEmptyForSplit();
+        if (target) {
+          target.reserved = true;
+          this.corePulse = CORE_PULSE_FRAMES;
+          this.flyingElements.push({
+            startX: this.centerX,
+            startY: this.centerY,
+            targetSlot: target,
+            frame: 0,
+            totalFrames: FLY_FRAMES,
+          });
+          this.queuedSplits -= 1;
+          this.splitTimer = SPLIT_INTERVAL_FRAMES;
+          if (onSplitStart) onSplitStart(target);
         }
-      } else if (this.splitTimer > 0) {
+      } else {
         this.splitTimer -= 1;
       }
-
-      // 2) 推进飞行动画，到达则落地
-      for (let i = this.flyingElements.length - 1; i >= 0; i--) {
-        const fly = this.flyingElements[i];
-        fly.frame += 1;
-        if (fly.frame >= fly.totalFrames) {
-          fly.targetSlot.level = 1;
-          fly.targetSlot.reserved = false;
-          this.flyingElements.splice(i, 1);
-          if (onLand) onLand(fly.targetSlot);
-        }
-      }
-
-      // 4) 首次完成初始 4 次分裂：标记完成
-      if (!this.initialSplitsComplete && this.queuedSplits === 0 && this.flyingElements.length === 0) {
-        this.initialSplitsComplete = true;
-      }
-      this._recomputeInputLock();
+    } else if (this.splitTimer > 0) {
+      this.splitTimer -= 1;
     }
 
-    // 3) 核心脉冲衰减 — 时停期间慢放（1/3 速度）
-    if (this.corePulse > 0) {
-      if (!frozen || GameGlobal.TimeFreeze.shouldCoreTick()) {
-        this.corePulse -= 1;
+    // 2) 推进飞行动画，到达则落地
+    for (let i = this.flyingElements.length - 1; i >= 0; i--) {
+      const fly = this.flyingElements[i];
+      fly.frame += 1;
+      if (fly.frame >= fly.totalFrames) {
+        fly.targetSlot.level = 1;
+        fly.targetSlot.reserved = false;
+        this.flyingElements.splice(i, 1);
+        if (onLand) onLand(fly.targetSlot);
       }
     }
+
+    // 3) 核心脉冲衰减
+    if (this.corePulse > 0) this.corePulse -= 1;
+
+    // 4) 首次完成初始 4 次分裂：标记完成
+    if (!this.initialSplitsComplete && this.queuedSplits === 0 && this.flyingElements.length === 0) {
+      this.initialSplitsComplete = true;
+    }
+    // 重新计算输入锁
+    this._recomputeInputLock();
   }
 
   /**
@@ -347,7 +340,6 @@ class Board {
    * @param {(target:object) => void} [onTimedSplitFire] - 本次定时分裂成功发射时的回调（用于额外粒子）
    */
   updateTimedSplit(onTimedSplitFire) {
-    if (GameGlobal.TimeFreeze && GameGlobal.TimeFreeze.isFrozen()) return;
     // 暂停道具：冻结定时分裂调度 — scheduledFrame 跟着 gameFrame 前进，保证"剩余帧"不变
     if (this.timedSplitPauseFramesRemaining > 0) {
       this.timedSplitPauseFramesRemaining -= 1;
