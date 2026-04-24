@@ -233,7 +233,6 @@ function checkComboDropTrigger() {
  * @param {object} slotB - 第二步点击的格子（将清空）
  */
 function performMerge(slotA, slotB) {
-  console.log('[Perform] combo before addMerge =', score.combo);
   // 合法性已由 handleSlotTap 校验（相邻 + 同级 + 非空）
   score.resetCombo();
   comboText.reset();
@@ -250,22 +249,12 @@ function performMerge(slotA, slotB) {
  * 每一步 combo 都会触发一次（包含玩家主动合成和自动连锁）。
  */
 function handleMergeBurst(anim, midX, midY) {
-  console.log('[Burst]', {
-    pendingPoints: GameGlobal.pendingMergePoints,
-    combo: score.combo,
-    willSpawn: GameGlobal.pendingMergePoints > 0 && score.combo <= 1
-  });
   const colors = getElementColors(anim.newLevel);
   const slotAPos = board.getSlotPosition(anim.slotA);
   particles.spawn(slotAPos.x, slotAPos.y, colors.primary, 14, { speed: 5, life: 35, radius: 2 });
   particles.spawn(slotAPos.x, slotAPos.y, colors.secondary, 10, { speed: 2.5, life: 22 });
   lastBurstPos = { x: slotAPos.x, y: slotAPos.y };
   GameGlobal.ShockwaveManager.spawn(slotAPos.x, slotAPos.y, colors.primary);
-
-  const points = GameGlobal.pendingMergePoints || 0;
-  if (points > 0 && score.combo <= 1) {
-    scoreText.spawn(slotAPos.x, slotAPos.y - LS.ds(20), points);
-  }
 
   sessionMergeCount++;
   if (score.combo > sessionMaxCombo) sessionMaxCombo = score.combo;
@@ -279,9 +268,7 @@ function handleMergeComplete(slotA, newLevel) {
   // Combo 连锁：找相邻同级最近的一个，继续合成
   const nextPartner = board.findNearestAdjacentSameLevel(slotA);
   if (nextPartner) {
-    console.log('[Complete] combo BEFORE increment =', score.combo);
     const c = score.incrementCombo();
-    console.log('[Complete] combo AFTER increment =', score.combo);
     if (c >= 2) comboText.push(c);
     const chainedLevel = slotA.level + 1;
     GameGlobal.pendingMergePoints = score.addMergeScore(chainedLevel, c);
@@ -352,7 +339,9 @@ function updateMergeFlow() {
         const absorbPoints = score.addAbsorbScore(newCoreLevel);
         if (!absorbJustSpawned) {
           absorbJustSpawned = true;
-          scoreText.spawn(centerX, centerY - LS.ds(40), absorbPoints, 'absorb');
+          const mergePoints = GameGlobal.pendingMergePoints || 0;
+          const totalPoints = mergePoints + absorbPoints;
+          scoreText.spawn(centerX, centerY - LS.ds(40), totalPoints, 'absorb');
         }
         // 核心升级赠送道具：进化 Lv.5/7/9...（奇数≥5）、清空 Lv.6/8/10...（偶数≥6）
         if (newCoreLevel >= 5 && newCoreLevel % 2 === 1) {
@@ -469,7 +458,6 @@ function handleDropTap(drop) {
  * @param {object[]} upgradedSlots
  */
 function handleUpgradeComplete(upgradedSlots) {
-  console.log('[Upgrade] entered, points =', GameGlobal.pendingMergePoints);
   for (const slot of upgradedSlots) {
     if (slot.level === null) continue;        // 安全检查
     if (slot.mergeAnimating) continue;
@@ -500,7 +488,6 @@ function handleUpgradeComplete(upgradedSlots) {
  * @param {object[]} mergedSlots - 磁吸过程中发生合成的目标格
  */
 function handleMagnetComplete(mergedSlots) {
-  console.log('[Magnet] entered, points =', GameGlobal.pendingMergePoints);
   // 先检查所有受影响的格子是否能触发合成连锁
   const allSlots = [...mergedSlots];
   for (const slot of allSlots) {
