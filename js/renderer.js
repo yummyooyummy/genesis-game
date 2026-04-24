@@ -313,7 +313,32 @@ class Renderer {
    */
   drawMagnetAnimation(items, board) {
     if (!items._magnetAnim) return;
-    const { moves, frame, totalFrames } = items._magnetAnim;
+    const { moves, targets, frame, preFrames, totalFrames } = items._magnetAnim;
+
+    // 前摇阶段：目标粒子青色光环脉动
+    if (frame < 0 && targets) {
+      const { ctx } = this;
+      const t = (frame + preFrames) / preFrames; // 0 → 1
+      const pulse = 0.5 + 0.5 * Math.sin(t * Math.PI * 4);
+      for (const slot of targets) {
+        if (slot.level === null) continue;
+        const pos = board.getSlotPosition(slot);
+        const ringRadius = board.getElementRadius(slot.level) * (1.3 + pulse * 0.3);
+        ctx.save();
+        ctx.globalAlpha = pulse * 0.7;
+        ctx.strokeStyle = 'rgba(123,208,224,0.9)';
+        ctx.lineWidth = LS.ds(2);
+        ctx.shadowColor = 'rgba(123,208,224,0.8)';
+        ctx.shadowBlur = LS.ds(10);
+        ctx.beginPath();
+        ctx.arc(pos.x, pos.y, ringRadius, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.restore();
+      }
+      return;
+    }
+
+    // 滑动阶段
     const t = Math.min(1, frame / totalFrames);
     const ease = 1 - Math.pow(1 - t, 3);
 

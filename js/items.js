@@ -375,12 +375,12 @@ class Items {
     }
 
     this.inventory.magnet -= 1;
+    const targets = moves.map(m => m.slot);
     for (const move of moves) {
       move.fromPos = board.getSlotPosition(move.slot);
       move.toPos = board.getSlotPosition(move.targetSlot);
-      move.slot._magnetAnimating = true;
     }
-    this._magnetAnim = { moves, frame: 0, totalFrames: 30 };
+    this._magnetAnim = { moves, targets, frame: -15, preFrames: 15, totalFrames: 30 };
     board.itemUseLocked = true;
     board._recomputeInputLock();
     return true;
@@ -509,7 +509,14 @@ class Items {
     // 磁吸动画推进
     if (this._magnetAnim) {
       this._magnetAnim.frame += 1;
-      if (this._magnetAnim.frame >= this._magnetAnim.totalFrames) {
+      if (this._magnetAnim.frame < 0) {
+        // 前摇阶段：不做状态修改，渲染层读 targets 画闪烁
+      } else if (this._magnetAnim.frame === 0) {
+        // 前摇结束，进入滑动阶段：标记 _magnetAnimating
+        for (const move of this._magnetAnim.moves) {
+          move.slot._magnetAnimating = true;
+        }
+      } else if (this._magnetAnim.frame >= this._magnetAnim.totalFrames) {
         this._executeMagnet(board, particles, onMagnetComplete);
       }
     }
