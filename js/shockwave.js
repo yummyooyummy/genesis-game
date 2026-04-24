@@ -20,6 +20,7 @@ class ShockwaveManager {
       maxLife,
       startRadius: opts.startRadius || LS.ds(12),
       endRadius: opts.endRadius || LS.ds(54),
+      alphaMultiplier: opts.alphaMultiplier ?? 1.0,
     });
   }
 
@@ -40,7 +41,7 @@ class ShockwaveManager {
     for (const w of this.waves) {
       const t = 1 - w.life / w.maxLife;
       const radius = w.startRadius + (w.endRadius - w.startRadius) * t;
-      const alpha = (1 - t) * 0.75;
+      const alpha = (1 - t) * 0.75 * w.alphaMultiplier;
       const lineWidth = LS.ds(2) * (1 - t * 0.5);
 
       ctx.beginPath();

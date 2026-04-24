@@ -1218,13 +1218,13 @@ function gameLoop() {
   if (gameState === 'menu') {
     drawMenuScreen();
   } else if (gameState === 'intro') {
-    // ─── 开场转场动效（800ms / 48 帧） ───
+    // ─── 开场转场动效（1200ms / 72 帧） ───
     introFrame++;
     const f = introFrame;
 
-    // Phase 1（帧 1-12）：菜单淡出 + 缩小
-    if (f <= 12) {
-      const p = (f - 1) / 11;
+    // Phase 1（帧 1-18）：菜单淡出 + 缩小
+    if (f <= 18) {
+      const p = (f - 1) / 17;
       const eased = 1 - (1 - p) * (1 - p);
       const alpha = 1 - eased;
       const scale = 1 - 0.03 * eased;
@@ -1238,11 +1238,11 @@ function gameLoop() {
       ctx.restore();
     }
 
-    // Phase 2（帧 11-29）：游戏界面淡入
-    if (f >= 11) {
+    // Phase 2（帧 17-44）：游戏界面淡入
+    if (f >= 17) {
       let coreAlpha, coreScale;
-      if (f < 29) {
-        const p2 = (f - 11) / 18;
+      if (f < 44) {
+        const p2 = (f - 17) / 27;
         coreAlpha = p2;
         if (p2 < 0.7) {
           coreScale = 0.7 + (1.02 - 0.7) * (p2 / 0.7);
@@ -1276,23 +1276,31 @@ function gameLoop() {
       ctx.restore();
     }
 
-    // Phase 3（帧 24）：触发 shockwave + orbit 粒子
-    if (f === 24) {
+    // Phase 3（帧 36 起）：双圈 shockwave + orbit 粒子
+    if (f === 36) {
       GameGlobal.ShockwaveManager.spawn(centerX, centerY, '#B4A5FF', {
-        maxLife: 18,
+        maxLife: 27,
         startRadius: LS.ds(12),
-        endRadius: LS.ds(120),
+        endRadius: LS.ds(180),
       });
       particles.spawnOrbit(centerX, centerY, '#B4A5FF', 20, {
-        life: 30,
+        life: 45,
         minRadius: 60,
         maxRadius: 100,
-        angularSpeed: 0.12,
+        angularSpeed: 0.10,
+      });
+    }
+    if (f === 42) {
+      GameGlobal.ShockwaveManager.spawn(centerX, centerY, '#B4A5FF', {
+        maxLife: 27,
+        startRadius: LS.ds(12),
+        endRadius: LS.ds(260),
+        alphaMultiplier: 0.5,
       });
     }
 
     // Phase 3 持续：更新和渲染粒子 / shockwave
-    if (f >= 24) {
+    if (f >= 36) {
       particles.update();
       particles.draw(ctx);
       GameGlobal.ShockwaveManager.update();
@@ -1300,7 +1308,7 @@ function gameLoop() {
     }
 
     // 转场结束
-    if (f >= 48) {
+    if (f >= 72) {
       gameState = 'playing';
       input.isIntro = false;
       board.queueInitialSplits();
@@ -1309,7 +1317,7 @@ function gameLoop() {
     }
 
     // 异常保险
-    if (f > 120) {
+    if (f > 180) {
       gameState = 'playing';
       input.isIntro = false;
       board.queueInitialSplits();
