@@ -547,8 +547,9 @@ class Renderer {
         }
       }
 
-      // 数量徽章（右上角，count > 0 时才画）
-      if (count > 0) {
+      // 数量徽章（始终显示，count=0 时淡化）
+      {
+        const badgeAlpha = count > 0 ? 1.0 : 0.45;
         const bx = cx + LS.ds(20);
         const by = cy - LS.ds(24);
         const bw = LS.ds(18);
@@ -570,6 +571,7 @@ class Renderer {
         }
 
         ctx.save();
+        ctx.globalAlpha *= badgeAlpha;
         ctx.translate(bx, by);
         ctx.scale(badgeScale, badgeScale);
         ctx.translate(-bx, -by);
