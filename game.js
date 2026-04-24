@@ -356,8 +356,8 @@ function updateMergeFlow() {
     if (!mergeFlowBurstFired) {
       mergeFlowBurstFired = true;
       const coreColors = getElementColors(board.core.level);
-      particles.spawn(centerX, centerY, coreColors.primary, 24, { speed: 5, life: 45, radius: 4 });
-      particles.spawn(centerX, centerY, coreColors.secondary, 16, { speed: 3, life: 35, radius: 3 });
+      particles.spawn(centerX, centerY, coreColors.primary, 24, { speed: 8, life: 55, radius: 4 });
+      particles.spawn(centerX, centerY, coreColors.secondary, 16, { speed: 5, life: 45, radius: 3 });
       board.corePulse = 15;
     }
     if (mergeFlowTimer <= 0) {
