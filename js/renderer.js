@@ -158,6 +158,9 @@ class Renderer {
 
     const pe = items && items._pendingEffect;
     const clearPre = pe && pe.type === 'clear' && pe.frame < 0 ? pe : null;
+    const upgradePre = pe && pe.type === 'upgrade' && pe.frame < 0 ? pe : null;
+    const bounceRec = GameGlobal.upgradedTargets;
+    const bounceAlive = bounceRec && (Date.now() - bounceRec.upgradedAt) < 300;
 
     for (const slot of board.slots) {
       // 选中的格子单独由 drawSelectionHighlight 绘制（带脉冲）
@@ -176,12 +179,26 @@ class Renderer {
         ctx.arc(pos.x, pos.y, 5, 0, Math.PI * 2);
         ctx.fill();
       } else {
+        const r = board.getElementRadius(slot.level);
         const isClearTarget = clearPre && clearPre.targets.includes(slot);
+        const isUpgradeTarget = upgradePre && upgradePre.targets.includes(slot);
+        const isBounce = bounceAlive && bounceRec.slots.includes(slot);
 
-        // 有元素：绘制彩色圆 + 等级名
-        this._drawElement(pos.x, pos.y, slot.level, board.getElementRadius(slot.level));
+        if (isBounce) {
+          const bt = (Date.now() - bounceRec.upgradedAt) / 300;
+          let scale;
+          if (bt < 0.3) scale = 0.6 + 0.6 * (bt / 0.3);
+          else scale = 1.2 - 0.2 * (1 - Math.pow(1 - (bt - 0.3) / 0.7, 3));
+          ctx.save();
+          ctx.translate(pos.x, pos.y);
+          ctx.scale(scale, scale);
+          ctx.translate(-pos.x, -pos.y);
+          this._drawElement(pos.x, pos.y, slot.level, r);
+          ctx.restore();
+        } else {
+          this._drawElement(pos.x, pos.y, slot.level, r);
+        }
 
-        // 清空前摇：粒子自身泛红呼吸
         if (isClearTarget) {
           const t = (clearPre.frame + clearPre.preFrames) / clearPre.preFrames;
           const pulse = Math.pow(Math.sin(t * Math.PI * 2), 2);
@@ -189,8 +206,30 @@ class Renderer {
           ctx.globalAlpha = pulse * 0.45;
           ctx.fillStyle = 'rgba(255,60,60,1)';
           ctx.beginPath();
-          ctx.arc(pos.x, pos.y, board.getElementRadius(slot.level), 0, Math.PI * 2);
+          ctx.arc(pos.x, pos.y, r, 0, Math.PI * 2);
           ctx.fill();
+          ctx.restore();
+        }
+
+        if (isUpgradeTarget) {
+          const t = (upgradePre.frame + upgradePre.preFrames) / upgradePre.preFrames;
+          ctx.save();
+          ctx.globalAlpha = t * 0.5;
+          ctx.fillStyle = 'rgba(255,216,135,1)';
+          ctx.beginPath();
+          ctx.arc(pos.x, pos.y, r, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.restore();
+          const shrinkR = r * (2.5 - t * 1.4);
+          ctx.save();
+          ctx.globalAlpha = t * 0.85;
+          ctx.strokeStyle = 'rgba(255,216,135,0.9)';
+          ctx.lineWidth = LS.ds(1.5 + t * 1.5);
+          ctx.shadowColor = 'rgba(255,182,72,0.8)';
+          ctx.shadowBlur = LS.ds(8 + t * 12);
+          ctx.beginPath();
+          ctx.arc(pos.x, pos.y, shrinkR, 0, Math.PI * 2);
+          ctx.stroke();
           ctx.restore();
         }
 

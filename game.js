@@ -1136,6 +1136,7 @@ function handleRestart() {
   comboText.reset();
   GameGlobal.ShockwaveManager.reset();
   GameGlobal.itemGainState = {};
+  GameGlobal.upgradedTargets = null;
   items.reset();
   gameState = 'playing';
   input.isGameOver = false;
