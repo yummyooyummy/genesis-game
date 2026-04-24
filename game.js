@@ -257,7 +257,7 @@ function handleMergeBurst(anim, midX, midY) {
   GameGlobal.ShockwaveManager.spawn(slotAPos.x, slotAPos.y, colors.primary);
 
   const points = GameGlobal.pendingMergePoints || 0;
-  if (points > 0) {
+  if (points > 0 && score.combo <= 1) {
     scoreText.spawn(slotAPos.x, slotAPos.y - LS.ds(20), points);
   }
 
