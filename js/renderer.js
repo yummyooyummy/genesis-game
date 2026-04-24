@@ -106,11 +106,10 @@ class Renderer {
     ctx.arc(cx, cy, radius, 0, Math.PI * 2);
     ctx.fill();
 
-    // 前摇动效：内部涟漪 + 弱能量外溢
+    // 前摇动效：内部涟漪
     if (warningProgress > 0) {
       const wp = warningProgress;
 
-      // Phase 1: 内部涟漪（全程，强度随 wp 增强）
       for (let i = 0; i < 3; i++) {
         const rippleT = (wp * 1.5 + i * 0.33) % 1;
         const rippleRadius = radius * (0.25 + rippleT * 0.7);
@@ -125,27 +124,6 @@ class Renderer {
         ctx.stroke();
         ctx.restore();
       }
-
-      // Phase 2: 能量外溢（弱）（wp 0.67 → 1.0）
-      if (wp >= 0.67) {
-        const t = (wp - 0.67) / (1 - 0.67);
-        const swellRadius = radius * (1 + t * 0.12);
-
-        const glow = ctx.createRadialGradient(
-          cx, cy, radius * 0.9,
-          cx, cy, swellRadius * 1.3
-        );
-        glow.addColorStop(0, `rgba(255, 216, 135, ${0.3 + t * 0.2})`);
-        glow.addColorStop(0.7, `rgba(255, 182, 72, ${0.15 * (1 - t * 0.5)})`);
-        glow.addColorStop(1, 'transparent');
-
-        ctx.save();
-        ctx.fillStyle = glow;
-        ctx.beginPath();
-        ctx.arc(cx, cy, swellRadius * 1.3, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.restore();
-      }
     }
 
     // 核心边框（脉冲时更亮）
@@ -154,6 +132,25 @@ class Renderer {
     ctx.beginPath();
     ctx.arc(cx, cy, radius, 0, Math.PI * 2);
     ctx.stroke();
+
+    // 迸发白环（corePulse 触发时从核心向外扩散）
+    if (pulse > 0) {
+      const ringT = 1 - pulse;
+      const ringRadius = radius * (1 + ringT * 1.8);
+      const ringAlpha = pulse * 0.85;
+      const ringLineWidth = LS.ds(3) * pulse;
+
+      ctx.save();
+      ctx.globalAlpha = ringAlpha;
+      ctx.strokeStyle = 'rgba(255, 255, 255, 1)';
+      ctx.lineWidth = ringLineWidth;
+      ctx.shadowColor = 'rgba(255, 240, 200, 0.9)';
+      ctx.shadowBlur = LS.ds(12) * pulse;
+      ctx.beginPath();
+      ctx.arc(cx, cy, ringRadius, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.restore();
+    }
 
     // 等级文字
     ctx.fillStyle = '#fff';
