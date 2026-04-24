@@ -703,10 +703,7 @@ class Board {
       if (!anim.burstFired && anim.frame >= anim.convergeFrames) {
         anim.burstFired = true;
         const posA = this.getSlotPosition(anim.slotA);
-        const posB = this.getSlotPosition(anim.slotB);
-        const midX = (posA.x + posB.x) / 2;
-        const midY = (posA.y + posB.y) / 2;
-        if (onBurst) onBurst(anim, midX, midY);
+        if (onBurst) onBurst(anim, posA.x, posA.y);
       }
 
       // 动画结束：写回状态、解除 mergeAnimating、触发完成回调
@@ -735,20 +732,17 @@ class Board {
   getMergeAnimationState(anim) {
     const posA = this.getSlotPosition(anim.slotA);
     const posB = this.getSlotPosition(anim.slotB);
-    const mid = { x: (posA.x + posB.x) / 2, y: (posA.y + posB.y) / 2 };
+    const mid = { x: posA.x, y: posA.y };
 
     if (anim.frame < anim.convergeFrames) {
       const t = anim.frame / anim.convergeFrames;
       const ease = 1 - Math.pow(1 - t, 3);
-      const sourcePos = {
-        x: posA.x + (mid.x - posA.x) * ease,
-        y: posA.y + (mid.y - posA.y) * ease,
-      };
+      const sourcePos = { x: posA.x, y: posA.y };
       const consumedPos = {
-        x: posB.x + (mid.x - posB.x) * ease,
-        y: posB.y + (mid.y - posB.y) * ease,
+        x: posB.x + (posA.x - posB.x) * ease,
+        y: posB.y + (posA.y - posB.y) * ease,
       };
-      const radiusScale = 1 - ease * 0.3; // 1.0 → 0.7
+      const radiusScale = 1;
       return { phase: 'converge', sourcePos, consumedPos, radiusScale, mid };
     }
 
@@ -759,11 +753,7 @@ class Board {
     } else {
       scale = 1.2 - ((pt - 0.5) / 0.5) * 0.2; // 1.2 → 1.0
     }
-    const ease = 1 - Math.pow(1 - pt, 2);
-    const newPos = {
-      x: mid.x + (posA.x - mid.x) * ease,
-      y: mid.y + (posA.y - mid.y) * ease,
-    };
+    const newPos = { x: posA.x, y: posA.y };
     return { phase: 'pop', newPos, scale, mid };
   }
 

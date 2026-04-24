@@ -34,7 +34,7 @@ const GAME_CONFIG = {
   },
   // 合成动画
   mergeAnimation: {
-    convergeFrames: 18,           // 两元素向中点聚合（帧）
+    convergeFrames: 9,            // B 飞向 A（帧）
     popFrames: 6,                 // 新元素从 0.5× 放大到 1.0×（帧）
   },
   // 合成后流程（合成动画结束后的各阶段时长）

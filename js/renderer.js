@@ -294,6 +294,9 @@ class Renderer {
       const state = board.getMergeAnimationState(anim);
       if (state.phase === 'converge') {
         const r = board.getElementRadius(anim.sourceLevel) * state.radiusScale;
+        const t = anim.frame / anim.convergeFrames;
+        const glowStrength = 0.4 + t * 0.4;
+        this._drawMergeGlow(state.sourcePos.x, state.sourcePos.y, anim.sourceLevel, r, glowStrength);
         this._drawElement(state.sourcePos.x, state.sourcePos.y, anim.sourceLevel, r);
         this._drawElement(state.consumedPos.x, state.consumedPos.y, anim.sourceLevel, r);
       } else {
@@ -367,6 +370,21 @@ class Renderer {
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     ctx.fillText(String(level), x, y);
+  }
+
+  _drawMergeGlow(x, y, level, radius, strength) {
+    const colors = getElementColors(level);
+    const { ctx } = this;
+    ctx.save();
+    ctx.globalAlpha = strength;
+    const grad = ctx.createRadialGradient(x, y, radius * 0.9, x, y, radius * 3.0);
+    grad.addColorStop(0, colors.secondary);
+    grad.addColorStop(1, 'transparent');
+    ctx.fillStyle = grad;
+    ctx.beginPath();
+    ctx.arc(x, y, radius * 3.0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
   }
 
   /**
