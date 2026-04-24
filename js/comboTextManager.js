@@ -1,7 +1,7 @@
 const LS = require('./layoutScale');
 
 const MAX_SLOTS = 3;
-const LIFE_FRAMES = 90;
+const LIFE_FRAMES = 60;
 const SPAWN_FRAMES = 10;
 const FADE_FRAMES = 20;
 
