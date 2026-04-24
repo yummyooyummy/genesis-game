@@ -1797,84 +1797,41 @@ function gameLoop() {
       }
     }
   } else if (gameState === 'outro') {
-    // ─── 出场转场动效（1000ms / 60 帧） ───
+    // ─── 出场转场动效（~667ms / 40 帧）───
     outroFrame++;
     const f = outroFrame;
+    const TOTAL = 40;
 
-    // Phase 1（帧 1-24）：源界面收缩淡出
-    if (f <= 24) {
-      const p1 = (f - 1) / 23;
+    // Phase 1（帧 1-18）：源界面淡出
+    if (f <= 18) {
+      const p1 = f / 18;
       const eased = 1 - (1 - p1) * (1 - p1);
       const alpha = 1 - eased;
-      const scale = 1.0 - 0.03 * eased;
 
       ctx.save();
       ctx.globalAlpha = alpha;
-      ctx.translate(screenWidth / 2, screenHeight / 2);
-      ctx.scale(scale, scale);
-      ctx.translate(-screenWidth / 2, -screenHeight / 2);
-
       if (outroSource === 'paused') {
         renderPlayingSnapshot();
         drawPauseDialog(1.0, false);
       } else if (outroSource === 'gameover') {
         drawGameOverScreen(1.0);
       }
-
       ctx.restore();
     }
 
-    // 帧 12：反向光环（从大到小）
-    if (f === 12) {
-      GameGlobal.ShockwaveManager.spawn(centerX, centerY, '#B4A5FF', {
-        maxLife: 24,
-        startRadius: LS.ds(180),
-        endRadius: LS.ds(12),
-      });
-    }
-
-    // Phase 2（帧 18-42）：屏幕中央脉冲光点
-    if (f >= 18 && f <= 42) {
-      const p2 = (f - 18) / 24;
-      const pulseAlpha = Math.sin(p2 * Math.PI) * 0.8;
-      ctx.save();
-      ctx.globalAlpha = pulseAlpha;
-      ctx.shadowColor = '#B4A5FF';
-      ctx.shadowBlur = LS.ds(30);
-      ctx.fillStyle = '#B4A5FF';
-      ctx.beginPath();
-      ctx.arc(centerX, centerY, LS.ds(6), 0, Math.PI * 2);
-      ctx.fill();
-      ctx.restore();
-      ctx.shadowBlur = 0;
-    }
-
-    // Phase 3（帧 30-60）：菜单从中心扩散淡入
-    if (f >= 30) {
-      const p3 = Math.min(1, (f - 30) / 30);
-      const eased = 1 - (1 - p3) * (1 - p3);
-      const menuAlpha = eased;
-      const menuScale = 0.97 + 0.03 * eased;
+    // Phase 2（帧 12-40）：菜单淡入
+    if (f >= 12) {
+      const p2 = Math.min(1, (f - 12) / 28);
+      const eased = 1 - (1 - p2) * (1 - p2);
 
       ctx.save();
-      ctx.globalAlpha = menuAlpha;
-      ctx.translate(screenWidth / 2, screenHeight / 2);
-      ctx.scale(menuScale, menuScale);
-      ctx.translate(-screenWidth / 2, -screenHeight / 2);
+      ctx.globalAlpha = eased;
       drawMenuScreen();
       ctx.restore();
     }
 
-    // shockwave 渲染
-    GameGlobal.ShockwaveManager.update();
-    GameGlobal.ShockwaveManager.render(ctx);
-
-    // 粒子残留淡出
-    particles.update();
-    particles.draw(ctx);
-
     // 转场结束
-    if (f >= 60) {
+    if (f >= TOTAL) {
       handleRestart();
       gameState = 'menu';
       input.isMenu = true;
