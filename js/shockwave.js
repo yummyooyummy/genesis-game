@@ -1,3 +1,5 @@
+const LS = require('./layoutScale');
+
 class ShockwaveManager {
   constructor() {
     this.waves = [];
@@ -23,7 +25,6 @@ class ShockwaveManager {
   }
 
   render(ctx) {
-    const LS = GameGlobal.LayoutScale;
     ctx.save();
     for (const w of this.waves) {
       const t = 1 - w.life / w.maxLife;
