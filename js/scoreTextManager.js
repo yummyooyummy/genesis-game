@@ -9,11 +9,6 @@ class ScoreTextManager {
   }
 
   spawn(x, y, points, kind = 'merge') {
-    console.log('[SPAWN]', {
-      points, kind,
-      x: Math.round(x), y: Math.round(y),
-      stack: new Error().stack.split('\n').slice(2, 6).join(' <- ')
-    });
     this.items.push({ x, y, points, kind, age: 0 });
   }
 
