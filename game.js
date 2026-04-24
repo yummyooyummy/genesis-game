@@ -399,22 +399,20 @@ function updateMergeFlow() {
       board.mergeFlowLocked = false;
       board._recomputeInputLock();
 
-      // 统一 spawn 本次操作的白跳字（合成累计）
-      if (pendingActionMergePoints > 0 && pendingActionLastBurstPos) {
+      // 有核心升级 → 只出金跳字，吞掉白跳字
+      // 无核心升级 → 只出白跳字
+      if (pendingActionAbsorbPoints > 0) {
+        scoreText.spawn(centerX, centerY - LS.ds(40), pendingActionAbsorbPoints, 'absorb');
+        pendingActionAbsorbPoints = 0;
+      } else if (pendingActionMergePoints > 0 && pendingActionLastBurstPos) {
         scoreText.spawn(
           pendingActionLastBurstPos.x,
           pendingActionLastBurstPos.y - LS.ds(20),
           pendingActionMergePoints
         );
-        pendingActionMergePoints = 0;
-        pendingActionLastBurstPos = null;
       }
-
-      // 统一 spawn 本次操作的金跳字（核心升级累计）
-      if (pendingActionAbsorbPoints > 0) {
-        scoreText.spawn(centerX, centerY - LS.ds(40), pendingActionAbsorbPoints, 'absorb');
-        pendingActionAbsorbPoints = 0;
-      }
+      pendingActionMergePoints = 0;
+      pendingActionLastBurstPos = null;
 
       // 开局吸附完成后不触发合成后分裂
       if (openingAbsorbActive) {
