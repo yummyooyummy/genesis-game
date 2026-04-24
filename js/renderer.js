@@ -153,8 +153,11 @@ class Renderer {
    * 绘制所有格子（空位 + 元素）
    * @param {import('./board').default} board
    */
-  drawSlots(board) {
+  drawSlots(board, items) {
     const { ctx } = this;
+
+    const pe = items && items._pendingEffect;
+    const clearPre = pe && pe.type === 'clear' && pe.frame < 0 ? pe : null;
 
     for (const slot of board.slots) {
       // 选中的格子单独由 drawSelectionHighlight 绘制（带脉冲）
@@ -173,8 +176,29 @@ class Renderer {
         ctx.arc(pos.x, pos.y, 5, 0, Math.PI * 2);
         ctx.fill();
       } else {
+        // 清空前摇：抖动 + 红色警告光环
+        const isClearTarget = clearPre && clearPre.targets.includes(slot);
+        let dx = 0, dy = 0;
+        if (isClearTarget) {
+          const t = (clearPre.frame + clearPre.preFrames) / clearPre.preFrames;
+          const amp = LS.ds(1 + t * 2.5);
+          dx = (Math.random() - 0.5) * 2 * amp;
+          dy = (Math.random() - 0.5) * 2 * amp;
+          const warnR = board.getElementRadius(slot.level) * (1.0 + t * 0.25);
+          ctx.save();
+          ctx.globalAlpha = t * 0.85;
+          ctx.strokeStyle = 'rgba(255,80,80,0.95)';
+          ctx.lineWidth = LS.ds(1.5 + t * 1.5);
+          ctx.shadowColor = 'rgba(255,100,100,0.9)';
+          ctx.shadowBlur = LS.ds(6 + t * 10);
+          ctx.beginPath();
+          ctx.arc(pos.x + dx, pos.y + dy, warnR, 0, Math.PI * 2);
+          ctx.stroke();
+          ctx.restore();
+        }
+
         // 有元素：绘制彩色圆 + 等级名
-        this._drawElement(pos.x, pos.y, slot.level, board.getElementRadius(slot.level));
+        this._drawElement(pos.x + dx, pos.y + dy, slot.level, board.getElementRadius(slot.level));
 
         // 升级道具闪光叠加（白光一闪，18 帧线性衰减）
         if (slot._upgradeFlashFrame && slot._upgradeFlashFrame > 0) {

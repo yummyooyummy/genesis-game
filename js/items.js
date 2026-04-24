@@ -295,10 +295,7 @@ class Items {
     );
 
     this.inventory.clear -= 1;
-    for (const slot of targets) {
-      slot._upgradeFlashFrame = 12;
-    }
-    this._pendingEffect = { type: 'clear', targets, delayFrames: 12 };
+    this._pendingEffect = { type: 'clear', targets, preFrames: 25, flashFrames: 12, frame: -25 };
     board.itemUseLocked = true;
     board._recomputeInputLock();
     return true;
@@ -444,8 +441,9 @@ class Items {
       for (const slot of targets) {
         const pos = board.getSlotPosition(slot);
         const colors = getElementColors(slot.level);
-        particles.spawn(pos.x, pos.y, colors.primary, 12, { speed: 3, life: 28 });
+        particles.spawn(pos.x, pos.y, colors.primary, 16, { speed: 6, life: 35, radius: 2 });
         particles.spawn(pos.x, pos.y, colors.secondary, 8, { speed: 1.8, life: 22 });
+        particles.spawn(pos.x, pos.y, 'rgba(180,165,255,0.6)', 6, { speed: 0.8, life: 45, radius: 3 });
         slot.level = null;
         slot.reserved = false;
         if (board.selectedSlot === slot) board.clearSelection();
@@ -521,14 +519,30 @@ class Items {
       }
     }
 
-    // 闪光延迟效果推进（0.2s 闪光 → 执行实际效果）
+    // 闪光延迟效果推进
     if (this._pendingEffect) {
-      for (const slot of this._pendingEffect.targets) {
-        if (slot._upgradeFlashFrame > 0) slot._upgradeFlashFrame -= 1;
-      }
-      this._pendingEffect.delayFrames -= 1;
-      if (this._pendingEffect.delayFrames <= 0) {
-        this._executePendingEffect(board, particles);
+      const pe = this._pendingEffect;
+      if (pe.frame !== undefined) {
+        pe.frame += 1;
+        if (pe.frame === 0) {
+          for (const slot of pe.targets) slot._upgradeFlashFrame = pe.flashFrames;
+        }
+        if (pe.frame >= 0) {
+          for (const slot of pe.targets) {
+            if (slot._upgradeFlashFrame > 0) slot._upgradeFlashFrame -= 1;
+          }
+        }
+        if (pe.frame >= pe.flashFrames) {
+          this._executePendingEffect(board, particles);
+        }
+      } else {
+        for (const slot of pe.targets) {
+          if (slot._upgradeFlashFrame > 0) slot._upgradeFlashFrame -= 1;
+        }
+        pe.delayFrames -= 1;
+        if (pe.delayFrames <= 0) {
+          this._executePendingEffect(board, particles);
+        }
       }
     }
 

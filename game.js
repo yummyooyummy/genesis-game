@@ -1287,7 +1287,7 @@ function gameLoop() {
     renderer.drawConnectionLines(board);
 
     // 绘制所有格子和元素（选中格 / 合成动画格 由后续专用函数绘制）
-    renderer.drawSlots(board);
+    renderer.drawSlots(board, items);
 
     // 绘制选中高亮（发光环 + 脉冲元素）
     renderer.drawSelectionHighlight(board);
@@ -1370,7 +1370,7 @@ function gameLoop() {
     renderer.clear();
     renderer.drawTracks(centerX, centerY, boardRadius);
     renderer.drawConnectionLines(board);
-    renderer.drawSlots(board);
+    renderer.drawSlots(board, items);
     renderer.drawSelectionHighlight(board);
     renderer.drawCore(centerX, centerY, board.core.level, board.getCorePulseRatio(), board.timedSplitWarningProgress);
     renderer.drawFlyingElements(board);
