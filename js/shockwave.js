@@ -10,12 +10,16 @@ class ShockwaveManager {
     this.waves = [];
   }
 
-  spawn(x, y, color) {
+  spawn(x, y, color, opts = {}) {
+    const LS = require('./layoutScale');
+    const maxLife = opts.maxLife || 10;
     this.waves.push({
       x, y,
       color: color || '#FFD887',
-      life: 10,
-      maxLife: 10,
+      life: maxLife,
+      maxLife,
+      startRadius: opts.startRadius || LS.ds(12),
+      endRadius: opts.endRadius || LS.ds(54),
     });
   }
 
@@ -35,7 +39,7 @@ class ShockwaveManager {
     ctx.save();
     for (const w of this.waves) {
       const t = 1 - w.life / w.maxLife;
-      const radius = LS.ds(12) + LS.ds(42) * t;
+      const radius = w.startRadius + (w.endRadius - w.startRadius) * t;
       const alpha = (1 - t) * 0.75;
       const lineWidth = LS.ds(2) * (1 - t * 0.5);
 

@@ -72,8 +72,31 @@ class Particles {
     }
   }
 
+  spawnOrbit(centerX, centerY, color, count, opts = {}) {
+    const life = opts.life || 30;
+    const minR = opts.minRadius || 60;
+    const maxR = opts.maxRadius || 100;
+    const angularSpeed = opts.angularSpeed || 0.12;
+
+    for (let i = 0; i < count; i++) {
+      if (this.pool.length >= MAX_PARTICLES) break;
+      const angle = Math.random() * Math.PI * 2;
+      const orbitR = minR + Math.random() * (maxR - minR);
+      const speed = angularSpeed * (0.8 + Math.random() * 0.4);
+      this.pool.push({
+        centerX, centerY,
+        angle, orbitR, angularSpeed: speed,
+        radius: 2 * (Math.random() * 0.5 + 0.5),
+        color, alpha: 1,
+        life, maxLife: life,
+        isOrbit: true,
+        x: centerX + Math.cos(angle) * orbitR,
+        y: centerY + Math.sin(angle) * orbitR,
+      });
+    }
+  }
+
   /**
-   * 生成尾迹粒子（用于吸附动画）
    * @param {number} x - 当前位置 x
    * @param {number} y - 当前位置 y
    * @param {string} color - 粒子颜色
@@ -136,6 +159,12 @@ class Particles {
           p.life -= 1;
         }
         p.alpha = Math.min(1, p.life / 5);
+      } else if (p.isOrbit) {
+        p.angle += p.angularSpeed;
+        p.x = p.centerX + Math.cos(p.angle) * p.orbitR;
+        p.y = p.centerY + Math.sin(p.angle) * p.orbitR;
+        p.life -= 1;
+        p.alpha = Math.max(0, p.life / p.maxLife);
       } else {
         p.x += p.vx;
         p.y += p.vy;

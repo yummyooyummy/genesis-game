@@ -871,7 +871,7 @@ class Board {
   }
 
   /** 重置棋盘 */
-  reset() {
+  reset(skipInitialSplits = false) {
     this.core.level = 1;
     this.rotation = { inner: 0, mid: 0, outer: 0 };
     for (const s of this.slots) {
@@ -897,8 +897,7 @@ class Board {
     this.mergeFlowLocked = false;
     this.itemUseLocked = false;
     this.timedSplitPauseFramesRemaining = 0;
-    // 重新排队开局 4 次分裂
-    this.queueInitialSplits();
+    if (!skipInitialSplits) this.queueInitialSplits();
   }
 
   /**

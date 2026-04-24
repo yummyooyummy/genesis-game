@@ -42,6 +42,9 @@ class Input {
     /** 是否在菜单界面 */
     this.isMenu = true;
 
+    /** 是否在 intro 转场中（锁死所有输入） */
+    this.isIntro = false;
+
     /** 菜单触摸回调 */
     this.onMenuTouch = null;
 
@@ -80,6 +83,8 @@ class Input {
    * @param {number} y - 逻辑像素坐标 y
    */
   _handleTouch(x, y) {
+    if (this.isIntro) return;
+
     if (this.isMenu) {
       if (this.onMenuTouch) {
         this.onMenuTouch(x, y);

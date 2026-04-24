@@ -63,6 +63,7 @@ const dropTargetPositions = {
 
 // 游戏状态机
 // 'menu'     → 开始界面
+// 'intro'    → 开场转场动效（menu → playing 过渡）
 // 'playing'  → 游戏中
 // 'paused'   → 暂停弹窗
 // 'gameover' → 结束界面
@@ -72,6 +73,7 @@ let menuButtons = null;     // { start: { x, y, w, h } }
 let menuOrbitAngle = 0;
 let pauseDialogButtons = null; // { resume, restart, home } 每个 { x, y, w, h }
 let decorationTimer = 0;   // 装饰粒子计时器
+let introFrame = 0;        // intro 转场帧计数器
 
 // 调试开关 — 上线前改为 false
 const DEBUG_ITEMS = true;
@@ -1041,6 +1043,7 @@ function isGameOverBtnHit(tx, ty, key) {
 }
 
 function handleHome() {
+  if (gameState === 'intro') return;
   toast.clear();
   handleRestart();
   gameState = 'menu';
@@ -1049,8 +1052,8 @@ function handleHome() {
 }
 
 function handleStart() {
-  handleRestart();
-  console.log('[状态] 从 menu 进入 playing');
+  handleRestart({ withIntro: true });
+  console.log('[状态] menu → intro');
 }
 
 function handleShare() {
@@ -1164,12 +1167,12 @@ function drawPauseDialog() {
 }
 
 /** 处理重新开始 */
-function handleRestart() {
+function handleRestart({ withIntro = false } = {}) {
   // 强制清零 combo 状态（防止残留）
   score.resetCombo();
   comboText.reset();
 
-  board.reset();
+  board.reset(withIntro);
   score.reset();
   particles.clear();
   comboText.reset();
@@ -1181,7 +1184,13 @@ function handleRestart() {
   GameGlobal.pendingMergePoints = 0;
   GameGlobal.itemGainState = {};
   items.reset();
-  gameState = 'playing';
+  if (withIntro) {
+    gameState = 'intro';
+    introFrame = 0;
+    input.isIntro = true;
+  } else {
+    gameState = 'playing';
+  }
   input.isGameOver = false;
   input.isMenu = false;
   input.isPaused = false;
@@ -1208,6 +1217,105 @@ function handleRestart() {
 function gameLoop() {
   if (gameState === 'menu') {
     drawMenuScreen();
+  } else if (gameState === 'intro') {
+    // ─── 开场转场动效（800ms / 48 帧） ───
+    introFrame++;
+    const f = introFrame;
+
+    // Phase 1（帧 1-12）：菜单淡出 + 缩小
+    if (f <= 12) {
+      const p = (f - 1) / 11;
+      const eased = 1 - (1 - p) * (1 - p);
+      const alpha = 1 - eased;
+      const scale = 1 - 0.03 * eased;
+
+      ctx.save();
+      ctx.globalAlpha = alpha;
+      ctx.translate(screenWidth / 2, screenHeight / 2);
+      ctx.scale(scale, scale);
+      ctx.translate(-screenWidth / 2, -screenHeight / 2);
+      drawMenuScreen();
+      ctx.restore();
+    }
+
+    // Phase 2（帧 11-29）：游戏界面淡入
+    if (f >= 11) {
+      let coreAlpha, coreScale;
+      if (f < 29) {
+        const p2 = (f - 11) / 18;
+        coreAlpha = p2;
+        if (p2 < 0.7) {
+          coreScale = 0.7 + (1.02 - 0.7) * (p2 / 0.7);
+        } else {
+          coreScale = 1.02 - (1.02 - 1.0) * ((p2 - 0.7) / 0.3);
+        }
+      } else {
+        coreAlpha = 1;
+        coreScale = 1.0;
+      }
+
+      // 背景（不淡入）
+      renderer.clear();
+
+      // 轨道 + 核心
+      ctx.save();
+      ctx.globalAlpha = coreAlpha;
+      renderer.drawTracks(centerX, centerY, boardRadius);
+      renderer.drawCore(centerX, centerY, board.core.level, 0, 0, coreScale);
+      ctx.restore();
+
+      // UI 淡入（和核心同步）
+      ctx.save();
+      ctx.globalAlpha = coreAlpha;
+      const storedMax = playerData.loadPlayerData().maxScore;
+      const displayMax = Math.max(storedMax, score.total);
+      renderer.drawScoreUI(score.total, displayMax);
+      renderer.drawItemBar(items);
+      renderer.drawCoreLevelUI(board.core.level);
+      renderer.drawPauseButton();
+      ctx.restore();
+    }
+
+    // Phase 3（帧 24）：触发 shockwave + orbit 粒子
+    if (f === 24) {
+      GameGlobal.ShockwaveManager.spawn(centerX, centerY, '#B4A5FF', {
+        maxLife: 18,
+        startRadius: LS.ds(12),
+        endRadius: LS.ds(120),
+      });
+      particles.spawnOrbit(centerX, centerY, '#B4A5FF', 20, {
+        life: 30,
+        minRadius: 60,
+        maxRadius: 100,
+        angularSpeed: 0.12,
+      });
+    }
+
+    // Phase 3 持续：更新和渲染粒子 / shockwave
+    if (f >= 24) {
+      particles.update();
+      particles.draw(ctx);
+      GameGlobal.ShockwaveManager.update();
+      GameGlobal.ShockwaveManager.render(ctx);
+    }
+
+    // 转场结束
+    if (f >= 48) {
+      gameState = 'playing';
+      input.isIntro = false;
+      board.queueInitialSplits();
+      introFrame = 0;
+      console.log('[状态] intro → playing');
+    }
+
+    // 异常保险
+    if (f > 120) {
+      gameState = 'playing';
+      input.isIntro = false;
+      board.queueInitialSplits();
+      introFrame = 0;
+      console.warn('[intro] 异常超时，强制进入 playing');
+    }
   } else if (gameState === 'playing') {
     // === UPDATE ===
 
