@@ -18,6 +18,7 @@ const toast = require('./js/toastNotifications');
 const ItemIcons = require('./js/itemIcons');
 const ConfettiManager = require('./js/confettiParticles');
 const ComboTextManager = require('./js/comboTextManager');
+const ShockwaveManager = require('./js/shockwave');
 
 // ─── Canvas 初始化 ───
 
@@ -107,6 +108,7 @@ const particles = new Particles();
 const score = new Score();
 const items = new Items();
 const comboText = new ComboTextManager();
+GameGlobal.ShockwaveManager = new ShockwaveManager();
 
 const input = new Input(
   canvas,
@@ -246,9 +248,10 @@ function performMerge(slotA, slotB) {
  */
 function handleMergeBurst(anim, midX, midY) {
   const colors = getElementColors(anim.newLevel);
-  particles.spawn(midX, midY, colors.primary, 16, { speed: 4, life: 32 });
+  particles.spawn(midX, midY, colors.primary, 14, { speed: 5, life: 35, radius: 2 });
   particles.spawn(midX, midY, colors.secondary, 10, { speed: 2.5, life: 22 });
   lastBurstPos = { x: midX, y: midY };
+  GameGlobal.ShockwaveManager.spawn(midX, midY);
 
   sessionMergeCount++;
   if (score.combo > sessionMaxCombo) sessionMaxCombo = score.combo;
@@ -1132,6 +1135,7 @@ function handleRestart() {
   score.reset();
   particles.clear();
   comboText.reset();
+  GameGlobal.ShockwaveManager.reset();
   items.reset();
   gameState = 'playing';
   input.isGameOver = false;
@@ -1263,6 +1267,7 @@ function gameLoop() {
 
     // 粒子更新
     particles.update();
+    GameGlobal.ShockwaveManager.update();
 
     comboText.update();
 
@@ -1313,6 +1318,7 @@ function gameLoop() {
 
     // 绘制粒子
     particles.draw(ctx);
+    GameGlobal.ShockwaveManager.render(ctx);
 
     // 道具使用期间的屏幕边缘脉冲（清空=暖金/升级=绿松）
     renderer.drawItemUseBurst(items);
