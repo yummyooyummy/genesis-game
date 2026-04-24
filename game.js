@@ -75,6 +75,19 @@ let pauseDialogButtons = null; // { resume, restart, home } 每个 { x, y, w, h 
 let decorationTimer = 0;   // 装饰粒子计时器
 let introFrame = 0;        // intro 转场帧计数器
 
+// 暂停弹窗动效
+let pauseOpenFrame = 0;
+let pauseClosing = false;
+let pauseCloseFrame = 0;
+let pauseCloseAction = null; // 'resume' | 'restart' | 'home'
+
+// 游戏结束界面动效
+let gameoverOpenFrame = 0;
+let gameoverClosing = false;
+let gameoverCloseFrame = 0;
+let gameoverCloseAction = null; // 'restart' | 'home' | 'share'
+let gameoverConfettiFired = false;
+
 // 调试开关 — 上线前改为 false
 const DEBUG_ITEMS = true;
 
@@ -130,11 +143,31 @@ input.setReferences(board, renderer, items);
 input.onMenuTouch = function () { handleStart(); };
 input.onPauseTap = handlePause;
 input._onPauseResume = handleResume;
-input._onPauseRestart = handleRestart;
+input._onPauseRestart = function () {
+  if (gameState !== 'paused' || pauseClosing) return;
+  pauseClosing = true;
+  pauseCloseFrame = 0;
+  pauseCloseAction = 'restart';
+};
 input._onPauseHome = handleHome;
-input._onGameOverRestart = handleRestart;
-input._onGameOverHome = handleHome;
-input._onGameOverShare = handleShare;
+input._onGameOverRestart = function () {
+  if (gameState !== 'gameover' || gameoverClosing) return;
+  gameoverClosing = true;
+  gameoverCloseFrame = 0;
+  gameoverCloseAction = 'restart';
+};
+input._onGameOverHome = function () {
+  if (gameState !== 'gameover' || gameoverClosing) return;
+  gameoverClosing = true;
+  gameoverCloseFrame = 0;
+  gameoverCloseAction = 'home';
+};
+input._onGameOverShare = function () {
+  if (gameState !== 'gameover' || gameoverClosing) return;
+  gameoverClosing = true;
+  gameoverCloseFrame = 0;
+  gameoverCloseAction = 'share';
+};
 if (DEBUG_ITEMS) {
   input.onDebugItemTap = function () {
     items.grant('magnet', 1);
@@ -428,6 +461,9 @@ function updateMergeFlow() {
         console.log('[状态] 切换到 gameOver');
         input.isGameOver = true;
         _saveOnGameOver();
+        gameoverOpenFrame = 0;
+        gameoverClosing = false;
+        gameoverConfettiFired = false;
       }
     }
     return;
@@ -774,9 +810,23 @@ function drawMenuScreen() {
  * 绘制结束界面（静态布局，不处理触摸）
  * 数据来源：lastGameResult + playerData
  */
-function drawGameOverScreen() {
+function drawGameOverScreen(progress) {
+  if (progress <= 0) return;
+
+  function subP(p, s, e) {
+    if (p <= s) return 0;
+    if (p >= e) return 1;
+    return (p - s) / (e - s);
+  }
+
   // ── 背景 ──
   drawBgGradient();
+
+  // ── 全局淡入/淡出蒙层 ──
+  ctx.save();
+  ctx.fillStyle = `rgba(0,0,0,${0.7 * progress})`;
+  ctx.fillRect(0, 0, screenWidth, screenHeight);
+  ctx.restore();
 
   // ── 数据准备 ──
   const data = lastGameResult || {};
@@ -786,231 +836,294 @@ function drawGameOverScreen() {
   const levelName = getLevelNameZh(maxLevel);
   const isNewRecord = !!(data.isNewRecord);
 
-  // ── 破纪录金色粒子 ──
-  if (data.isNewRecord) {
+  // ── 破纪录金色粒子（progress >= 0.8 触发）──
+  if (isNewRecord && progress >= 0.8 && !gameoverConfettiFired) {
+    gameoverConfettiFired = true;
     if (!ConfettiManager.initialized) ConfettiManager.init(screenWidth, screenHeight);
+  }
+  if (isNewRecord && gameoverConfettiFired) {
     ConfettiManager.update();
     ConfettiManager.draw(ctx);
   }
 
-  // ── 标题 "游戏结束" ──
-  ui.drawText(ctx, '游戏结束', LS.dx(187.5), LS.dy(125), {
-    fontSize: LS.df(26),
-    color: UI_CONFIG.color.textPrimary,
-    weight: '600',
-  });
-
-  // ── 标题渐变线 ──
-  ctx.save();
-  ctx.strokeStyle = UI_CONFIG.color.borderSoft;
-  ctx.lineWidth = 1;
-  ctx.beginPath();
-  ctx.moveTo(LS.dx(187.5) - LS.ds(30), LS.dy(150));
-  ctx.lineTo(LS.dx(187.5) + LS.ds(30), LS.dy(150));
-  ctx.stroke();
-  ctx.restore();
-
-  // ── 分数卡片（中心 187.5, 230，尺寸 319×108）──
-  const cardW = LS.ds(319);
-  const cardH = LS.ds(108);
-  const cardX = LS.dx(187.5) - cardW / 2;
-  const cardY = LS.dy(230) - cardH / 2;
-  ui.drawGlassCard(ctx, cardX, cardY, cardW, cardH);
-
-  // 第 1 行：本局分数
-  ui.drawText(ctx, '本局分数', LS.dx(48), LS.dy(204), {
-    fontSize: LS.df(12.5),
-    color: UI_CONFIG.color.textMuted,
-    align: 'left',
-  });
-  ui.drawText(ctx, String(curScore), LS.dx(327), LS.dy(204), {
-    fontSize: LS.df(26),
-    color: UI_CONFIG.color.textPrimary,
-    align: 'right',
-    weight: '700',
-  });
-
-  // 卡内分隔线
-  const divW = LS.ds(291);
-  ctx.save();
-  ctx.strokeStyle = UI_CONFIG.color.borderSoft;
-  ctx.lineWidth = 1;
-  ctx.setLineDash([4, 4]);
-  ctx.beginPath();
-  ctx.moveTo(LS.dx(187.5) - divW / 2, LS.dy(234));
-  ctx.lineTo(LS.dx(187.5) + divW / 2, LS.dy(234));
-  ctx.stroke();
-  ctx.setLineDash([]);
-  ctx.restore();
-
-  // 第 2 行：最高分数
-  const highScoreColor = isNewRecord ? UI_CONFIG.color.accentGold : UI_CONFIG.color.textPrimary;
-
-  ui.drawText(ctx, '最高分数', LS.dx(48), LS.dy(260), {
-    fontSize: LS.df(12.5),
-    color: UI_CONFIG.color.textMuted,
-    align: 'left',
-  });
-
-  if (isNewRecord) {
+  // ── 标题 "游戏结束" + 分隔线 ──
+  const titleAlpha = subP(progress, 0, 0.3);
+  if (titleAlpha > 0) {
+    const titleYOff = LS.ds(-20) * (1 - titleAlpha);
     ctx.save();
-    ctx.shadowColor = 'rgba(255,182,72,0.60)';
-    ctx.shadowBlur = UI_CONFIG.glow.recordGold;
-  }
-  ui.drawText(ctx, String(maxScore), LS.dx(327), LS.dy(260), {
-    fontSize: LS.df(22),
-    color: highScoreColor,
-    align: 'right',
-    weight: '700',
-  });
-  if (isNewRecord) ctx.restore();
-
-  // NEW! 徽章
-  if (isNewRecord) {
-    const badgeFontSize = LS.df(9);
-    const badgeW = LS.ds(38);
-    const badgeH = LS.ds(18);
-    const badgeX = LS.dx(236);
-    const badgeY = LS.dy(260) - badgeH / 2;
-
-    ctx.save();
-    ctx.shadowColor = 'rgba(138,127,209,0.50)';
-    ctx.shadowBlur = 10;
-    const grad = ctx.createLinearGradient(badgeX, badgeY, badgeX + badgeW, badgeY + badgeH);
-    grad.addColorStop(0, UI_CONFIG.color.accentPurple);
-    grad.addColorStop(1, UI_CONFIG.color.accentPurpleLight);
-    ctx.fillStyle = grad;
-    const r = badgeH / 2;
-    ctx.beginPath();
-    ctx.moveTo(badgeX + r, badgeY);
-    ctx.lineTo(badgeX + badgeW - r, badgeY);
-    ctx.arc(badgeX + badgeW - r, badgeY + r, r, -Math.PI / 2, Math.PI / 2);
-    ctx.lineTo(badgeX + r, badgeY + badgeH);
-    ctx.arc(badgeX + r, badgeY + r, r, Math.PI / 2, -Math.PI / 2);
-    ctx.closePath();
-    ctx.fill();
-    ctx.restore();
-
-    ui.drawText(ctx, 'NEW!', badgeX + badgeW / 2, badgeY + badgeH / 2, {
-      fontSize: badgeFontSize,
-      color: '#FFFFFF',
+    ctx.globalAlpha = titleAlpha;
+    ui.drawText(ctx, '游戏结束', LS.dx(187.5), LS.dy(125) + titleYOff, {
+      fontSize: LS.df(26),
+      color: UI_CONFIG.color.textPrimary,
       weight: '600',
     });
+    ctx.strokeStyle = UI_CONFIG.color.borderSoft;
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(LS.dx(187.5) - LS.ds(30), LS.dy(150) + titleYOff);
+    ctx.lineTo(LS.dx(187.5) + LS.ds(30), LS.dy(150) + titleYOff);
+    ctx.stroke();
+    ctx.restore();
   }
 
-  // ── 详情区（3 行）──
-  const details = [
-    { label: '核心等级', value: 'Lv.' + maxLevel + ' ' + levelName, valueColor: UI_CONFIG.color.accentCyan, y: 328 },
-    { label: '最高连锁', value: String(data.maxCombo || 0), valueColor: UI_CONFIG.color.textPrimary, y: 358 },
-    { label: '合成次数', value: String(data.mergeCount || 0), valueColor: UI_CONFIG.color.textPrimary, y: 388 },
-  ];
+  // ── 分数卡片 ──
+  const cardAlpha = subP(progress, 0.2, 0.5);
+  if (cardAlpha > 0) {
+    ctx.save();
+    ctx.globalAlpha = cardAlpha;
 
-  for (let i = 0; i < details.length; i++) {
-    const d = details[i];
-    ui.drawText(ctx, d.label, LS.dx(52), LS.dy(d.y), {
-      fontSize: LS.df(12),
+    const cardW = LS.ds(319);
+    const cardH = LS.ds(108);
+    const cardX = LS.dx(187.5) - cardW / 2;
+    const cardY = LS.dy(230) - cardH / 2;
+    ui.drawGlassCard(ctx, cardX, cardY, cardW, cardH);
+
+    // 分数累加
+    const scoreT = subP(progress, 0.3, 0.8);
+    const scoreEased = 1 - (1 - scoreT) * (1 - scoreT);
+    const displayScore = Math.round(curScore * scoreEased);
+
+    ui.drawText(ctx, '本局分数', LS.dx(48), LS.dy(204), {
+      fontSize: LS.df(12.5),
       color: UI_CONFIG.color.textMuted,
       align: 'left',
     });
-    ui.drawText(ctx, d.value, LS.dx(323), LS.dy(d.y), {
-      fontSize: LS.df(12),
-      color: d.valueColor,
+    ui.drawText(ctx, String(displayScore), LS.dx(327), LS.dy(204), {
+      fontSize: LS.df(26),
+      color: UI_CONFIG.color.textPrimary,
       align: 'right',
+      weight: '700',
     });
 
-    if (i < details.length - 1) {
-      const lineY = LS.dy(d.y + 15);
+    // 卡内分隔线
+    const divW = LS.ds(291);
+    ctx.strokeStyle = UI_CONFIG.color.borderSoft;
+    ctx.lineWidth = 1;
+    ctx.setLineDash([4, 4]);
+    ctx.beginPath();
+    ctx.moveTo(LS.dx(187.5) - divW / 2, LS.dy(234));
+    ctx.lineTo(LS.dx(187.5) + divW / 2, LS.dy(234));
+    ctx.stroke();
+    ctx.setLineDash([]);
+
+    // 最高分数
+    const highScoreColor = isNewRecord ? UI_CONFIG.color.accentGold : UI_CONFIG.color.textPrimary;
+    ui.drawText(ctx, '最高分数', LS.dx(48), LS.dy(260), {
+      fontSize: LS.df(12.5),
+      color: UI_CONFIG.color.textMuted,
+      align: 'left',
+    });
+
+    if (isNewRecord) {
+      ctx.shadowColor = 'rgba(255,182,72,0.60)';
+      ctx.shadowBlur = UI_CONFIG.glow.recordGold;
+    }
+    ui.drawText(ctx, String(maxScore), LS.dx(327), LS.dy(260), {
+      fontSize: LS.df(22),
+      color: highScoreColor,
+      align: 'right',
+      weight: '700',
+    });
+    ctx.shadowColor = 'transparent';
+    ctx.shadowBlur = 0;
+
+    ctx.restore();
+  }
+
+  // ── NEW! 徽章（弹出缩放）──
+  if (isNewRecord) {
+    const badgeAlpha = subP(progress, 0.7, 0.85);
+    if (badgeAlpha > 0) {
+      const badgeFontSize = LS.df(9);
+      const badgeW = LS.ds(38);
+      const badgeH = LS.ds(18);
+      const badgeX = LS.dx(236);
+      const badgeY = LS.dy(260) - badgeH / 2;
+      const badgeCX = badgeX + badgeW / 2;
+      const badgeCY = badgeY + badgeH / 2;
+      const bScale = badgeAlpha < 0.6
+        ? 0.5 + (1.15 - 0.5) * (badgeAlpha / 0.6)
+        : 1.15 - (1.15 - 1.0) * ((badgeAlpha - 0.6) / 0.4);
+
       ctx.save();
-      ctx.strokeStyle = UI_CONFIG.color.borderSoft;
-      ctx.lineWidth = 1;
-      ctx.setLineDash([4, 4]);
+      ctx.globalAlpha = badgeAlpha;
+      ctx.translate(badgeCX, badgeCY);
+      ctx.scale(bScale, bScale);
+      ctx.translate(-badgeCX, -badgeCY);
+
+      ctx.shadowColor = 'rgba(138,127,209,0.50)';
+      ctx.shadowBlur = 10;
+      const grad = ctx.createLinearGradient(badgeX, badgeY, badgeX + badgeW, badgeY + badgeH);
+      grad.addColorStop(0, UI_CONFIG.color.accentPurple);
+      grad.addColorStop(1, UI_CONFIG.color.accentPurpleLight);
+      ctx.fillStyle = grad;
+      const r = badgeH / 2;
       ctx.beginPath();
-      ctx.moveTo(LS.dx(52), lineY);
-      ctx.lineTo(LS.dx(323), lineY);
-      ctx.stroke();
-      ctx.setLineDash([]);
+      ctx.moveTo(badgeX + r, badgeY);
+      ctx.lineTo(badgeX + badgeW - r, badgeY);
+      ctx.arc(badgeX + badgeW - r, badgeY + r, r, -Math.PI / 2, Math.PI / 2);
+      ctx.lineTo(badgeX + r, badgeY + badgeH);
+      ctx.arc(badgeX + r, badgeY + r, r, Math.PI / 2, -Math.PI / 2);
+      ctx.closePath();
+      ctx.fill();
+      ctx.shadowBlur = 0;
+
+      ui.drawText(ctx, 'NEW!', badgeCX, badgeCY, {
+        fontSize: badgeFontSize,
+        color: '#FFFFFF',
+        weight: '600',
+      });
       ctx.restore();
     }
+  }
+
+  // ── 详情区 ──
+  const detailAlpha = subP(progress, 0.5, 0.7);
+  if (detailAlpha > 0) {
+    ctx.save();
+    ctx.globalAlpha = detailAlpha;
+
+    const details = [
+      { label: '核心等级', value: 'Lv.' + maxLevel + ' ' + levelName, valueColor: UI_CONFIG.color.accentCyan, y: 328 },
+      { label: '最高连锁', value: String(data.maxCombo || 0), valueColor: UI_CONFIG.color.textPrimary, y: 358 },
+      { label: '合成次数', value: String(data.mergeCount || 0), valueColor: UI_CONFIG.color.textPrimary, y: 388 },
+    ];
+
+    for (let i = 0; i < details.length; i++) {
+      const d = details[i];
+      ui.drawText(ctx, d.label, LS.dx(52), LS.dy(d.y), {
+        fontSize: LS.df(12),
+        color: UI_CONFIG.color.textMuted,
+        align: 'left',
+      });
+      ui.drawText(ctx, d.value, LS.dx(323), LS.dy(d.y), {
+        fontSize: LS.df(12),
+        color: d.valueColor,
+        align: 'right',
+      });
+
+      if (i < details.length - 1) {
+        const lineY = LS.dy(d.y + 15);
+        ctx.strokeStyle = UI_CONFIG.color.borderSoft;
+        ctx.lineWidth = 1;
+        ctx.setLineDash([4, 4]);
+        ctx.beginPath();
+        ctx.moveTo(LS.dx(52), lineY);
+        ctx.lineTo(LS.dx(323), lineY);
+        ctx.stroke();
+        ctx.setLineDash([]);
+      }
+    }
+
+    ctx.restore();
   }
 
   // ── 发现新形态横幅 ──
   const newLevel = data.newlyUnlockedLevel;
   if (newLevel != null) {
-    const bannerW = LS.ds(319);
-    const bannerH = LS.ds(92);
-    const bannerX = LS.dx(187.5) - bannerW / 2;
-    const bannerY = LS.dy(578) - bannerH / 2;
+    const bannerAlpha = subP(progress, 0.6, 0.8);
+    if (bannerAlpha > 0) {
+      ctx.save();
+      ctx.globalAlpha = bannerAlpha;
 
-    ctx.save();
-    ctx.shadowColor = 'rgba(255,182,72,0.28)';
-    ctx.shadowBlur = 24;
-    ui.drawGlassCard(ctx, bannerX, bannerY, bannerW, bannerH, {
-      radius: UI_CONFIG.radius.cardScore,
-      borderColor: 'rgba(255,182,72,0.30)',
-    });
-    ctx.restore();
+      const bannerW = LS.ds(319);
+      const bannerH = LS.ds(92);
+      const bannerX = LS.dx(187.5) - bannerW / 2;
+      const bannerY = LS.dy(578) - bannerH / 2;
 
-    const dotR = LS.ds(20);
-    const dotCX = bannerX + LS.ds(16) + dotR;
-    const dotCY = bannerY + bannerH / 2 - LS.ds(4);
-    const dotColor = getLevelColor(newLevel);
+      ctx.shadowColor = 'rgba(255,182,72,0.28)';
+      ctx.shadowBlur = 24;
+      ui.drawGlassCard(ctx, bannerX, bannerY, bannerW, bannerH, {
+        radius: UI_CONFIG.radius.cardScore,
+        borderColor: 'rgba(255,182,72,0.30)',
+      });
+      ctx.shadowColor = 'transparent';
+      ctx.shadowBlur = 0;
 
-    ctx.save();
-    ctx.shadowColor = dotColor + '99';
-    ctx.shadowBlur = 14;
-    ctx.fillStyle = dotColor;
-    ctx.beginPath();
-    ctx.arc(dotCX, dotCY, dotR, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.restore();
+      const dotR = LS.ds(20);
+      const dotCX = bannerX + LS.ds(16) + dotR;
+      const dotCY = bannerY + bannerH / 2 - LS.ds(4);
+      const dotColor = getLevelColor(newLevel);
 
-    const textLeft = dotCX + dotR + LS.ds(14);
-    const enName = getLevelNameEn(newLevel);
-    const zhName = getLevelNameZh(newLevel);
+      ctx.shadowColor = dotColor + '99';
+      ctx.shadowBlur = 14;
+      ctx.fillStyle = dotColor;
+      ctx.beginPath();
+      ctx.arc(dotCX, dotCY, dotR, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.shadowColor = 'transparent';
+      ctx.shadowBlur = 0;
 
-    ui.drawText(ctx, '发现新形态', textLeft, bannerY + LS.ds(24), {
-      fontSize: LS.df(13),
-      color: UI_CONFIG.color.accentGoldSoft,
-      align: 'left',
-    });
+      const textLeft = dotCX + dotR + LS.ds(14);
+      const enName = getLevelNameEn(newLevel);
+      const zhName = getLevelNameZh(newLevel);
 
-    ctx.save();
-    ctx.shadowColor = 'rgba(255,216,135,0.50)';
-    ctx.shadowBlur = 14;
-    ui.drawText(ctx, 'Lv.' + newLevel + ' ' + enName + ' ' + zhName, textLeft, bannerY + LS.ds(46), {
-      fontSize: LS.df(15.5),
-      color: UI_CONFIG.color.accentGold,
-      align: 'left',
-      weight: '600',
-    });
-    ctx.restore();
+      ui.drawText(ctx, '发现新形态', textLeft, bannerY + LS.ds(24), {
+        fontSize: LS.df(13),
+        color: UI_CONFIG.color.accentGoldSoft,
+        align: 'left',
+      });
 
-    ui.drawText(ctx, zhName + ' · 首次达成', bannerX + bannerW / 2, bannerY + bannerH - LS.ds(10), {
-      fontSize: LS.df(11),
-      color: UI_CONFIG.color.textMuted,
-    });
+      ctx.shadowColor = 'rgba(255,216,135,0.50)';
+      ctx.shadowBlur = 14;
+      ui.drawText(ctx, 'Lv.' + newLevel + ' ' + enName + ' ' + zhName, textLeft, bannerY + LS.ds(46), {
+        fontSize: LS.df(15.5),
+        color: UI_CONFIG.color.accentGold,
+        align: 'left',
+        weight: '600',
+      });
+      ctx.shadowColor = 'transparent';
+      ctx.shadowBlur = 0;
+
+      ui.drawText(ctx, zhName + ' · 首次达成', bannerX + bannerW / 2, bannerY + bannerH - LS.ds(10), {
+        fontSize: LS.df(11),
+        color: UI_CONFIG.color.textMuted,
+      });
+
+      ctx.restore();
+    }
   }
 
-  // ── 按钮区 ──
-  // 重新开始主按钮（中心 187.5, 700，尺寸 319×52）
+  // ── 按钮区（依次淡入）──
+  const btnIds = ['gameover_restart', 'gameover_home', 'gameover_share'];
+  const btnAlphas = [
+    subP(progress, 0.7, 0.8),
+    subP(progress, 0.8, 0.9),
+    subP(progress, 0.9, 1.0),
+  ];
+
   const restartW = LS.ds(319);
   const restartH = LS.ds(52);
   const restartX = LS.dx(187.5) - restartW / 2;
   const restartY = LS.dy(700) - restartH / 2;
-  ui.drawPrimaryButton(ctx, restartX, restartY, restartW, restartH, '重新开始', { scale: ui.getButtonScale('gameover_restart') });
+  if (btnAlphas[0] > 0) {
+    ctx.save();
+    ctx.globalAlpha = btnAlphas[0];
+    ui.drawPrimaryButton(ctx, restartX, restartY, restartW, restartH, '重新开始', { scale: ui.getButtonScale(btnIds[0]) });
+    ctx.restore();
+  }
 
-  // 返回主页（中心 156, 756，尺寸 257×44）+ 分享（中心 320, 756，尺寸 54×44）
   const homeW = LS.ds(257);
   const homeH = LS.ds(44);
   const homeX = LS.dx(156) - homeW / 2;
   const homeY = LS.dy(756) - homeH / 2;
-  ui.drawSecondaryButton(ctx, homeX, homeY, homeW, homeH, '返回主页', { scale: ui.getButtonScale('gameover_home') });
+  if (btnAlphas[1] > 0) {
+    ctx.save();
+    ctx.globalAlpha = btnAlphas[1];
+    ui.drawSecondaryButton(ctx, homeX, homeY, homeW, homeH, '返回主页', { scale: ui.getButtonScale(btnIds[1]) });
+    ctx.restore();
+  }
 
   const shareW = LS.ds(54);
   const shareH = LS.ds(44);
   const shareX = LS.dx(320) - shareW / 2;
   const shareY = LS.dy(756) - shareH / 2;
-  ui.drawSecondaryButton(ctx, shareX, shareY, shareW, shareH, '分享', { scale: ui.getButtonScale('gameover_share') });
+  if (btnAlphas[2] > 0) {
+    ctx.save();
+    ctx.globalAlpha = btnAlphas[2];
+    ui.drawSecondaryButton(ctx, shareX, shareY, shareW, shareH, '分享', { scale: ui.getButtonScale(btnIds[2]) });
+    ctx.restore();
+  }
 
   gameOverButtons = {
     restart: { x: restartX, y: restartY, w: restartW, h: restartH },
@@ -1023,6 +1136,13 @@ function drawGameOverScreen() {
 
 function handleHome() {
   if (gameState === 'intro') return;
+  if (gameState === 'paused' && !pauseClosing) {
+    pauseClosing = true;
+    pauseCloseFrame = 0;
+    pauseCloseAction = 'home';
+    return;
+  }
+  if (gameState === 'paused' && pauseClosing) return;
   toast.clear();
   handleRestart();
   gameState = 'menu';
@@ -1043,32 +1163,61 @@ function handlePause() {
   if (gameState !== 'playing') return;
   gameState = 'paused';
   input.isPaused = true;
+  pauseOpenFrame = 0;
+  pauseClosing = false;
+  pauseCloseAction = null;
   ItemCooldown.onPause(Date.now());
   console.log('[状态] 切换到 paused');
 }
 
 function handleResume() {
-  if (gameState !== 'paused') return;
-  gameState = 'playing';
-  input.isPaused = false;
-  pauseDialogButtons = null;
-  ItemCooldown.onResume(Date.now());
-  console.log('[状态] 从 paused 恢复到 playing');
+  if (gameState !== 'paused' || pauseClosing) return;
+  pauseClosing = true;
+  pauseCloseFrame = 0;
+  pauseCloseAction = 'resume';
 }
 
 /**
  * 绘制暂停弹窗（遮罩 + 毛玻璃卡片 + 内嵌统计卡 + 三按钮）
+ * @param {number} progress - 0→1 打开进度
+ * @param {boolean} isClosing - 是否正在关闭
  */
-function drawPauseDialog() {
-  // 半透明遮罩
+function drawPauseDialog(progress, isClosing) {
+  if (progress <= 0) return;
+
+  // 蒙层 alpha（bgOverlay 原值 × progress）
+  ctx.save();
+  ctx.globalAlpha = progress;
   ctx.fillStyle = UI_CONFIG.color.bgOverlay;
   ctx.fillRect(0, 0, screenWidth, screenHeight);
+  ctx.restore();
+
+  // 弹窗缩放
+  let dialogScale;
+  if (isClosing) {
+    dialogScale = 0.95 + 0.05 * progress;
+  } else {
+    if (progress < 0.7) {
+      dialogScale = 0.9 + (1.03 - 0.9) * (progress / 0.7);
+    } else {
+      dialogScale = 1.03 - (1.03 - 1.0) * ((progress - 0.7) / 0.3);
+    }
+  }
+
+  const dialogCX = LS.dx(187.5);
+  const dialogCY = LS.dy(406);
+
+  ctx.save();
+  ctx.globalAlpha = progress;
+  ctx.translate(dialogCX, dialogCY);
+  ctx.scale(dialogScale, dialogScale);
+  ctx.translate(-dialogCX, -dialogCY);
 
   // 弹窗卡片（中心 187.5, 406，尺寸 284×286）
   const cardW = LS.ds(284);
   const cardH = LS.ds(286);
-  const cardX = LS.dx(187.5) - cardW / 2;
-  const cardY = LS.dy(406) - cardH / 2;
+  const cardX = dialogCX - cardW / 2;
+  const cardY = dialogCY - cardH / 2;
 
   ui.drawGlassCard(ctx, cardX, cardY, cardW, cardH, {
     radius: UI_CONFIG.radius.dialog,
@@ -1087,7 +1236,7 @@ function drawPauseDialog() {
   // 内嵌统计卡（中心 187.5, 356，尺寸 240×66）
   const statW = LS.ds(240);
   const statH = LS.ds(66);
-  const statX = LS.dx(187.5) - statW / 2;
+  const statX = dialogCX - statW / 2;
   const statY = LS.dy(356) - statH / 2;
   ui.drawGlassCard(ctx, statX, statY, statW, statH, {
     radius: UI_CONFIG.radius.md,
@@ -1124,7 +1273,7 @@ function drawPauseDialog() {
 
   // 按钮区
   const btnW = LS.ds(240);
-  const btnX = LS.dx(187.5) - btnW / 2;
+  const btnX = dialogCX - btnW / 2;
 
   const primaryH = LS.ds(42);
   const secondaryH = LS.ds(38);
@@ -1137,6 +1286,8 @@ function drawPauseDialog() {
 
   const homeBtnY = LS.dy(510) - secondaryH / 2;
   ui.drawSecondaryButton(ctx, btnX, homeBtnY, btnW, secondaryH, '返回主页', { scale: ui.getButtonScale('pause_home') });
+
+  ctx.restore();
 
   pauseDialogButtons = {
     resume:  { x: btnX, y: resumeBtnY, w: btnW, h: primaryH },
@@ -1184,6 +1335,16 @@ function handleRestart({ withIntro = false } = {}) {
   openingAbsorbPending = true;
   openingAbsorbActive = false;
   pauseDialogButtons = null;
+  // 重置动效状态
+  pauseOpenFrame = 0;
+  pauseClosing = false;
+  pauseCloseFrame = 0;
+  pauseCloseAction = null;
+  gameoverOpenFrame = 0;
+  gameoverClosing = false;
+  gameoverCloseFrame = 0;
+  gameoverCloseAction = null;
+  gameoverConfettiFired = false;
   // 重置单局追踪
   sessionMaxLevel = 1;
   sessionStartMaxLevel = playerData.loadPlayerData().maxLevel || 1;
@@ -1392,6 +1553,9 @@ function gameLoop() {
       console.log('[状态] 切换到 gameOver');
       input.isGameOver = true;
       _saveOnGameOver();
+      gameoverOpenFrame = 0;
+      gameoverClosing = false;
+      gameoverConfettiFired = false;
     }
 
     // 装饰粒子（每 30 帧生成一轮）
@@ -1541,9 +1705,70 @@ function gameLoop() {
 
     ctx.restore();
 
-    drawPauseDialog();
+    // 暂停弹窗动效
+    let pauseProgress;
+    if (!pauseClosing) {
+      pauseOpenFrame++;
+      pauseProgress = Math.min(1, pauseOpenFrame / 12);
+    } else {
+      pauseCloseFrame++;
+      pauseProgress = Math.max(0, 1 - pauseCloseFrame / 9);
+    }
+    drawPauseDialog(pauseProgress, pauseClosing);
+
+    // 关闭动画结束
+    if (pauseClosing && pauseCloseFrame >= 9) {
+      const action = pauseCloseAction;
+      gameState = 'playing';
+      input.isPaused = false;
+      pauseDialogButtons = null;
+      input._pauseDialogButtons = null;
+      ItemCooldown.onResume(Date.now());
+      pauseClosing = false;
+      pauseCloseFrame = 0;
+      pauseOpenFrame = 0;
+      pauseCloseAction = null;
+      if (action === 'restart') {
+        handleRestart();
+      } else if (action === 'home') {
+        toast.clear();
+        handleRestart();
+        gameState = 'menu';
+        input.isMenu = true;
+        console.log('[状态] 切换到 menu');
+      } else {
+        console.log('[状态] 从 paused 恢复到 playing');
+      }
+    }
   } else if (gameState === 'gameover') {
-    drawGameOverScreen();
+    let goProgress;
+    if (!gameoverClosing) {
+      gameoverOpenFrame++;
+      goProgress = Math.min(1, gameoverOpenFrame / 42);
+    } else {
+      gameoverCloseFrame++;
+      goProgress = Math.max(0, 1 - gameoverCloseFrame / 18);
+    }
+    drawGameOverScreen(goProgress);
+
+    // 关闭动画结束
+    if (gameoverClosing && gameoverCloseFrame >= 18) {
+      const action = gameoverCloseAction;
+      gameoverClosing = false;
+      gameoverCloseFrame = 0;
+      gameoverCloseAction = null;
+      if (action === 'restart') {
+        handleRestart();
+      } else if (action === 'home') {
+        toast.clear();
+        handleRestart();
+        gameState = 'menu';
+        input.isMenu = true;
+        console.log('[状态] 切换到 menu');
+      } else if (action === 'share') {
+        handleShare();
+      }
+    }
   }
 
   // 继续循环
