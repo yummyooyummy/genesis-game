@@ -317,7 +317,11 @@ class Items {
     const targets = allParticles.filter(s => s.level === minLevel);
 
     this.inventory.upgrade -= 1;
-    this._pendingEffect = { type: 'upgrade', targets, preFrames: 30, frame: -30 };
+    this._pendingEffect = {
+      type: 'upgrade', targets, preFrames: 30, frame: -30,
+      executeFrames: 10, afterFrames: 12,
+      executed: false, afterTriggered: false,
+    };
     board.itemUseLocked = true;
     board._recomputeInputLock();
     return true;
@@ -449,15 +453,10 @@ class Items {
     } else if (type === 'upgrade') {
       for (const slot of targets) {
         slot.level += 1;
-        const pos = board.getSlotPosition(slot);
-        const colors = getElementColors(slot.level);
-        particles.spawn(pos.x, pos.y, colors.primary, 20, { speed: 6, life: 40 });
-        particles.spawn(pos.x, pos.y, colors.secondary, 14, { speed: 1.8, life: 24 });
-        particles.spawn(pos.x, pos.y, '#FFFFFF', 6, { speed: 2.2, life: 20, radius: 2 });
       }
       this._pendingUpgradedSlots = targets;
-      GameGlobal.upgradedTargets = { slots: targets.slice(), upgradedAt: Date.now() };
       this._startUseAnim('upgrade', board);
+      return; // don't null _pendingEffect yet — afterFrames still pending
     }
 
     this._pendingEffect = null;
@@ -521,20 +520,47 @@ class Items {
     if (this._pendingEffect) {
       const pe = this._pendingEffect;
       pe.frame += 1;
-      if (pe.frame < 0) {
-        // 前摇阶段
-      } else if (pe.type === 'clear') {
-        if (pe.frame === 0) {
-          for (const slot of pe.targets) slot._upgradeFlashFrame = pe.flashFrames;
-        }
-        for (const slot of pe.targets) {
-          if (slot._upgradeFlashFrame > 0) slot._upgradeFlashFrame -= 1;
-        }
-        if (pe.frame >= pe.flashFrames) {
-          this._executePendingEffect(board, particles);
+
+      if (pe.type === 'clear') {
+        if (pe.frame < 0) {
+          // 前摇
+        } else {
+          if (pe.frame === 0) {
+            for (const slot of pe.targets) slot._upgradeFlashFrame = pe.flashFrames;
+          }
+          for (const slot of pe.targets) {
+            if (slot._upgradeFlashFrame > 0) slot._upgradeFlashFrame -= 1;
+          }
+          if (pe.frame >= pe.flashFrames) {
+            this._executePendingEffect(board, particles);
+          }
         }
       } else if (pe.type === 'upgrade') {
-        this._executePendingEffect(board, particles);
+        if (pe.frame < 0) {
+          if (pe.frame % 3 === 0) {
+            for (const slot of pe.targets) {
+              const pos = board.getSlotPosition(slot);
+              particles.spawnConverge(pos.x, pos.y, 'rgba(255,216,135,0.95)', 2,
+                { life: 20, minDistance: 70, maxDistance: 110, radius: 2 });
+            }
+          }
+        } else if (pe.frame < pe.executeFrames) {
+          if (!pe.executed) {
+            pe.executed = true;
+            this._executePendingEffect(board, particles);
+          }
+        } else if (pe.frame < pe.executeFrames + pe.afterFrames) {
+          if (!pe.afterTriggered) {
+            pe.afterTriggered = true;
+            for (const slot of pe.targets) {
+              const pos = board.getSlotPosition(slot);
+              particles.spawn(pos.x, pos.y, 'rgba(255,216,135,0.85)', 7,
+                { speed: 0.6, life: 40, radius: 2.5 });
+            }
+          }
+        } else {
+          this._pendingEffect = null;
+        }
       }
     }
 

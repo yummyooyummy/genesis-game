@@ -47,6 +47,31 @@ class Particles {
     }
   }
 
+  spawnConverge(targetX, targetY, color, count, opts = {}) {
+    const life = opts.life || 30;
+    const minDist = opts.minDistance || 60;
+    const maxDist = opts.maxDistance || 100;
+    const radius = opts.radius || 2;
+
+    for (let i = 0; i < count; i++) {
+      if (this.pool.length >= MAX_PARTICLES) break;
+      const angle = Math.random() * Math.PI * 2;
+      const dist = minDist + Math.random() * (maxDist - minDist);
+      this.pool.push({
+        x: targetX + Math.cos(angle) * dist,
+        y: targetY + Math.sin(angle) * dist,
+        targetX,
+        targetY,
+        radius: radius * (Math.random() * 0.5 + 0.5),
+        color,
+        alpha: 1,
+        life,
+        maxLife: life,
+        isConverge: true,
+      });
+    }
+  }
+
   /**
    * 生成尾迹粒子（用于吸附动画）
    * @param {number} x - 当前位置 x
@@ -99,14 +124,26 @@ class Particles {
   update() {
     for (let i = this.pool.length - 1; i >= 0; i--) {
       const p = this.pool[i];
-      p.x += p.vx;
-      p.y += p.vy;
-      p.life -= 1;
-      p.alpha = Math.max(0, p.life / p.maxLife);
 
-      // 速度衰减
-      p.vx *= 0.97;
-      p.vy *= 0.97;
+      if (p.isConverge) {
+        p.x += (p.targetX - p.x) * 0.15;
+        p.y += (p.targetY - p.y) * 0.15;
+        const dx = p.targetX - p.x;
+        const dy = p.targetY - p.y;
+        if (dx * dx + dy * dy < 25) {
+          p.life = 0;
+        } else {
+          p.life -= 1;
+        }
+        p.alpha = Math.min(1, p.life / 5);
+      } else {
+        p.x += p.vx;
+        p.y += p.vy;
+        p.life -= 1;
+        p.alpha = Math.max(0, p.life / p.maxLife);
+        p.vx *= 0.97;
+        p.vy *= 0.97;
+      }
 
       if (p.life <= 0) {
         this.pool.splice(i, 1);
