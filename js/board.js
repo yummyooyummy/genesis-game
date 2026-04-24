@@ -140,7 +140,6 @@ class Board {
 
   /** 每帧更新旋转偏移（使用 this.rotationSpeeds，可运行时调整） */
   updateRotation() {
-    if (GameGlobal.TimeFreeze && GameGlobal.TimeFreeze.isFrozen()) return;
     for (const ring of ['inner', 'mid', 'outer']) {
       this.rotation[ring] += this.rotationSpeeds[ring] * RING_CONFIG[ring].direction;
     }
@@ -708,7 +707,6 @@ class Board {
    *   — 在一段动画结束时回调（用于连锁下一步、吸附、排下一次分裂）
    */
   updateMergeAnimations(onBurst, onComplete) {
-    if (GameGlobal.TimeFreeze && GameGlobal.TimeFreeze.isFrozen()) return;
     for (let i = this.mergeAnimations.length - 1; i >= 0; i--) {
       const anim = this.mergeAnimations[i];
       anim.frame += 1;

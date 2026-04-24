@@ -19,7 +19,6 @@ const ItemIcons = require('./js/itemIcons');
 const ConfettiManager = require('./js/confettiParticles');
 const ComboTextManager = require('./js/comboTextManager');
 const ShockwaveManager = require('./js/shockwave');
-const TimeFreeze = require('./js/timeFreeze');
 
 // ─── Canvas 初始化 ───
 
@@ -109,8 +108,6 @@ const score = new Score();
 const items = new Items();
 const comboText = new ComboTextManager();
 GameGlobal.ShockwaveManager = new ShockwaveManager();
-const timeFreeze = new TimeFreeze();
-GameGlobal.TimeFreeze = timeFreeze;
 
 const input = new Input(
   canvas,
@@ -323,7 +320,6 @@ function updateMergeFlow() {
     if (mergeFlowTimer <= 0) {
       mergeFlowAbsorbSlot.mergeAnimating = false;
       const newCoreLevel = board.doAbsorb(mergeFlowAbsorbSlot);
-      timeFreeze.start();
       board.coreLevelUpFrame = 48;
       // 追踪本局最高核心等级
       if (newCoreLevel > sessionMaxLevel) sessionMaxLevel = newCoreLevel;
@@ -1140,7 +1136,6 @@ function handleRestart() {
   particles.clear();
   comboText.reset();
   GameGlobal.ShockwaveManager.reset();
-  timeFreeze.reset();
   GameGlobal.itemGainState = {};
   items.reset();
   gameState = 'playing';
@@ -1172,8 +1167,6 @@ function gameLoop() {
     drawMenuScreen();
   } else if (gameState === 'playing') {
     // === UPDATE ===
-
-    timeFreeze.update();
 
     // 旋转
     board.updateRotation();
