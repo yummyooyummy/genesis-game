@@ -395,6 +395,12 @@ function updateMergeFlow() {
 
   if (mergeFlowState === 'recovery') {
     if (mergeFlowTimer <= 0) {
+      const t = Date.now() % 100000;
+      console.log(`[RECOVERY END t=${t}ms]`, {
+        mergePoints: pendingActionMergePoints,
+        absorbPoints: pendingActionAbsorbPoints,
+        hasLastBurstPos: !!pendingActionLastBurstPos
+      });
       mergeFlowState = null;
       board.mergeFlowLocked = false;
       board._recomputeInputLock();

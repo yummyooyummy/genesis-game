@@ -9,12 +9,23 @@ class ScoreTextManager {
   }
 
   spawn(x, y, points, kind = 'merge') {
+    const time = Date.now() % 100000;
+    console.log(`[SPAWN t=${time}ms]`, {
+      points, kind,
+      x: Math.round(x), y: Math.round(y),
+      itemsCount: this.items.length,
+      stack: new Error().stack.split('\n').slice(2, 6).join(' <- ')
+    });
     this.items.push({ x, y, points, kind, age: 0 });
   }
 
   update() {
     for (const it of this.items) it.age += 1;
+    const before = this.items.length;
     this.items = this.items.filter(it => it.age < MAX_AGE);
+    if (this.items.length !== before) {
+      console.log(`[REMOVE] items ${before} -> ${this.items.length}`);
+    }
   }
 
   render(ctx) {
