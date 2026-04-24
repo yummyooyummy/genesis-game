@@ -96,6 +96,10 @@ let mergeFlowBurstFired = false;
 let absorbJustSpawned = false;
 let lastBurstPos = { x: centerX, y: centerY }; // 最近一次合成爆发中点（供 combo 掉落定位）
 
+// 一次玩家操作周期内累加的合成得分和最后一次 burst 位置
+let pendingActionMergePoints = 0;
+let pendingActionLastBurstPos = null;
+
 // 开局自动吸附状态：初始分裂落地后自动吸附 1 个 Lv.1 → 核心升 Lv.2
 let openingAbsorbPending = true;
 let openingAbsorbActive = false; // 开局吸附流程进行中（recovery 阶段跳过合成后分裂）
@@ -236,6 +240,8 @@ function performMerge(slotA, slotB) {
   // 合法性已由 handleSlotTap 校验（相邻 + 同级 + 非空）
   score.resetCombo();
   comboText.reset();
+  pendingActionMergePoints = 0;
+  pendingActionLastBurstPos = null;
   const combo = score.incrementCombo();
   if (combo >= 2) comboText.push(combo);
   const newLevel = slotA.level + 1;
@@ -249,13 +255,6 @@ function performMerge(slotA, slotB) {
  * 每一步 combo 都会触发一次（包含玩家主动合成和自动连锁）。
  */
 function handleMergeBurst(anim, midX, midY) {
-  console.log('[handleMergeBurst called]', {
-    newLevel: anim.newLevel,
-    slotA: anim.slotA && anim.slotA.id,
-    pendingPoints: GameGlobal.pendingMergePoints,
-    combo: score.combo,
-    stack: new Error().stack.split('\n').slice(2, 6).join('\n  <- ')
-  });
   const colors = getElementColors(anim.newLevel);
   const slotAPos = board.getSlotPosition(anim.slotA);
   particles.spawn(slotAPos.x, slotAPos.y, colors.primary, 14, { speed: 5, life: 35, radius: 2 });
@@ -265,7 +264,8 @@ function handleMergeBurst(anim, midX, midY) {
 
   const points = GameGlobal.pendingMergePoints || 0;
   if (points > 0) {
-    scoreText.spawn(slotAPos.x, slotAPos.y - LS.ds(20), points);
+    pendingActionMergePoints += points;
+    pendingActionLastBurstPos = { x: slotAPos.x, y: slotAPos.y };
   }
 
   sessionMergeCount++;
@@ -405,6 +405,17 @@ function updateMergeFlow() {
       board.mergeFlowLocked = false;
       board._recomputeInputLock();
 
+      // 统一 spawn 本次操作的累计白跳字
+      if (pendingActionMergePoints > 0 && pendingActionLastBurstPos) {
+        scoreText.spawn(
+          pendingActionLastBurstPos.x,
+          pendingActionLastBurstPos.y - LS.ds(20),
+          pendingActionMergePoints
+        );
+        pendingActionMergePoints = 0;
+        pendingActionLastBurstPos = null;
+      }
+
       // 开局吸附完成后不触发合成后分裂
       if (openingAbsorbActive) {
         openingAbsorbActive = false;
@@ -477,6 +488,8 @@ function handleUpgradeComplete(upgradedSlots) {
     if (partner && !partner.mergeAnimating) {
       score.resetCombo();
       comboText.reset();
+      pendingActionMergePoints = 0;
+      pendingActionLastBurstPos = null;
       const combo = score.incrementCombo();
       if (combo >= 2) comboText.push(combo);
       const newLevel = slot.level + 1;
@@ -508,6 +521,8 @@ function handleMagnetComplete(mergedSlots) {
     if (partner && !partner.mergeAnimating) {
       score.resetCombo();
       comboText.reset();
+      pendingActionMergePoints = 0;
+      pendingActionLastBurstPos = null;
       const combo = score.incrementCombo();
       if (combo >= 2) comboText.push(combo);
       const newLevel = slot.level + 1;
@@ -1160,6 +1175,8 @@ function handleRestart() {
   comboText.reset();
   GameGlobal.ShockwaveManager.reset();
   scoreText.reset();
+  pendingActionMergePoints = 0;
+  pendingActionLastBurstPos = null;
   GameGlobal.pendingMergePoints = 0;
   GameGlobal.itemGainState = {};
   items.reset();
