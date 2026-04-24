@@ -380,7 +380,7 @@ class Items {
       move.fromPos = board.getSlotPosition(move.slot);
       move.toPos = board.getSlotPosition(move.targetSlot);
     }
-    this._magnetAnim = { moves, targets, frame: -15, preFrames: 15, totalFrames: 30 };
+    this._magnetAnim = { moves, targets, frame: -25, preFrames: 25, totalFrames: 30 };
     board.itemUseLocked = true;
     board._recomputeInputLock();
     return true;

@@ -319,17 +319,23 @@ class Renderer {
     if (frame < 0 && targets) {
       const { ctx } = this;
       const t = (frame + preFrames) / preFrames; // 0 → 1
-      const pulse = 0.5 + 0.5 * Math.sin(t * Math.PI * 4);
+      let pulse;
+      if (t < 0.7) {
+        const k = t / 0.7;
+        pulse = Math.sin(k * Math.PI / 2);
+      } else {
+        pulse = 1;
+      }
       for (const slot of targets) {
         if (slot.level === null) continue;
         const pos = board.getSlotPosition(slot);
-        const ringRadius = board.getElementRadius(slot.level) * (1.3 + pulse * 0.3);
+        const ringRadius = board.getElementRadius(slot.level) * (1.2 + pulse * 0.5);
         ctx.save();
-        ctx.globalAlpha = pulse * 0.7;
+        ctx.globalAlpha = pulse * 0.85;
         ctx.strokeStyle = 'rgba(123,208,224,0.9)';
-        ctx.lineWidth = LS.ds(2);
+        ctx.lineWidth = LS.ds(2 + pulse * 1);
         ctx.shadowColor = 'rgba(123,208,224,0.8)';
-        ctx.shadowBlur = LS.ds(10);
+        ctx.shadowBlur = LS.ds(8 + pulse * 10);
         ctx.beginPath();
         ctx.arc(pos.x, pos.y, ringRadius, 0, Math.PI * 2);
         ctx.stroke();
