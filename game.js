@@ -233,6 +233,7 @@ function checkComboDropTrigger() {
  * @param {object} slotB - 第二步点击的格子（将清空）
  */
 function performMerge(slotA, slotB) {
+  console.log('[Perform] combo before addMerge =', score.combo);
   // 合法性已由 handleSlotTap 校验（相邻 + 同级 + 非空）
   score.resetCombo();
   comboText.reset();
@@ -249,6 +250,11 @@ function performMerge(slotA, slotB) {
  * 每一步 combo 都会触发一次（包含玩家主动合成和自动连锁）。
  */
 function handleMergeBurst(anim, midX, midY) {
+  console.log('[Burst]', {
+    pendingPoints: GameGlobal.pendingMergePoints,
+    combo: score.combo,
+    willSpawn: GameGlobal.pendingMergePoints > 0 && score.combo <= 1
+  });
   const colors = getElementColors(anim.newLevel);
   const slotAPos = board.getSlotPosition(anim.slotA);
   particles.spawn(slotAPos.x, slotAPos.y, colors.primary, 14, { speed: 5, life: 35, radius: 2 });
@@ -273,7 +279,9 @@ function handleMergeComplete(slotA, newLevel) {
   // Combo 连锁：找相邻同级最近的一个，继续合成
   const nextPartner = board.findNearestAdjacentSameLevel(slotA);
   if (nextPartner) {
+    console.log('[Complete] combo BEFORE increment =', score.combo);
     const c = score.incrementCombo();
+    console.log('[Complete] combo AFTER increment =', score.combo);
     if (c >= 2) comboText.push(c);
     const chainedLevel = slotA.level + 1;
     GameGlobal.pendingMergePoints = score.addMergeScore(chainedLevel, c);
@@ -461,6 +469,7 @@ function handleDropTap(drop) {
  * @param {object[]} upgradedSlots
  */
 function handleUpgradeComplete(upgradedSlots) {
+  console.log('[Upgrade] entered, points =', GameGlobal.pendingMergePoints);
   for (const slot of upgradedSlots) {
     if (slot.level === null) continue;        // 安全检查
     if (slot.mergeAnimating) continue;
@@ -491,6 +500,7 @@ function handleUpgradeComplete(upgradedSlots) {
  * @param {object[]} mergedSlots - 磁吸过程中发生合成的目标格
  */
 function handleMagnetComplete(mergedSlots) {
+  console.log('[Magnet] entered, points =', GameGlobal.pendingMergePoints);
   // 先检查所有受影响的格子是否能触发合成连锁
   const allSlots = [...mergedSlots];
   for (const slot of allSlots) {
