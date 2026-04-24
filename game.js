@@ -67,6 +67,7 @@ const dropTargetPositions = {
 // 'playing'  → 游戏中
 // 'paused'   → 暂停弹窗
 // 'gameover' → 结束界面
+// 'outro'    → 出场转场动效（game → menu 过渡）
 let gameState = 'menu';
 let gameOverButtons = null; // { restart, home, share } 每个 { x, y, w, h }
 let menuButtons = null;     // { start: { x, y, w, h } }
@@ -87,6 +88,10 @@ let gameoverClosing = false;
 let gameoverCloseFrame = 0;
 let gameoverCloseAction = null; // 'restart' | 'home' | 'share'
 let gameoverConfettiFired = false;
+
+// outro 转场动效（game → menu）
+let outroFrame = 0;
+let outroSource = null;  // 'paused' | 'gameover'
 
 // 调试开关 — 上线前改为 false
 const DEBUG_ITEMS = true;
@@ -156,12 +161,7 @@ input._onGameOverRestart = function () {
   gameoverCloseFrame = 0;
   gameoverCloseAction = 'restart';
 };
-input._onGameOverHome = function () {
-  if (gameState !== 'gameover' || gameoverClosing) return;
-  gameoverClosing = true;
-  gameoverCloseFrame = 0;
-  gameoverCloseAction = 'home';
-};
+input._onGameOverHome = handleHome;
 input._onGameOverShare = function () {
   if (gameState !== 'gameover' || gameoverClosing) return;
   gameoverClosing = true;
@@ -1136,18 +1136,23 @@ function drawGameOverScreen(progress) {
 
 function handleHome() {
   if (gameState === 'intro') return;
-  if (gameState === 'paused' && !pauseClosing) {
-    pauseClosing = true;
-    pauseCloseFrame = 0;
-    pauseCloseAction = 'home';
-    return;
-  }
-  if (gameState === 'paused' && pauseClosing) return;
+  if (gameState === 'outro') return;
+
+  outroSource = gameState;
+
+  // 清理暂停/gameover 关闭动画状态
+  pauseClosing = false;
+  pauseCloseFrame = 0;
+  pauseCloseAction = null;
+  gameoverClosing = false;
+  gameoverCloseFrame = 0;
+  gameoverCloseAction = null;
+
+  gameState = 'outro';
+  outroFrame = 0;
+  input.isIntro = true;
   toast.clear();
-  handleRestart();
-  gameState = 'menu';
-  input.isMenu = true;
-  console.log('[状态] 切换到 menu');
+  console.log('[状态] 切换到 outro (from ' + outroSource + ')');
 }
 
 function handleStart() {
@@ -1297,6 +1302,38 @@ function drawPauseDialog(progress, isClosing) {
   input._pauseDialogButtons = pauseDialogButtons;
 }
 
+/** 渲染 playing 画面的静态快照（不推进任何逻辑） */
+function renderPlayingSnapshot() {
+  renderer.clear();
+  renderer.drawTracks(centerX, centerY, boardRadius);
+  renderer.drawConnectionLines(board);
+  renderer.drawSlots(board, items);
+  renderer.drawSelectionHighlight(board);
+  renderer.drawCore(centerX, centerY, board.core.level, board.getCorePulseRatio(), board.timedSplitWarningProgress, board.getCoreLevelUpScale());
+  renderer.drawFlyingElements(board);
+
+  if (mergeFlowState === 'absorb' && mergeFlowAbsorbSlot) {
+    const absPos = board.getSlotPosition(mergeFlowAbsorbSlot);
+    const t = mergeFlowAbsorbProgress;
+    const ease = 1 - Math.pow(1 - t, 3);
+    const ax = absPos.x + (centerX - absPos.x) * ease;
+    const ay = absPos.y + (centerY - absPos.y) * ease;
+    const level = mergeFlowAbsorbSlot.level;
+    const radius = board.getElementRadius(level) * (1 - ease * 0.4);
+    renderer._drawElement(ax, ay, level, radius);
+  }
+
+  renderer.drawMergeAnimations(board);
+  renderer.drawMagnetAnimation(items, board);
+  renderer.drawDrops(items);
+  const storedMax = playerData.loadPlayerData().maxScore;
+  const displayMax = Math.max(storedMax, score.total);
+  renderer.drawScoreUI(score.total, displayMax);
+  renderer.drawItemBar(items);
+  renderer.drawCoreLevelUI(board.core.level);
+  renderer.drawPauseButton();
+}
+
 /** 处理重新开始 */
 function handleRestart({ withIntro = false } = {}) {
   // 强制清零 combo 状态（防止残留）
@@ -1345,6 +1382,8 @@ function handleRestart({ withIntro = false } = {}) {
   gameoverCloseFrame = 0;
   gameoverCloseAction = null;
   gameoverConfettiFired = false;
+  outroFrame = 0;
+  outroSource = null;
   // 重置单局追踪
   sessionMaxLevel = 1;
   sessionStartMaxLevel = playerData.loadPlayerData().maxLevel || 1;
@@ -1730,12 +1769,6 @@ function gameLoop() {
       pauseCloseAction = null;
       if (action === 'restart') {
         handleRestart();
-      } else if (action === 'home') {
-        toast.clear();
-        handleRestart();
-        gameState = 'menu';
-        input.isMenu = true;
-        console.log('[状态] 切换到 menu');
       } else {
         console.log('[状态] 从 paused 恢复到 playing');
       }
@@ -1759,19 +1792,113 @@ function gameLoop() {
       gameoverCloseAction = null;
       if (action === 'restart') {
         handleRestart();
-      } else if (action === 'home') {
-        toast.clear();
-        handleRestart();
-        gameState = 'menu';
-        input.isMenu = true;
-        console.log('[状态] 切换到 menu');
       } else if (action === 'share') {
         handleShare();
       }
     }
-  }
+  } else if (gameState === 'outro') {
+    // ─── 出场转场动效（1000ms / 60 帧） ───
+    outroFrame++;
+    const f = outroFrame;
 
-  // 继续循环
+    // Phase 1（帧 1-24）：源界面收缩淡出
+    if (f <= 24) {
+      const p1 = (f - 1) / 23;
+      const eased = 1 - (1 - p1) * (1 - p1);
+      const alpha = 1 - eased;
+      const scale = 1.0 - 0.03 * eased;
+
+      ctx.save();
+      ctx.globalAlpha = alpha;
+      ctx.translate(screenWidth / 2, screenHeight / 2);
+      ctx.scale(scale, scale);
+      ctx.translate(-screenWidth / 2, -screenHeight / 2);
+
+      if (outroSource === 'paused') {
+        renderPlayingSnapshot();
+        drawPauseDialog(1.0, false);
+      } else if (outroSource === 'gameover') {
+        drawGameOverScreen(1.0);
+      }
+
+      ctx.restore();
+    }
+
+    // 帧 12：反向光环（从大到小）
+    if (f === 12) {
+      GameGlobal.ShockwaveManager.spawn(centerX, centerY, '#B4A5FF', {
+        maxLife: 24,
+        startRadius: LS.ds(180),
+        endRadius: LS.ds(12),
+      });
+    }
+
+    // Phase 2（帧 18-42）：屏幕中央脉冲光点
+    if (f >= 18 && f <= 42) {
+      const p2 = (f - 18) / 24;
+      const pulseAlpha = Math.sin(p2 * Math.PI) * 0.8;
+      ctx.save();
+      ctx.globalAlpha = pulseAlpha;
+      ctx.shadowColor = '#B4A5FF';
+      ctx.shadowBlur = LS.ds(30);
+      ctx.fillStyle = '#B4A5FF';
+      ctx.beginPath();
+      ctx.arc(centerX, centerY, LS.ds(6), 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+      ctx.shadowBlur = 0;
+    }
+
+    // Phase 3（帧 30-60）：菜单从中心扩散淡入
+    if (f >= 30) {
+      const p3 = Math.min(1, (f - 30) / 30);
+      const eased = 1 - (1 - p3) * (1 - p3);
+      const menuAlpha = eased;
+      const menuScale = 0.97 + 0.03 * eased;
+
+      ctx.save();
+      ctx.globalAlpha = menuAlpha;
+      ctx.translate(screenWidth / 2, screenHeight / 2);
+      ctx.scale(menuScale, menuScale);
+      ctx.translate(-screenWidth / 2, -screenHeight / 2);
+      drawMenuScreen();
+      ctx.restore();
+    }
+
+    // shockwave 渲染
+    GameGlobal.ShockwaveManager.update();
+    GameGlobal.ShockwaveManager.render(ctx);
+
+    // 粒子残留淡出
+    particles.update();
+    particles.draw(ctx);
+
+    // 转场结束
+    if (f >= 60) {
+      handleRestart();
+      gameState = 'menu';
+      input.isMenu = true;
+      input.isIntro = false;
+      outroFrame = 0;
+      outroSource = null;
+      particles.clear();
+      GameGlobal.ShockwaveManager.reset();
+      console.log('[状态] outro → menu');
+    }
+
+    // 异常超时保险
+    if (f > 120) {
+      handleRestart();
+      gameState = 'menu';
+      input.isMenu = true;
+      input.isIntro = false;
+      outroFrame = 0;
+      outroSource = null;
+      particles.clear();
+      GameGlobal.ShockwaveManager.reset();
+      console.warn('[outro] 异常超时，强制进入 menu');
+    }
+  }
   requestAnimationFrame(gameLoop);
 }
 
