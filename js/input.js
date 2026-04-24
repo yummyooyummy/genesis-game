@@ -48,11 +48,23 @@ class Input {
     /** 菜单触摸回调 */
     this.onMenuTouch = null;
 
-    /** 暂停弹窗触摸回调 */
-    this.onPausedTouch = null;
+    /** 暂停弹窗按钮回调 */
+    this._onPauseResume = null;
+    this._onPauseRestart = null;
+    this._onPauseHome = null;
+
+    /** 游戏结束按钮回调 */
+    this._onGameOverRestart = null;
+    this._onGameOverHome = null;
+    this._onGameOverShare = null;
 
     /** 点击暂停按钮回调 */
     this.onPauseTap = null;
+
+    /** 按钮边界引用（由 game.js 每帧更新） */
+    this._menuButtons = null;
+    this._pauseDialogButtons = null;
+    this._gameOverButtons = null;
 
     this._bindEvents();
   }
@@ -68,57 +80,105 @@ class Input {
 
   /** 绑定触摸事件（微信小游戏 API） */
   _bindEvents() {
+    this._lastTouchPos = null;
+
     wx.onTouchStart((e) => {
       if (e.touches.length > 0) {
         const touch = e.touches[0];
-        // 微信小游戏 touch 坐标就是逻辑像素，无需转换 clientX
-        this._handleTouch(touch.clientX, touch.clientY);
+        const x = touch.clientX;
+        const y = touch.clientY;
+        this._lastTouchPos = { x, y };
+        this._handleTouch(x, y);
       }
+    });
+
+    wx.onTouchMove((e) => {
+      if (e.touches.length > 0) {
+        const touch = e.touches[0];
+        this._lastTouchPos = { x: touch.clientX, y: touch.clientY };
+      }
+    });
+
+    wx.onTouchEnd((e) => {
+      const ct = e.changedTouches && e.changedTouches[0];
+      const pos = ct
+        ? { x: ct.clientX, y: ct.clientY }
+        : this._lastTouchPos;
+      this._handleTouchEnd(pos);
+      this._lastTouchPos = null;
+    });
+
+    wx.onTouchCancel(() => {
+      this._handleTouchCancel();
+      this._lastTouchPos = null;
     });
   }
 
   /**
-   * 处理触摸
-   * @param {number} x - 逻辑像素坐标 x
-   * @param {number} y - 逻辑像素坐标 y
+   * 检测坐标命中了哪个按钮（返回按钮 ID 字符串或 null）
+   */
+  _hitTestButton(x, y) {
+    const ui = require('./uiHelpers');
+
+    if (this.isMenu) {
+      if (this._menuButtons && this._menuButtons.start) {
+        const b = this._menuButtons.start;
+        if (ui.isPointInRect(x, y, b.x, b.y, b.w, b.h)) return 'menu_start';
+      }
+      return null;
+    }
+
+    if (this.isPaused) {
+      const pb = this._pauseDialogButtons;
+      if (pb) {
+        if (ui.isPointInRect(x, y, pb.resume.x, pb.resume.y, pb.resume.w, pb.resume.h)) return 'pause_resume';
+        if (ui.isPointInRect(x, y, pb.restart.x, pb.restart.y, pb.restart.w, pb.restart.h)) return 'pause_restart';
+        if (ui.isPointInRect(x, y, pb.home.x, pb.home.y, pb.home.w, pb.home.h)) return 'pause_home';
+      }
+      return null;
+    }
+
+    if (this.isGameOver) {
+      const gb = this._gameOverButtons;
+      if (gb) {
+        if (gb.restart && ui.isPointInRect(x, y, gb.restart.x, gb.restart.y, gb.restart.w, gb.restart.h)) return 'gameover_restart';
+        if (gb.home && ui.isPointInRect(x, y, gb.home.x, gb.home.y, gb.home.w, gb.home.h)) return 'gameover_home';
+        if (gb.share && ui.isPointInRect(x, y, gb.share.x, gb.share.y, gb.share.w, gb.share.h)) return 'gameover_share';
+      }
+      return null;
+    }
+
+    // playing 状态：暂停按钮
+    if (this.renderer && this.renderer.pauseBtnPos) {
+      const btn = this.renderer.pauseBtnPos;
+      const dx = x - btn.x;
+      const dy = y - btn.y;
+      if (dx * dx + dy * dy <= btn.r * btn.r) return 'pause_btn';
+    }
+
+    return null;
+  }
+
+  /**
+   * 处理触摸按下
    */
   _handleTouch(x, y) {
     if (this.isIntro) return;
 
-    if (this.isMenu) {
-      if (this.onMenuTouch) {
-        this.onMenuTouch(x, y);
-      }
+    // 检测是否命中了带反馈的按钮
+    const btnId = this._hitTestButton(x, y);
+    if (btnId) {
+      GameGlobal.buttonPressState = {
+        id: btnId,
+        phase: 'down',
+        downAt: Date.now(),
+        upAt: 0,
+      };
       return;
     }
 
-    if (this.isPaused) {
-      if (this.onPausedTouch) {
-        this.onPausedTouch(x, y);
-      }
-      return;
-    }
-
-    if (this.isGameOver) {
-      if (this.onGameOverTouch) {
-        this.onGameOverTouch(x, y);
-      }
-      return;
-    }
-
-    // 暂停按钮命中（优先级最高）
-    if (this.onPauseTap && this.renderer && this.renderer.pauseBtnPos) {
-      const btn = this.renderer.pauseBtnPos;
-      const dx = x - btn.x;
-      const dy = y - btn.y;
-      if (dx * dx + dy * dy <= btn.r * btn.r) {
-        this.onPauseTap();
-        return;
-      }
-    }
-
-
-
+    // 以下是不带按钮反馈的交互（道具栏、棋盘、调试等）
+    if (this.isMenu || this.isPaused || this.isGameOver) return;
 
     // 调试：快速加道具
     if (this.onDebugItemTap) {
@@ -158,6 +218,70 @@ class Input {
     const hitSlot = this._hitTest(x, y);
     if (hitSlot) {
       this.onSlotTap(hitSlot);
+    }
+  }
+
+  /**
+   * 处理触摸松开
+   */
+  _handleTouchEnd(pos) {
+    const s = GameGlobal.buttonPressState;
+    if (!s || s.phase !== 'down') return;
+
+    if (!pos) {
+      s.phase = 'cancel';
+      return;
+    }
+
+    const hitId = this._hitTestButton(pos.x, pos.y);
+    if (hitId === s.id) {
+      s.phase = 'releasing';
+      s.upAt = Date.now();
+      this._fireButtonAction(s.id);
+    } else {
+      s.phase = 'cancel';
+    }
+  }
+
+  /**
+   * 处理触摸取消
+   */
+  _handleTouchCancel() {
+    const s = GameGlobal.buttonPressState;
+    if (s && s.phase === 'down') {
+      s.phase = 'cancel';
+    }
+  }
+
+  /**
+   * 触发按钮的实际 click 逻辑
+   */
+  _fireButtonAction(id) {
+    switch (id) {
+      case 'menu_start':
+        if (this.onMenuTouch) this.onMenuTouch(id);
+        break;
+      case 'pause_btn':
+        if (this.onPauseTap) this.onPauseTap();
+        break;
+      case 'pause_resume':
+        if (this._onPauseResume) this._onPauseResume();
+        break;
+      case 'pause_restart':
+        if (this._onPauseRestart) this._onPauseRestart();
+        break;
+      case 'pause_home':
+        if (this._onPauseHome) this._onPauseHome();
+        break;
+      case 'gameover_restart':
+        if (this._onGameOverRestart) this._onGameOverRestart();
+        break;
+      case 'gameover_home':
+        if (this._onGameOverHome) this._onGameOverHome();
+        break;
+      case 'gameover_share':
+        if (this._onGameOverShare) this._onGameOverShare();
+        break;
     }
   }
 

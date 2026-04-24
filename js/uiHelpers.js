@@ -28,6 +28,34 @@ function _roundRectPath(ctx, x, y, w, h, r) {
   ctx.closePath();
 }
 
+/**
+ * 根据 buttonPressState 计算指定按钮的当前缩放值
+ */
+function getButtonScale(id) {
+  const s = GameGlobal.buttonPressState;
+  if (!s || s.id !== id) return 1.0;
+  const now = Date.now();
+
+  if (s.phase === 'down') {
+    const t = Math.min(1, (now - s.downAt) / 40);
+    const eased = 1 - (1 - t) * (1 - t);
+    return 1.0 - 0.05 * eased;
+  }
+
+  if (s.phase === 'releasing') {
+    const t = (now - s.upAt) / 150;
+    if (t >= 1) return 1.0;
+    if (t < 0.5) {
+      const p = t / 0.5;
+      return 0.95 + (1.02 - 0.95) * p;
+    }
+    const p = (t - 0.5) / 0.5;
+    return 1.02 - (1.02 - 1.0) * p;
+  }
+
+  return 1.0;
+}
+
 // ─── 导出函数 ───────────────────────────────────────────
 
 /**
@@ -124,9 +152,18 @@ function drawPrimaryButton(ctx, x, y, w, h, text, options) {
     pressed: false,
     fontSize: UI_CONFIG.font.buttonPrimary,
     useCta: false,
+    scale: 1.0,
   }, options);
 
   ctx.save();
+
+  if (o.scale !== 1.0) {
+    const cx = x + w / 2;
+    const cy = y + h / 2;
+    ctx.translate(cx, cy);
+    ctx.scale(o.scale, o.scale);
+    ctx.translate(-cx, -cy);
+  }
 
   const cta = UI_CONFIG.ctaButton;
 
@@ -206,9 +243,18 @@ function drawSecondaryButton(ctx, x, y, w, h, text, options) {
     borderColor: UI_CONFIG.color.borderGlass,
     fontSize: UI_CONFIG.font.buttonSecondary,
     pressed: false,
+    scale: 1.0,
   }, options);
 
   ctx.save();
+
+  if (o.scale !== 1.0) {
+    const cx = x + w / 2;
+    const cy = y + h / 2;
+    ctx.translate(cx, cy);
+    ctx.scale(o.scale, o.scale);
+    ctx.translate(-cx, -cy);
+  }
 
   const r = UI_CONFIG.radius.button;
   _roundRectPath(ctx, x, y, w, h, r);
@@ -309,4 +355,5 @@ module.exports = {
   drawText,
   measureText,
   isPointInRect,
+  getButtonScale,
 };

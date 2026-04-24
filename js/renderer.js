@@ -801,8 +801,17 @@ class Renderer {
     const cy = LS.dy(755);
     const r = LS.ds(17);
 
-    // 圆形背景
+    const ui = require('./uiHelpers');
+    const scale = ui.getButtonScale('pause_btn');
+
     ctx.save();
+    if (scale !== 1.0) {
+      ctx.translate(cx, cy);
+      ctx.scale(scale, scale);
+      ctx.translate(-cx, -cy);
+    }
+
+    // 圆形背景
     ctx.fillStyle = 'rgba(30,40,80,0.5)';
     ctx.beginPath();
     ctx.arc(cx, cy, r, 0, Math.PI * 2);
@@ -810,16 +819,15 @@ class Renderer {
     ctx.strokeStyle = 'rgba(74,90,158,0.6)';
     ctx.lineWidth = LS.ds(1);
     ctx.stroke();
-    ctx.restore();
 
     // 双竖条
-    ctx.save();
     ctx.fillStyle = '#E8ECFF';
     const barW = LS.ds(3);
     const barH = LS.ds(12);
     const gap = LS.ds(5);
     ctx.fillRect(cx - gap / 2 - barW, cy - barH / 2, barW, barH);
     ctx.fillRect(cx + gap / 2, cy - barH / 2, barW, barH);
+
     ctx.restore();
 
     this.pauseBtnPos = { x: cx, y: cy, r: r + LS.ds(6) };

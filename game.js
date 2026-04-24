@@ -127,17 +127,14 @@ const input = new Input(
   handleDropTap
 );
 input.setReferences(board, renderer, items);
-input.onGameOverTouch = function (x, y) {
-  if (isGameOverBtnHit(x, y, 'restart')) { handleRestart(); return; }
-  if (isGameOverBtnHit(x, y, 'home'))    { handleHome(); return; }
-  if (isGameOverBtnHit(x, y, 'share'))   { handleShare(); return; }
-};
-input.onMenuTouch = function (x, y) {
-  if (menuButtons && menuButtons.start && ui.isPointInRect(x, y, menuButtons.start.x, menuButtons.start.y, menuButtons.start.w, menuButtons.start.h)) {
-    handleStart();
-  }
-};
+input.onMenuTouch = function () { handleStart(); };
 input.onPauseTap = handlePause;
+input._onPauseResume = handleResume;
+input._onPauseRestart = handleRestart;
+input._onPauseHome = handleHome;
+input._onGameOverRestart = handleRestart;
+input._onGameOverHome = handleHome;
+input._onGameOverShare = handleShare;
 if (DEBUG_ITEMS) {
   input.onDebugItemTap = function () {
     items.grant('magnet', 1);
@@ -145,21 +142,6 @@ if (DEBUG_ITEMS) {
     items.grant('upgrade', 1);
   };
 }
-input.onPausedTouch = function (x, y) {
-  if (!pauseDialogButtons) return;
-  if (ui.isPointInRect(x, y, pauseDialogButtons.resume.x, pauseDialogButtons.resume.y, pauseDialogButtons.resume.w, pauseDialogButtons.resume.h)) {
-    handleResume();
-    return;
-  }
-  if (ui.isPointInRect(x, y, pauseDialogButtons.restart.x, pauseDialogButtons.restart.y, pauseDialogButtons.restart.w, pauseDialogButtons.restart.h)) {
-    handleRestart();
-    return;
-  }
-  if (ui.isPointInRect(x, y, pauseDialogButtons.home.x, pauseDialogButtons.home.y, pauseDialogButtons.home.w, pauseDialogButtons.home.h)) {
-    handleHome();
-    return;
-  }
-};
 
 // ─── 游戏逻辑 ───
 
@@ -783,8 +765,9 @@ function drawMenuScreen() {
   ctx.fillStyle = 'rgba(0,0,0,0.01)';
   ctx.fillRect(btnX, btnY, btnW, btnH);
   ctx.restore();
-  ui.drawPrimaryButton(ctx, btnX, btnY, btnW, btnH, '开始游戏', { useCta: true });
+  ui.drawPrimaryButton(ctx, btnX, btnY, btnW, btnH, '开始游戏', { useCta: true, scale: ui.getButtonScale('menu_start') });
   menuButtons = { start: { x: btnX, y: btnY, w: btnW, h: btnH } };
+  input._menuButtons = menuButtons;
 }
 
 /**
@@ -1014,33 +997,29 @@ function drawGameOverScreen() {
   const restartH = LS.ds(52);
   const restartX = LS.dx(187.5) - restartW / 2;
   const restartY = LS.dy(700) - restartH / 2;
-  ui.drawPrimaryButton(ctx, restartX, restartY, restartW, restartH, '重新开始');
+  ui.drawPrimaryButton(ctx, restartX, restartY, restartW, restartH, '重新开始', { scale: ui.getButtonScale('gameover_restart') });
 
   // 返回主页（中心 156, 756，尺寸 257×44）+ 分享（中心 320, 756，尺寸 54×44）
   const homeW = LS.ds(257);
   const homeH = LS.ds(44);
   const homeX = LS.dx(156) - homeW / 2;
   const homeY = LS.dy(756) - homeH / 2;
-  ui.drawSecondaryButton(ctx, homeX, homeY, homeW, homeH, '返回主页');
+  ui.drawSecondaryButton(ctx, homeX, homeY, homeW, homeH, '返回主页', { scale: ui.getButtonScale('gameover_home') });
 
   const shareW = LS.ds(54);
   const shareH = LS.ds(44);
   const shareX = LS.dx(320) - shareW / 2;
   const shareY = LS.dy(756) - shareH / 2;
-  ui.drawSecondaryButton(ctx, shareX, shareY, shareW, shareH, '分享');
+  ui.drawSecondaryButton(ctx, shareX, shareY, shareW, shareH, '分享', { scale: ui.getButtonScale('gameover_share') });
 
   gameOverButtons = {
     restart: { x: restartX, y: restartY, w: restartW, h: restartH },
     home:    { x: homeX, y: homeY, w: homeW, h: homeH },
     share:   { x: shareX, y: shareY, w: shareW, h: shareH },
   };
+  input._gameOverButtons = gameOverButtons;
 }
 
-function isGameOverBtnHit(tx, ty, key) {
-  if (!gameOverButtons || !gameOverButtons[key]) return false;
-  const b = gameOverButtons[key];
-  return ui.isPointInRect(tx, ty, b.x, b.y, b.w, b.h);
-}
 
 function handleHome() {
   if (gameState === 'intro') return;
@@ -1151,19 +1130,20 @@ function drawPauseDialog() {
   const secondaryH = LS.ds(38);
 
   const resumeBtnY = LS.dy(418) - primaryH / 2;
-  ui.drawPrimaryButton(ctx, btnX, resumeBtnY, btnW, primaryH, '继续游戏');
+  ui.drawPrimaryButton(ctx, btnX, resumeBtnY, btnW, primaryH, '继续游戏', { scale: ui.getButtonScale('pause_resume') });
 
   const restartBtnY = LS.dy(464) - secondaryH / 2;
-  ui.drawSecondaryButton(ctx, btnX, restartBtnY, btnW, secondaryH, '重新开始');
+  ui.drawSecondaryButton(ctx, btnX, restartBtnY, btnW, secondaryH, '重新开始', { scale: ui.getButtonScale('pause_restart') });
 
   const homeBtnY = LS.dy(510) - secondaryH / 2;
-  ui.drawSecondaryButton(ctx, btnX, homeBtnY, btnW, secondaryH, '返回主页');
+  ui.drawSecondaryButton(ctx, btnX, homeBtnY, btnW, secondaryH, '返回主页', { scale: ui.getButtonScale('pause_home') });
 
   pauseDialogButtons = {
     resume:  { x: btnX, y: resumeBtnY, w: btnW, h: primaryH },
     restart: { x: btnX, y: restartBtnY, w: btnW, h: secondaryH },
     home:    { x: btnX, y: homeBtnY, w: btnW, h: secondaryH },
   };
+  input._pauseDialogButtons = pauseDialogButtons;
 }
 
 /** 处理重新开始 */
@@ -1183,6 +1163,7 @@ function handleRestart({ withIntro = false } = {}) {
   pendingActionAbsorbPoints = 0;
   GameGlobal.pendingMergePoints = 0;
   GameGlobal.itemGainState = {};
+  GameGlobal.buttonPressState = null;
   items.reset();
   if (withIntro) {
     gameState = 'intro';
