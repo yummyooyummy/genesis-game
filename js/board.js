@@ -907,7 +907,7 @@ class Board {
    */
   getElementRadius(level) {
     // 低级小，高级大：8px ~ 20px
-    return 8 + level * 1.2;
+    return 10 + level * 1.1;
   }
 }
 

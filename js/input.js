@@ -5,7 +5,7 @@
  */
 
 /** 触摸容差（像素） */
-const TOUCH_TOLERANCE = 10;
+const TOUCH_TOLERANCE = 14;
 
 class Input {
   /**
