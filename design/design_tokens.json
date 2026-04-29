@@ -23,7 +23,9 @@
       "glass_inset_panel":     "rgba(10,14,39,0.40)",
       "capsule_bg":            "rgba(30,40,80,0.50)",
       "surface_muted":         "rgba(74,90,158,0.25)",
-      "surface_muted_soft":    "rgba(74,90,158,0.35)"
+      "surface_muted_soft":    "rgba(74,90,158,0.35)",
+      "toast_grad_start":      "#1A2244",
+      "toast_grad_end":        "#131938"
     },
 
     "border": {
@@ -52,6 +54,7 @@
       "gold_amber":            "#FFB648",
       "gold_soft":             "#FFD887",
       "gold_shadow_rgba":      "rgba(255,182,72,0.60)",
+      "gold_stroke_subtle":    "rgba(255,182,72,0.55)",
       "success_green":         "#5ECB95",
       "success_green_soft":    "#8FE2B5",
       "error_pink":            "#FF6B9D",
@@ -177,6 +180,7 @@
     "button_primary":        "0 6px 20px rgba(138,127,209,0.35)",
     "capsule_hover":         "0 0 8px rgba(138,127,209,0.50)",
     "new_record_badge":      "0 0 10px rgba(138,127,209,0.50)",
+    "new_badge_purple":       "0 0 8px rgba(138,127,209,0.45)",
     "new_form_banner":       "0 0 24px rgba(255,182,72,0.28), 0 0 40px rgba(123,208,224,0.18)"
   },
 
@@ -205,7 +209,9 @@
     "codex_fade_mask":       "linear-gradient(90deg, transparent, #000 24px, #000 calc(100% - 24px), transparent)",
     "newform_banner_fill":   "linear-gradient(135deg, rgba(255,182,72,0.12), rgba(123,208,224,0.12))",
     "particle_fill":         "radial-gradient(circle at 35% 30%, #fff, {color} 55%, {color}cc 85%)",
-    "button_primary_fill":   "linear-gradient(180deg, #9A8FE5 0%, #8A7FD1 100%)"
+    "button_primary_fill":   "linear-gradient(180deg, #9A8FE5 0%, #8A7FD1 100%)",
+    "toast_fill":            "linear-gradient(180deg, #1A2244 0%, #131938 100%)",
+    "gold_title_text":       "linear-gradient(90deg, #FFD887 0%, #FFB648 100%)"
   },
 
   "size": {
@@ -267,7 +273,25 @@
     },
 
     "inventory_item":          { "size": 56, "radius": 14 },
-    "phone_viewport":          { "width": 390, "height": 844 }
+    "phone_viewport":          { "width": 390, "height": 844 },
+
+    "new_form_toast": {
+      "width": 320,
+      "height": 76,
+      "top": 110,
+      "radius": 14,
+      "padding": "14px 16px",
+      "particle_plate":        { "width": 44, "height": 44 }
+    },
+
+    "badge": {
+      "new_record": {
+        "padding":            "3px 8px",
+        "radius":             999,
+        "bg":                 "accent.purple_primary",
+        "text_color":         "text.primary"
+      }
+    }
   },
 
   "motion": {
@@ -282,13 +306,20 @@
       "banner_in":   "360ms",
       "floaty":      "6s",
       "codex_pulse": "2.2s",
-      "spin_slow":   "6s"
+      "spin_slow":   "6s",
+      "toast_in":    "300ms",
+      "toast_hold":  "1400ms",
+      "toast_out":   "300ms",
+      "toast_gold_sweep": "900ms"
     },
     "keyframes": {
       "floaty":      "0%,100% translateY(0) · 50% translateY(-8px)",
       "bannerIn":    "from translateY(+20px) opacity 0 → to translateY(0) opacity 1",
       "codexPulse":  "0%,100% opacity 0.35 scale 1 · 50% opacity 0.85 scale 1.08",
-      "nfSpin":      "0→360deg rotate linear infinite"
+      "nfSpin":      "0→360deg rotate linear infinite",
+      "toastIn":     "from translateY(-12px) opacity 0 → to translateY(0) opacity 1",
+      "toastOut":    "from translateY(0) opacity 1 → to translateY(-8px) opacity 0",
+      "goldSweep":   "0% left -30% · 100% left 130%   // 顶边光扫从左到右"
     }
   },
 
