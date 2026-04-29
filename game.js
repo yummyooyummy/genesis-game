@@ -31,7 +31,6 @@ const sysInfo = wx.getSystemInfoSync();
 const dpr = sysInfo.pixelRatio || 2;
 const screenWidth = sysInfo.windowWidth;
 const screenHeight = sysInfo.windowHeight;
-const statusBarHeight = sysInfo.statusBarHeight || 20;
 
 // 设置 Canvas 尺寸（逻辑像素 × 设备像素比）
 canvas.width = screenWidth * dpr;
@@ -1714,7 +1713,7 @@ function gameLoop() {
     comboText.render(ctx);
 
     // 顶部 toast 浮层（在所有 UI 之上）
-    toast.draw(ctx, screenWidth, statusBarHeight);
+    toast.draw(ctx, screenWidth);
 
     if (DEBUG_ITEMS) {
       const dbx = LS.dx(335), dby = LS.dy(60), dbr = LS.ds(18);

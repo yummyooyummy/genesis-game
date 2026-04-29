@@ -24,6 +24,7 @@ const CARD_H = 76;
 const CARD_TOP = 110;
 const CARD_R = 14;
 const PLATE_SIZE = 44;
+const PLATE_RADIUS = 8;
 const PARTICLE_RADIUS = 14;
 const SWEEP_DURATION = 900;
 const SWEEP_WIDTH = 40;
@@ -105,7 +106,7 @@ const ToastManager = {
     }
   },
 
-  draw(ctx, screenWidth, statusBarHeight) {
+  draw(ctx, screenWidth) {
     if (!this.current) return;
     const elapsed = Date.now() - this.startTime;
     const level = this.current.level;
@@ -127,7 +128,7 @@ const ToastManager = {
     }
 
     const cardX = (screenWidth - CARD_W) / 2;
-    const cardY = statusBarHeight + CARD_TOP + translateY;
+    const cardY = CARD_TOP + translateY;
 
     ctx.save();
     ctx.globalAlpha = opacity;
@@ -172,11 +173,22 @@ const ToastManager = {
       }
     }
 
-    // --- 左侧粒子 ---
+    // --- 左侧粒子展示台 ---
     const padding = 14;
-    const plateX = cardX + padding + PLATE_SIZE / 2;
-    const plateY = cardY + CARD_H / 2;
-    _drawParticle(ctx, plateX, plateY, level);
+    const plateLeft = cardX + padding;
+    const plateTop = cardY + (CARD_H - PLATE_SIZE) / 2;
+
+    _roundRectPath(ctx, plateLeft, plateTop, PLATE_SIZE, PLATE_SIZE, PLATE_RADIUS);
+    ctx.fillStyle = 'rgba(10,14,39,0.40)';
+    ctx.fill();
+    _roundRectPath(ctx, plateLeft, plateTop, PLATE_SIZE, PLATE_SIZE, PLATE_RADIUS);
+    ctx.strokeStyle = 'rgba(74,90,158,0.30)';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+
+    const plateCx = plateLeft + PLATE_SIZE / 2;
+    const plateCy = plateTop + PLATE_SIZE / 2;
+    _drawParticle(ctx, plateCx, plateCy, level);
 
     // --- 右侧文字 ---
     const textX = cardX + padding + PLATE_SIZE + 12;
