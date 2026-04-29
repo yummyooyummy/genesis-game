@@ -828,66 +828,67 @@ function drawMenuScreen() {
 }
 
 /**
- * 在圆角矩形展示台上绘制粒子（用于结束界面"发现新形态"卡）
- * 视觉规则与 toastNotifications._drawParticle 保持一致
+ * 绘制结束界面"发现新形态"卡上的粒子簇
+ * 中央主粒子 + 周围 5 颗轨道小星点（无方框）
+ * 视觉：主屏幕核心粒子的迷你版
  */
-function drawParticlePlate(ctx, x, y, size, radius, level) {
+function drawNewFormParticle(ctx, cx, cy, baseRadius, level) {
   const colors = getElementColors(level);
 
   ctx.save();
 
-  // 圆角矩形台底
-  ctx.beginPath();
-  ctx.moveTo(x + radius, y);
-  ctx.arcTo(x + size, y, x + size, y + size, radius);
-  ctx.arcTo(x + size, y + size, x, y + size, radius);
-  ctx.arcTo(x, y + size, x, y, radius);
-  ctx.arcTo(x, y, x + size, y, radius);
-  ctx.closePath();
-  ctx.fillStyle = 'rgba(10,14,39,0.40)';
-  ctx.fill();
-  ctx.strokeStyle = 'rgba(74,90,158,0.30)';
-  ctx.lineWidth = 1;
-  ctx.stroke();
-
-  const cx = x + size / 2;
-  const cy = y + size / 2;
-  const r = size * 0.32;
-
   // 外辐射光
   ctx.globalAlpha = 0.3;
-  const glow = ctx.createRadialGradient(cx, cy, r * 0.5, cx, cy, r * 1.8);
+  const glow = ctx.createRadialGradient(cx, cy, baseRadius * 0.5, cx, cy, baseRadius * 1.8);
   glow.addColorStop(0, colors.primary);
   glow.addColorStop(1, 'transparent');
   ctx.fillStyle = glow;
   ctx.beginPath();
-  ctx.arc(cx, cy, r * 1.8, 0, Math.PI * 2);
+  ctx.arc(cx, cy, baseRadius * 1.8, 0, Math.PI * 2);
   ctx.fill();
   ctx.globalAlpha = 1;
 
-  // 内径向渐变
-  const grad = ctx.createRadialGradient(cx - r * 0.2, cy - r * 0.2, 0, cx, cy, r);
+  // 内径向渐变（主粒子）
+  const grad = ctx.createRadialGradient(cx - baseRadius * 0.2, cy - baseRadius * 0.2, 0, cx, cy, baseRadius);
   grad.addColorStop(0, colors.secondary);
   grad.addColorStop(1, colors.primary);
   ctx.fillStyle = grad;
   ctx.beginPath();
-  ctx.arc(cx, cy, r, 0, Math.PI * 2);
+  ctx.arc(cx, cy, baseRadius, 0, Math.PI * 2);
   ctx.fill();
 
-  // 高光环
+  // 主粒子高光环
   ctx.strokeStyle = 'rgba(255,255,255,0.2)';
   ctx.lineWidth = 1;
   ctx.beginPath();
-  ctx.arc(cx, cy, r, 0, Math.PI * 2);
+  ctx.arc(cx, cy, baseRadius, 0, Math.PI * 2);
   ctx.stroke();
 
   // 中央等级数字
-  const fontSize = Math.max(13, r * 1.05);
+  const fontSize = Math.max(13, baseRadius * 1.05);
   ctx.fillStyle = '#fff';
   ctx.font = `bold ${fontSize}px "Helvetica Neue", Helvetica, Arial, sans-serif`;
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
   ctx.fillText(String(level), cx, cy);
+
+  // 周围轨道小星点（5 颗，不规则角度/距离/亮度）
+  const orbitalDots = [
+    { angle: -65, distRatio: 1.50, rRatio: 0.085, alpha: 0.65 },
+    { angle:  35, distRatio: 1.40, rRatio: 0.060, alpha: 0.50 },
+    { angle: 110, distRatio: 1.55, rRatio: 0.080, alpha: 0.70 },
+    { angle: 180, distRatio: 1.45, rRatio: 0.065, alpha: 0.50 },
+    { angle: 245, distRatio: 1.50, rRatio: 0.075, alpha: 0.60 },
+  ];
+  for (const d of orbitalDots) {
+    const rad = (d.angle * Math.PI) / 180;
+    const dx = cx + Math.cos(rad) * baseRadius * d.distRatio;
+    const dy = cy + Math.sin(rad) * baseRadius * d.distRatio;
+    ctx.fillStyle = `rgba(255,255,255,${d.alpha})`;
+    ctx.beginPath();
+    ctx.arc(dx, dy, baseRadius * d.rRatio, 0, Math.PI * 2);
+    ctx.fill();
+  }
 
   ctx.restore();
 }
@@ -1113,7 +1114,7 @@ function drawGameOverScreen(progress) {
     ctx.restore();
   }
 
-  // ── 发现新形态卡（金描边 + 暖色辉光 + 粒子展示台 + 金渐变标题）──
+  // ── 发现新形态卡（金描边 + 暖色辉光 + 轨道粒子簇 + 金渐变标题）──
   const newLevel = data.newlyUnlockedLevel;
   if (newLevel != null) {
     const cardAlpha2 = subP(progress, 0.6, 0.8);
@@ -1136,28 +1137,28 @@ function drawGameOverScreen(progress) {
       ctx.shadowColor = 'transparent';
       ctx.shadowBlur = 0;
 
-      // 左侧粒子展示台 44×44
-      const plateSize = LS.ds(44);
-      const plateRadius = LS.ds(8);
-      const plateX = cardX + LS.ds(16);
-      const plateY = cardY + (cardH - plateSize) / 2;
-      drawParticlePlate(ctx, plateX, plateY, plateSize, plateRadius, newLevel);
+      // 左侧粒子簇（中央主粒子 + 5 颗轨道小星点，无方框）
+      const particleCx = cardX + LS.ds(38);
+      const particleCy = cardY + cardH / 2;
+      const particleR = LS.ds(18);
+      drawNewFormParticle(ctx, particleCx, particleCy, particleR, newLevel);
 
-      // 右侧文字
-      const textLeft = plateX + plateSize + LS.ds(12);
+      // 右侧文字（textLeft 与原 plate 右边缘对齐 + 12px 间距）
+      const textLeft = cardX + LS.ds(72);
       const zhName = getLevelNameZh(newLevel);
 
-      // kicker "发现新形态"（金色）
-      ui.drawText(ctx, '发现新形态', textLeft, cardY + LS.ds(28), {
+      // kicker "发现新形态"（灰色小字，baseline 距卡顶 36px）
+      ui.drawText(ctx, '发现新形态', textLeft, cardY + LS.ds(36), {
         fontSize: LS.df(12),
-        color: UI_CONFIG.color.accentGold,
+        color: UI_CONFIG.color.textMuted,
         align: 'left',
+        baseline: 'alphabetic',
       });
 
-      // 主标题"Lv.X 中文名" — 金色渐变（与 toast 同款，混排字体）
+      // 主标题"Lv.X 中文名" — 金色渐变（baseline 距卡顶 60px，混排字体）
       const lvText = 'Lv.' + newLevel + ' ';
       const titleFontSize = LS.df(18);
-      const titleY = cardY + LS.ds(52);
+      const titleY = cardY + LS.ds(60);
       const lvWidth = ui.measureText(ctx, lvText, titleFontSize, '600');
       const nameWidth = ui.measureText(ctx, zhName, titleFontSize, '600');
       const totalWidth = lvWidth + nameWidth;
@@ -1169,17 +1170,18 @@ function drawGameOverScreen(progress) {
       ctx.save();
       ctx.fillStyle = goldGrad;
       ctx.textAlign = 'left';
-      ctx.textBaseline = 'middle';
+      ctx.textBaseline = 'alphabetic';
       ctx.font = `600 ${titleFontSize}px "Helvetica Neue", Helvetica, Arial, sans-serif`;
       ctx.fillText(lvText, textLeft, titleY);
       ctx.font = `600 ${titleFontSize}px "PingFang SC", "Noto Sans SC", system-ui, sans-serif`;
       ctx.fillText(zhName, textLeft + lvWidth, titleY);
       ctx.restore();
 
-      // 底部小字"[中文名] · 本局新发现"（baseline 距卡内底部 14px）
+      // 底部小字"[中文名] · 本局新发现"（整卡水平居中，baseline 距卡内底部 14px）
       ui.drawText(ctx, zhName + ' · 本局新发现', cardX + cardW / 2, cardY + cardH - LS.ds(14), {
         fontSize: LS.df(11),
         color: UI_CONFIG.color.textMuted,
+        align: 'center',
         baseline: 'alphabetic',
       });
 
