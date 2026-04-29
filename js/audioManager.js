@@ -62,7 +62,6 @@ class AudioManager {
   }
 
   playSFX(name) {
-    console.log('[SFX]', name, 'stack:', new Error().stack);
     if (this.sfxMuted) return;
     const pool = this.sfxPools[name];
     if (!pool) return;

@@ -499,8 +499,10 @@ class Items {
    * @param {object} particles
    * @param {(upgradedSlots:object[]) => void} [onUpgradeComplete]
    *   升级道具 useAnim 结束时触发，game.js 用它启动合成连锁
+   * @param {() => void} [onClearComplete]
+   *   清空道具 useAnim 结束时触发
    */
-  update(board, particles, onUpgradeComplete, onMagnetComplete) {
+  update(board, particles, onUpgradeComplete, onMagnetComplete, onClearComplete) {
     // 磁吸动画推进
     if (this._magnetAnim) {
       this._magnetAnim.frame += 1;
@@ -575,15 +577,17 @@ class Items {
     if (this.useAnim) {
       this.useAnim.frame += 1;
       if (this.useAnim.frame >= this.useAnim.totalFrames) {
-        const wasUpgrade = this.useAnim.type === 'upgrade';
+        const type = this.useAnim.type;
         const upgraded = this._pendingUpgradedSlots;
         this.useAnim = null;
         board.itemUseLocked = false;
         board._recomputeInputLock();
         this._pendingUpgradedSlots = null;
 
-        if (wasUpgrade && upgraded && onUpgradeComplete) {
+        if (type === 'upgrade' && upgraded && onUpgradeComplete) {
           onUpgradeComplete(upgraded);
+        } else if (type === 'clear' && onClearComplete) {
+          onClearComplete();
         }
       }
     }

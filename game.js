@@ -489,10 +489,15 @@ function updateMergeFlow() {
  * @param {'clear'|'upgrade'|'magnet'} type
  */
 function handleItemTap(type) {
-  console.log('[handleItemTap] type:', type);
   if (gameState !== 'playing') return;
-  const success = items.use(type, board, particles);
-  if (success) GameGlobal.AudioManager.playSFX('item');
+  items.use(type, board, particles);
+}
+
+/**
+ * 清空道具 useAnim 结束后的回调
+ */
+function handleClearComplete() {
+  GameGlobal.AudioManager.playSFX('item');
 }
 
 /**
@@ -500,7 +505,6 @@ function handleItemTap(type) {
  * @param {object} drop
  */
 function handleDropTap(drop) {
-  console.log('[handleDropTap] called');
   if (gameState !== 'playing') return;
   if (!renderer.itemBarSlots) return;
   items.pickupDrop(drop, renderer.itemBarSlots);
@@ -515,7 +519,7 @@ function handleDropTap(drop) {
  * @param {object[]} upgradedSlots
  */
 function handleUpgradeComplete(upgradedSlots) {
-  console.log('[handleUpgradeComplete] called');
+  GameGlobal.AudioManager.playSFX('item');
   for (const slot of upgradedSlots) {
     if (slot.level === null) continue;        // 安全检查
     if (slot.mergeAnimating) continue;
@@ -549,8 +553,7 @@ function handleUpgradeComplete(upgradedSlots) {
  * @param {object[]} mergedSlots - 磁吸过程中发生合成的目标格
  */
 function handleMagnetComplete(mergedSlots) {
-  console.log('[handleMagnetComplete] mergedSlots:', mergedSlots?.length);
-  GameGlobal.AudioManager.playSFX('pickup');
+  GameGlobal.AudioManager.playSFX('item');
   // 先检查所有受影响的格子是否能触发合成连锁
   const allSlots = [...mergedSlots];
   for (const slot of allSlots) {
@@ -1590,7 +1593,7 @@ function gameLoop() {
 
     // 道具动效推进（使用动效计时 + 失败提示计时 + 暂停倒计时镜像 + 结束瞬间特效）
     // 升级道具 useAnim 结束时回调：尝试启动合成连锁
-    items.update(board, particles, handleUpgradeComplete, handleMagnetComplete);
+    items.update(board, particles, handleUpgradeComplete, handleMagnetComplete, handleClearComplete);
 
     // 掉落物生命周期推进（flyIn → floating → blinking → 消失 / 拾取飞行）
     items.updateDrops();
