@@ -39,9 +39,14 @@ class AudioManager {
 
   playBGM() {
     console.log('[Audio] playBGM called, bgmStarted=', this.bgmStarted, 'bgmMuted=', this.bgmMuted);
-    if (this.bgmMuted || this.bgmStarted) return;
-    this.bgmStarted = true;
-    this.bgm.play();
+    if (this.bgmMuted) return;
+    if (!this.bgmStarted) {
+      this.bgm.play();
+      this.bgmStarted = true;
+    } else if (this.bgm.paused) {
+      this.bgm.play();
+    }
+    this.bgmPausedByGame = false;
   }
 
   pauseBGMByGame() {
