@@ -22,6 +22,9 @@ class AudioManager {
     this.bgm.src = 'audio/bgm_main.mp3';
     this.bgm.loop = true;
     this.bgm.volume = this.bgmMuted ? 0 : 0.5;
+    this.bgm.onPause(() => console.log('[Audio] BGM onPause fired'));
+    this.bgm.onPlay(() => console.log('[Audio] BGM onPlay fired'));
+    this.bgm.onStop(() => console.log('[Audio] BGM onStop fired'));
 
     for (const name of SFX_NAMES) {
       this.sfxPools[name] = [];
@@ -35,12 +38,14 @@ class AudioManager {
   }
 
   playBGM() {
+    console.log('[Audio] playBGM called, bgmStarted=', this.bgmStarted, 'bgmMuted=', this.bgmMuted);
     if (this.bgmMuted || this.bgmStarted) return;
     this.bgmStarted = true;
     this.bgm.play();
   }
 
   pauseBGMByGame() {
+    console.log('[Audio] pauseBGMByGame called from:', new Error().stack);
     if (this.bgmPausedByGame) return;
     this.bgmPausedByGame = true;
     if (!this.bgmMuted && this.bgmStarted) {
@@ -49,6 +54,7 @@ class AudioManager {
   }
 
   resumeBGMByGame() {
+    console.log('[Audio] resumeBGMByGame called');
     if (!this.bgmPausedByGame) return;
     this.bgmPausedByGame = false;
     if (!this.bgmMuted && this.bgmStarted) {
