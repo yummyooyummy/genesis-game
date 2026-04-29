@@ -44,6 +44,10 @@ const LS = LayoutScale;
 LayoutScale.init(screenWidth, screenHeight);
 console.log(`[LayoutScale] screen=${screenWidth}x${screenHeight}, scaleX=${LayoutScale.scaleX.toFixed(3)}, scaleY=${LayoutScale.scaleY.toFixed(3)}, scaleMin=${LayoutScale.scaleMin.toFixed(3)}`);
 
+const AudioManager = require('./js/audioManager');
+GameGlobal.AudioManager = new AudioManager();
+GameGlobal.AudioManager.init();
+
 // ─── 游戏参数 ───
 
 /** 棋盘中心坐标（逻辑像素） */
@@ -98,6 +102,7 @@ const DEBUG_ITEMS = true;
 
 // ─── 存档 + 单局追踪 ───
 
+playerData.clearPlayerData(); // TODO: 调试用，上线前删除
 const savedData = playerData.loadPlayerData();
 let sessionMaxLevel = 1;
 let sessionStartMaxLevel = 1;
@@ -1172,6 +1177,7 @@ function handlePause() {
   pauseClosing = false;
   pauseCloseAction = null;
   ItemCooldown.onPause(Date.now());
+  GameGlobal.AudioManager.pauseBGMByGame();
   console.log('[状态] 切换到 paused');
 }
 
@@ -1180,6 +1186,7 @@ function handleResume() {
   pauseClosing = true;
   pauseCloseFrame = 0;
   pauseCloseAction = 'resume';
+  GameGlobal.AudioManager.resumeBGMByGame();
 }
 
 /**
@@ -1397,6 +1404,7 @@ function handleRestart({ withIntro = false } = {}) {
 
 function gameLoop() {
   if (gameState === 'menu') {
+    GameGlobal.AudioManager.playBGM();
     drawMenuScreen();
   } else if (gameState === 'intro') {
     // ─── 开场转场动效（1200ms / 72 帧） ───

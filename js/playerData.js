@@ -12,6 +12,7 @@ function _defaultData() {
   return {
     maxScore: 0,
     maxLevel: 1,
+    audioSettings: { bgmMuted: false, sfxMuted: false },
   };
 }
 
@@ -84,9 +85,22 @@ function clearPlayerData() {
   }
 }
 
+function getAudioSettings() {
+  const data = loadPlayerData();
+  return data.audioSettings;
+}
+
+function setAudioSettings(settings) {
+  const data = loadPlayerData();
+  data.audioSettings = Object.assign(data.audioSettings, settings);
+  savePlayerData(data);
+}
+
 module.exports = {
   loadPlayerData,
   savePlayerData,
   updateAfterGame,
   clearPlayerData,
+  getAudioSettings,
+  setAudioSettings,
 };
