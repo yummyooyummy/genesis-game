@@ -158,8 +158,12 @@ input._onPauseRestart = function () {
   pauseClosing = true;
   pauseCloseFrame = 0;
   pauseCloseAction = 'restart';
+  GameGlobal.AudioManager.resumeBGMByGame();
 };
-input._onPauseHome = handleHome;
+input._onPauseHome = function () {
+  GameGlobal.AudioManager.resumeBGMByGame();
+  handleHome();
+};
 input._onGameOverRestart = function () {
   if (gameState !== 'gameover' || gameoverClosing) return;
   gameoverClosing = true;
