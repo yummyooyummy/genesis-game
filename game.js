@@ -282,6 +282,7 @@ function performMerge(slotA, slotB) {
  * 每一步 combo 都会触发一次（包含玩家主动合成和自动连锁）。
  */
 function handleMergeBurst(anim, midX, midY) {
+  GameGlobal.AudioManager.playSFX('merge');
   const colors = getElementColors(anim.newLevel);
   const slotAPos = board.getSlotPosition(anim.slotA);
   particles.spawn(slotAPos.x, slotAPos.y, colors.primary, 14, { speed: 5, life: 35, radius: 2 });
@@ -363,12 +364,14 @@ function updateMergeFlow() {
       mergeFlowAbsorbSlot.mergeAnimating = false;
       const newCoreLevel = board.doAbsorb(mergeFlowAbsorbSlot);
       board.coreLevelUpFrame = 48;
+      GameGlobal.AudioManager.playSFX('levelup');
       // 追踪本局最高核心等级
       if (newCoreLevel > sessionMaxLevel) sessionMaxLevel = newCoreLevel;
       // 历史首次达到新等级 → 触发 toast + 立即更新存档
       const storedMaxLevel = playerData.loadPlayerData().maxLevel;
       if (newCoreLevel > storedMaxLevel) {
         toast.push(newCoreLevel);
+        setTimeout(() => GameGlobal.AudioManager.playSFX('record'), 200);
         const pd = playerData.loadPlayerData();
         pd.maxLevel = newCoreLevel;
         playerData.savePlayerData(pd);
@@ -473,6 +476,7 @@ function updateMergeFlow() {
         gameoverOpenFrame = 0;
         gameoverClosing = false;
         gameoverConfettiFired = false;
+        GameGlobal.AudioManager.playSFX('gameover');
       }
     }
     return;
@@ -485,8 +489,10 @@ function updateMergeFlow() {
  * @param {'clear'|'upgrade'|'magnet'} type
  */
 function handleItemTap(type) {
+  console.log('[handleItemTap] type:', type);
   if (gameState !== 'playing') return;
-  items.use(type, board, particles);
+  const success = items.use(type, board, particles);
+  if (success) GameGlobal.AudioManager.playSFX('item');
 }
 
 /**
@@ -494,6 +500,7 @@ function handleItemTap(type) {
  * @param {object} drop
  */
 function handleDropTap(drop) {
+  console.log('[handleDropTap] called');
   if (gameState !== 'playing') return;
   if (!renderer.itemBarSlots) return;
   items.pickupDrop(drop, renderer.itemBarSlots);
@@ -508,6 +515,7 @@ function handleDropTap(drop) {
  * @param {object[]} upgradedSlots
  */
 function handleUpgradeComplete(upgradedSlots) {
+  console.log('[handleUpgradeComplete] called');
   for (const slot of upgradedSlots) {
     if (slot.level === null) continue;        // 安全检查
     if (slot.mergeAnimating) continue;
@@ -541,6 +549,8 @@ function handleUpgradeComplete(upgradedSlots) {
  * @param {object[]} mergedSlots - 磁吸过程中发生合成的目标格
  */
 function handleMagnetComplete(mergedSlots) {
+  console.log('[handleMagnetComplete] mergedSlots:', mergedSlots?.length);
+  GameGlobal.AudioManager.playSFX('pickup');
   // 先检查所有受影响的格子是否能触发合成连锁
   const allSlots = [...mergedSlots];
   for (const slot of allSlots) {
@@ -1607,6 +1617,7 @@ function gameLoop() {
       gameoverOpenFrame = 0;
       gameoverClosing = false;
       gameoverConfettiFired = false;
+      GameGlobal.AudioManager.playSFX('gameover');
     }
 
     // 装饰粒子（每 30 帧生成一轮）

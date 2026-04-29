@@ -257,6 +257,13 @@ class Input {
    * 触发按钮的实际 click 逻辑
    */
   _fireButtonAction(id) {
+    const V2_IDS = ['menu_start', 'gameover_restart', 'pause_restart'];
+    if (V2_IDS.includes(id)) {
+      GameGlobal.AudioManager.playSFX('button_V2');
+    } else {
+      GameGlobal.AudioManager.playSFX('button');
+    }
+
     switch (id) {
       case 'menu_start':
         if (this.onMenuTouch) this.onMenuTouch(id);
