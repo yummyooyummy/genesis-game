@@ -1124,7 +1124,7 @@ function drawGameOverScreen(progress) {
       const cardW = LS.ds(319);
       const cardH = LS.ds(100);
       const cardX = LS.dx(187.5) - cardW / 2;
-      const cardY = LS.dy(580) - cardH / 2;
+      const cardY = LS.dy(600) - cardH / 2;
 
       // 暖色辉光（toast.shadow.new_form_banner 同款）
       ctx.shadowColor = 'rgba(255,182,72,0.28)';
@@ -1176,10 +1176,11 @@ function drawGameOverScreen(progress) {
       ctx.fillText(zhName, textLeft + lvWidth, titleY);
       ctx.restore();
 
-      // 底部小字"[中文名] · 本局新发现"
+      // 底部小字"[中文名] · 本局新发现"（baseline 距卡内底部 14px）
       ui.drawText(ctx, zhName + ' · 本局新发现', cardX + cardW / 2, cardY + cardH - LS.ds(14), {
         fontSize: LS.df(11),
         color: UI_CONFIG.color.textMuted,
+        baseline: 'alphabetic',
       });
 
       ctx.restore();
