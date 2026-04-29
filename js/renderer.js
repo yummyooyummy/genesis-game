@@ -135,7 +135,7 @@ class Renderer {
 
     // 等级文字
     ctx.fillStyle = '#fff';
-    ctx.font = 'bold 14px Arial';
+    ctx.font = "bold 16px 'Space Grotesk', Arial";
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     ctx.fillText(`Lv.${coreLevel}`, cx, cy);
@@ -436,9 +436,9 @@ class Renderer {
     ctx.stroke();
 
     // 元素名称 — 只显示等级数字（原型 UI：2、3、7 等）
-    const fontSize = Math.max(10, radius * 0.95);
+    const fontSize = Math.max(13, radius * 1.05);
     ctx.fillStyle = '#fff';
-    ctx.font = `bold ${fontSize}px Arial`;
+    ctx.font = `bold ${fontSize}px 'Space Grotesk', Arial`;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     ctx.fillText(String(level), x, y);
