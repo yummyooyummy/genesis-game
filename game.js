@@ -11,7 +11,7 @@ const Particles = require('./js/particles');
 const Input = require('./js/input');
 const Score = require('./js/score');
 const { Items, ITEM_TYPES, ItemCooldown } = require('./js/items');
-const { GAME_CONFIG, UI_CONFIG, msToFrames, getLevelColor, getLevelNameZh, getLevelNameEn } = require('./js/config');
+const { GAME_CONFIG, UI_CONFIG, msToFrames, getLevelColor, getLevelNameZh } = require('./js/config');
 const playerData = require('./js/playerData');
 const ui = require('./js/uiHelpers');
 const toast = require('./js/toastNotifications');
@@ -828,6 +828,71 @@ function drawMenuScreen() {
 }
 
 /**
+ * 在圆角矩形展示台上绘制粒子（用于结束界面"发现新形态"卡）
+ * 视觉规则与 toastNotifications._drawParticle 保持一致
+ */
+function drawParticlePlate(ctx, x, y, size, radius, level) {
+  const colors = getElementColors(level);
+
+  ctx.save();
+
+  // 圆角矩形台底
+  ctx.beginPath();
+  ctx.moveTo(x + radius, y);
+  ctx.arcTo(x + size, y, x + size, y + size, radius);
+  ctx.arcTo(x + size, y + size, x, y + size, radius);
+  ctx.arcTo(x, y + size, x, y, radius);
+  ctx.arcTo(x, y, x + size, y, radius);
+  ctx.closePath();
+  ctx.fillStyle = 'rgba(10,14,39,0.40)';
+  ctx.fill();
+  ctx.strokeStyle = 'rgba(74,90,158,0.30)';
+  ctx.lineWidth = 1;
+  ctx.stroke();
+
+  const cx = x + size / 2;
+  const cy = y + size / 2;
+  const r = size * 0.32;
+
+  // 外辐射光
+  ctx.globalAlpha = 0.3;
+  const glow = ctx.createRadialGradient(cx, cy, r * 0.5, cx, cy, r * 1.8);
+  glow.addColorStop(0, colors.primary);
+  glow.addColorStop(1, 'transparent');
+  ctx.fillStyle = glow;
+  ctx.beginPath();
+  ctx.arc(cx, cy, r * 1.8, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.globalAlpha = 1;
+
+  // 内径向渐变
+  const grad = ctx.createRadialGradient(cx - r * 0.2, cy - r * 0.2, 0, cx, cy, r);
+  grad.addColorStop(0, colors.secondary);
+  grad.addColorStop(1, colors.primary);
+  ctx.fillStyle = grad;
+  ctx.beginPath();
+  ctx.arc(cx, cy, r, 0, Math.PI * 2);
+  ctx.fill();
+
+  // 高光环
+  ctx.strokeStyle = 'rgba(255,255,255,0.2)';
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.arc(cx, cy, r, 0, Math.PI * 2);
+  ctx.stroke();
+
+  // 中央等级数字
+  const fontSize = Math.max(13, r * 1.05);
+  ctx.fillStyle = '#fff';
+  ctx.font = `bold ${fontSize}px "Helvetica Neue", Helvetica, Arial, sans-serif`;
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(String(level), cx, cy);
+
+  ctx.restore();
+}
+
+/**
  * 绘制结束界面（静态布局，不处理触摸）
  * 数据来源：lastGameResult + playerData
  */
@@ -889,47 +954,49 @@ function drawGameOverScreen(progress) {
 
   // ── 分数卡片 ──
   const cardAlpha = subP(progress, 0.2, 0.5);
+  const maxScoreStr = maxScore.toLocaleString('en-US');
   if (cardAlpha > 0) {
     ctx.save();
     ctx.globalAlpha = cardAlpha;
 
     const cardW = LS.ds(319);
-    const cardH = LS.ds(108);
+    const cardH = LS.ds(116);
     const cardX = LS.dx(187.5) - cardW / 2;
-    const cardY = LS.dy(230) - cardH / 2;
+    const cardY = LS.dy(250) - cardH / 2;
     ui.drawGlassCard(ctx, cardX, cardY, cardW, cardH);
 
     // 分数累加
     const scoreT = subP(progress, 0.3, 0.8);
     const scoreEased = 1 - (1 - scoreT) * (1 - scoreT);
     const displayScore = Math.round(curScore * scoreEased);
+    const displayScoreStr = displayScore.toLocaleString('en-US');
 
-    ui.drawText(ctx, '本局分数', LS.dx(48), LS.dy(204), {
+    ui.drawText(ctx, '本局分数', LS.dx(48), LS.dy(224), {
       fontSize: LS.df(12.5),
       color: UI_CONFIG.color.textMuted,
       align: 'left',
     });
-    ui.drawText(ctx, String(displayScore), LS.dx(327), LS.dy(204), {
+    ui.drawText(ctx, displayScoreStr, LS.dx(327), LS.dy(224), {
       fontSize: LS.df(26),
       color: UI_CONFIG.color.textPrimary,
       align: 'right',
       weight: '700',
     });
 
-    // 卡内分隔线
+    // 卡内分隔线（卡中线 y=250）
     const divW = LS.ds(291);
     ctx.strokeStyle = UI_CONFIG.color.borderSoft;
     ctx.lineWidth = 1;
     ctx.setLineDash([4, 4]);
     ctx.beginPath();
-    ctx.moveTo(LS.dx(187.5) - divW / 2, LS.dy(234));
-    ctx.lineTo(LS.dx(187.5) + divW / 2, LS.dy(234));
+    ctx.moveTo(LS.dx(187.5) - divW / 2, LS.dy(250));
+    ctx.lineTo(LS.dx(187.5) + divW / 2, LS.dy(250));
     ctx.stroke();
     ctx.setLineDash([]);
 
     // 最高分数
     const highScoreColor = isNewRecord ? UI_CONFIG.color.accentGold : UI_CONFIG.color.textPrimary;
-    ui.drawText(ctx, '最高分数', LS.dx(48), LS.dy(260), {
+    ui.drawText(ctx, '最高分数', LS.dx(48), LS.dy(276), {
       fontSize: LS.df(12.5),
       color: UI_CONFIG.color.textMuted,
       align: 'left',
@@ -939,7 +1006,7 @@ function drawGameOverScreen(progress) {
       ctx.shadowColor = 'rgba(255,182,72,0.60)';
       ctx.shadowBlur = UI_CONFIG.glow.recordGold;
     }
-    ui.drawText(ctx, String(maxScore), LS.dx(327), LS.dy(260), {
+    ui.drawText(ctx, maxScoreStr, LS.dx(327), LS.dy(276), {
       fontSize: LS.df(22),
       color: highScoreColor,
       align: 'right',
@@ -951,15 +1018,22 @@ function drawGameOverScreen(progress) {
     ctx.restore();
   }
 
-  // ── NEW! 徽章（弹出缩放）──
+  // ── NEW! 徽章（相对锚定到最高分数文字左侧 + 弹出缩放）──
   if (isNewRecord) {
     const badgeAlpha = subP(progress, 0.7, 0.85);
     if (badgeAlpha > 0) {
+      // 测量最高分数文本宽度，反推徽章右边界
+      const scoreFontSize = LS.df(22);
+      const scoreTextW = ui.measureText(ctx, maxScoreStr, scoreFontSize, '700');
+      const scoreRightX = LS.dx(327);
+      const scoreLeftX = scoreRightX - scoreTextW;
+
       const badgeFontSize = LS.df(9);
       const badgeW = LS.ds(38);
       const badgeH = LS.ds(18);
-      const badgeX = LS.dx(236);
-      const badgeY = LS.dy(260) - badgeH / 2;
+      const badgeRightX = scoreLeftX - LS.ds(8); // 徽章与数字间距 8px
+      const badgeX = badgeRightX - badgeW;
+      const badgeY = LS.dy(276) - badgeH / 2;
       const badgeCX = badgeX + badgeW / 2;
       const badgeCY = badgeY + badgeH / 2;
       const bScale = badgeAlpha < 0.6
@@ -1005,9 +1079,9 @@ function drawGameOverScreen(progress) {
     ctx.globalAlpha = detailAlpha;
 
     const details = [
-      { label: '核心等级', value: 'Lv.' + maxLevel + ' ' + levelName, valueColor: UI_CONFIG.color.accentCyan, y: 328 },
-      { label: '最高连锁', value: String(data.maxCombo || 0), valueColor: UI_CONFIG.color.textPrimary, y: 358 },
-      { label: '合成次数', value: String(data.mergeCount || 0), valueColor: UI_CONFIG.color.textPrimary, y: 388 },
+      { label: '核心等级', value: 'Lv.' + maxLevel + ' ' + levelName, valueColor: UI_CONFIG.color.accentCyan, y: 350 },
+      { label: '最高连锁', value: String(data.maxCombo || 0), valueColor: UI_CONFIG.color.textPrimary, y: 384 },
+      { label: '合成次数', value: String(data.mergeCount || 0), valueColor: UI_CONFIG.color.textPrimary, y: 418 },
     ];
 
     for (let i = 0; i < details.length; i++) {
@@ -1024,7 +1098,7 @@ function drawGameOverScreen(progress) {
       });
 
       if (i < details.length - 1) {
-        const lineY = LS.dy(d.y + 15);
+        const lineY = LS.dy(d.y + 17); // 行距 34 → 中点偏移 17
         ctx.strokeStyle = UI_CONFIG.color.borderSoft;
         ctx.lineWidth = 1;
         ctx.setLineDash([4, 4]);
@@ -1039,64 +1113,71 @@ function drawGameOverScreen(progress) {
     ctx.restore();
   }
 
-  // ── 发现新形态横幅 ──
+  // ── 发现新形态卡（金描边 + 暖色辉光 + 粒子展示台 + 金渐变标题）──
   const newLevel = data.newlyUnlockedLevel;
   if (newLevel != null) {
-    const bannerAlpha = subP(progress, 0.6, 0.8);
-    if (bannerAlpha > 0) {
+    const cardAlpha2 = subP(progress, 0.6, 0.8);
+    if (cardAlpha2 > 0) {
       ctx.save();
-      ctx.globalAlpha = bannerAlpha;
+      ctx.globalAlpha = cardAlpha2;
 
-      const bannerW = LS.ds(319);
-      const bannerH = LS.ds(92);
-      const bannerX = LS.dx(187.5) - bannerW / 2;
-      const bannerY = LS.dy(578) - bannerH / 2;
+      const cardW = LS.ds(319);
+      const cardH = LS.ds(100);
+      const cardX = LS.dx(187.5) - cardW / 2;
+      const cardY = LS.dy(580) - cardH / 2;
 
+      // 暖色辉光（toast.shadow.new_form_banner 同款）
       ctx.shadowColor = 'rgba(255,182,72,0.28)';
       ctx.shadowBlur = 24;
-      ui.drawGlassCard(ctx, bannerX, bannerY, bannerW, bannerH, {
+      ui.drawGlassCard(ctx, cardX, cardY, cardW, cardH, {
         radius: UI_CONFIG.radius.cardScore,
-        borderColor: 'rgba(255,182,72,0.30)',
+        borderColor: 'rgba(255,182,72,0.55)', // gold_stroke_subtle
       });
       ctx.shadowColor = 'transparent';
       ctx.shadowBlur = 0;
 
-      const dotR = LS.ds(20);
-      const dotCX = bannerX + LS.ds(16) + dotR;
-      const dotCY = bannerY + bannerH / 2 - LS.ds(4);
-      const dotColor = getLevelColor(newLevel);
+      // 左侧粒子展示台 44×44
+      const plateSize = LS.ds(44);
+      const plateRadius = LS.ds(8);
+      const plateX = cardX + LS.ds(16);
+      const plateY = cardY + (cardH - plateSize) / 2;
+      drawParticlePlate(ctx, plateX, plateY, plateSize, plateRadius, newLevel);
 
-      ctx.shadowColor = dotColor + '99';
-      ctx.shadowBlur = 14;
-      ctx.fillStyle = dotColor;
-      ctx.beginPath();
-      ctx.arc(dotCX, dotCY, dotR, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.shadowColor = 'transparent';
-      ctx.shadowBlur = 0;
-
-      const textLeft = dotCX + dotR + LS.ds(14);
-      const enName = getLevelNameEn(newLevel);
+      // 右侧文字
+      const textLeft = plateX + plateSize + LS.ds(12);
       const zhName = getLevelNameZh(newLevel);
 
-      ui.drawText(ctx, '发现新形态', textLeft, bannerY + LS.ds(24), {
-        fontSize: LS.df(13),
-        color: UI_CONFIG.color.accentGoldSoft,
-        align: 'left',
-      });
-
-      ctx.shadowColor = 'rgba(255,216,135,0.50)';
-      ctx.shadowBlur = 14;
-      ui.drawText(ctx, 'Lv.' + newLevel + ' ' + enName + ' ' + zhName, textLeft, bannerY + LS.ds(46), {
-        fontSize: LS.df(15.5),
+      // kicker "发现新形态"（金色）
+      ui.drawText(ctx, '发现新形态', textLeft, cardY + LS.ds(28), {
+        fontSize: LS.df(12),
         color: UI_CONFIG.color.accentGold,
         align: 'left',
-        weight: '600',
       });
-      ctx.shadowColor = 'transparent';
-      ctx.shadowBlur = 0;
 
-      ui.drawText(ctx, zhName + ' · 首次达成', bannerX + bannerW / 2, bannerY + bannerH - LS.ds(10), {
+      // 主标题"Lv.X 中文名" — 金色渐变（与 toast 同款，混排字体）
+      const lvText = 'Lv.' + newLevel + ' ';
+      const titleFontSize = LS.df(18);
+      const titleY = cardY + LS.ds(52);
+      const lvWidth = ui.measureText(ctx, lvText, titleFontSize, '600');
+      const nameWidth = ui.measureText(ctx, zhName, titleFontSize, '600');
+      const totalWidth = lvWidth + nameWidth;
+
+      const goldGrad = ctx.createLinearGradient(textLeft, 0, textLeft + totalWidth, 0);
+      goldGrad.addColorStop(0, '#FFD887');
+      goldGrad.addColorStop(1, '#FFB648');
+
+      ctx.save();
+      ctx.fillStyle = goldGrad;
+      ctx.textAlign = 'left';
+      ctx.textBaseline = 'middle';
+      ctx.font = `600 ${titleFontSize}px "Helvetica Neue", Helvetica, Arial, sans-serif`;
+      ctx.fillText(lvText, textLeft, titleY);
+      ctx.font = `600 ${titleFontSize}px "PingFang SC", "Noto Sans SC", system-ui, sans-serif`;
+      ctx.fillText(zhName, textLeft + lvWidth, titleY);
+      ctx.restore();
+
+      // 底部小字"[中文名] · 本局新发现"
+      ui.drawText(ctx, zhName + ' · 本局新发现', cardX + cardW / 2, cardY + cardH - LS.ds(14), {
         fontSize: LS.df(11),
         color: UI_CONFIG.color.textMuted,
       });
