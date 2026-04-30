@@ -1415,18 +1415,17 @@ function drawPauseDialog(progress, isClosing) {
   ctx.textBaseline = 'middle';
   ctx.fillText(pillText, pillCX, pillCY);
 
-  // 关状态：对角划线（划掉音符）
+  // 关状态：对角划线（左下→右上，划掉 ♪ 头部）
   if (bgmMuted) {
-    const noteX = pillX + pillPadX + ctx.measureText('♪').width / 2;
-    const slashR = LS.ds(7);
+    const noteW = ctx.measureText('♪').width;
+    const noteX = pillX + pillPadX + noteW / 2;
+    const slashR = noteW * 0.4;
     ctx.beginPath();
     ctx.moveTo(noteX - slashR, pillCY + slashR);
     ctx.lineTo(noteX + slashR, pillCY - slashR);
     ctx.strokeStyle = '#8891B8';
-    ctx.lineWidth = LS.ds(1.5);
-    ctx.lineCap = 'round';
+    ctx.lineWidth = LS.ds(1);
     ctx.stroke();
-    ctx.lineCap = 'butt';
   }
 
   ctx.restore();
