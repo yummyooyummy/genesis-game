@@ -1355,6 +1355,82 @@ function drawPauseDialog(progress, isClosing) {
     align: 'left',
   });
 
+  // BGM 开关 pill（标题行右侧）
+  const bgmMuted = GameGlobal.AudioManager.bgmMuted;
+  const pillH = LS.ds(28);
+  const pillY = LS.dy(293) - pillH / 2;
+  const pillFontSize = LS.df(11.5);
+  const pillPadX = LS.ds(12);
+
+  ctx.font = `${pillFontSize}px sans-serif`;
+  const textOn = '♪ 音乐 开';
+  const textOff = '♪ 音乐 关';
+  const pillTextW = Math.max(ctx.measureText(textOn).width, ctx.measureText(textOff).width);
+  const pillW = pillTextW + pillPadX * 2;
+  const pillX = LS.dx(308) - pillW;
+  const pillR = pillH / 2;
+
+  const pillScale = ui.getButtonScale('bgm_toggle');
+  const pillFinalScale = (pillScale === 1.0) ? 1.0 : 1.0 - (1.0 - pillScale) * (0.06 / 0.05);
+  const pillCX = pillX + pillW / 2;
+  const pillCY = pillY + pillH / 2;
+
+  ctx.save();
+  if (pillFinalScale !== 1.0) {
+    ctx.translate(pillCX, pillCY);
+    ctx.scale(pillFinalScale, pillFinalScale);
+    ctx.translate(-pillCX, -pillCY);
+  }
+
+  // pill 背景 + 边框
+  ctx.beginPath();
+  ctx.moveTo(pillX + pillR, pillY);
+  ctx.arcTo(pillX + pillW, pillY, pillX + pillW, pillY + pillH, pillR);
+  ctx.arcTo(pillX + pillW, pillY + pillH, pillX, pillY + pillH, pillR);
+  ctx.arcTo(pillX, pillY + pillH, pillX, pillY, pillR);
+  ctx.arcTo(pillX, pillY, pillX + pillW, pillY, pillR);
+  ctx.closePath();
+  if (!bgmMuted) {
+    ctx.fillStyle = 'rgba(138,127,209,0.18)';
+    ctx.fill();
+    const grad = ctx.createLinearGradient(pillX, pillY, pillX, pillY + pillH);
+    grad.addColorStop(0, 'rgba(180,165,255,0.12)');
+    grad.addColorStop(1, 'rgba(180,165,255,0)');
+    ctx.fillStyle = grad;
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(180,165,255,0.55)';
+  } else {
+    ctx.fillStyle = 'rgba(20,28,56,0.55)';
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(74,90,158,0.45)';
+  }
+  ctx.lineWidth = LS.ds(1);
+  ctx.stroke();
+
+  // pill 文字
+  const pillText = bgmMuted ? textOff : textOn;
+  ctx.font = `${pillFontSize}px sans-serif`;
+  ctx.fillStyle = bgmMuted ? '#8891B8' : UI_CONFIG.color.textPrimary;
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(pillText, pillCX, pillCY);
+
+  // 关状态：对角划线（划掉音符）
+  if (bgmMuted) {
+    const noteX = pillX + pillPadX + ctx.measureText('♪').width / 2;
+    const slashR = LS.ds(7);
+    ctx.beginPath();
+    ctx.moveTo(noteX - slashR, pillCY + slashR);
+    ctx.lineTo(noteX + slashR, pillCY - slashR);
+    ctx.strokeStyle = '#8891B8';
+    ctx.lineWidth = LS.ds(1.5);
+    ctx.lineCap = 'round';
+    ctx.stroke();
+    ctx.lineCap = 'butt';
+  }
+
+  ctx.restore();
+
   // 内嵌统计卡（中心 187.5, 356，尺寸 240×66）
   const statW = LS.ds(240);
   const statH = LS.ds(66);
@@ -1415,6 +1491,7 @@ function drawPauseDialog(progress, isClosing) {
     resume:  { x: btnX, y: resumeBtnY, w: btnW, h: primaryH },
     restart: { x: btnX, y: restartBtnY, w: btnW, h: secondaryH },
     home:    { x: btnX, y: homeBtnY, w: btnW, h: secondaryH },
+    bgmToggle: { x: pillX, y: pillY, w: pillW, h: pillH },
   };
   input._pauseDialogButtons = pauseDialogButtons;
 }
@@ -1880,6 +1957,11 @@ function gameLoop() {
       pauseProgress = Math.max(0, 1 - pauseCloseFrame / 9);
     }
     drawPauseDialog(pauseProgress, pauseClosing);
+
+    const btnHide = pauseClosing
+      ? Math.max(0, 1 - pauseCloseFrame / 9)
+      : Math.min(1, pauseOpenFrame / 10);
+    renderer.drawPauseButton(btnHide);
 
     // 关闭动画结束
     if (pauseClosing && pauseCloseFrame >= 9) {

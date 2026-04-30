@@ -794,33 +794,65 @@ class Renderer {
 
   /**
    * 绘制右下角暂停按钮（⏸ 双竖线）
+   * @param {number} hideProgress 0→1 弹窗打开时淡出进度
    */
-  drawPauseButton() {
+  drawPauseButton(hideProgress = 0) {
+    if (hideProgress >= 1) {
+      const cx = LS.dx(339);
+      const cy = LS.dy(755);
+      const r = LS.ds(20);
+      this.pauseBtnPos = { x: cx, y: cy, r: r + LS.ds(6) };
+      return;
+    }
+
     const { ctx } = this;
     const cx = LS.dx(339);
     const cy = LS.dy(755);
-    const r = LS.ds(17);
+    const r = LS.ds(20);
 
     const ui = require('./uiHelpers');
-    const scale = ui.getButtonScale('pause_btn');
+    const rawScale = ui.getButtonScale('pause_btn');
+    const scale = (rawScale === 1.0) ? 1.0 : 1.0 - (1.0 - rawScale) * (0.06 / 0.05);
+    const isPressed = GameGlobal.buttonPressState &&
+      GameGlobal.buttonPressState.id === 'pause_btn' &&
+      GameGlobal.buttonPressState.phase === 'down';
+
+    const hideScale = 1.0 - 0.2 * hideProgress;
+    const finalScale = scale * hideScale;
 
     ctx.save();
-    if (scale !== 1.0) {
-      ctx.translate(cx, cy);
-      ctx.scale(scale, scale);
-      ctx.translate(-cx, -cy);
+    ctx.globalAlpha = 1 - hideProgress;
+    ctx.translate(cx, cy);
+    ctx.scale(finalScale, finalScale);
+    ctx.translate(-cx, -cy);
+
+    if (isPressed) {
+      ctx.shadowColor = 'rgba(180,165,255,0.35)';
+      ctx.shadowBlur = LS.ds(12);
     }
 
-    // 圆形背景
-    ctx.fillStyle = 'rgba(30,40,80,0.5)';
+    ctx.fillStyle = 'rgba(20,28,56,0.70)';
     ctx.beginPath();
     ctx.arc(cx, cy, r, 0, Math.PI * 2);
     ctx.fill();
-    ctx.strokeStyle = 'rgba(74,90,158,0.6)';
+
+    ctx.shadowColor = 'transparent';
+    ctx.shadowBlur = 0;
+
+    ctx.strokeStyle = isPressed ? 'rgba(180,165,255,0.85)' : 'rgba(180,165,255,0.55)';
     ctx.lineWidth = LS.ds(1);
     ctx.stroke();
 
-    // 双竖条
+    if (isPressed) {
+      const grad = ctx.createRadialGradient(cx, cy, 0, cx, cy, r);
+      grad.addColorStop(0, 'rgba(180,165,255,0.18)');
+      grad.addColorStop(1, 'rgba(180,165,255,0)');
+      ctx.fillStyle = grad;
+      ctx.beginPath();
+      ctx.arc(cx, cy, r, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
     ctx.fillStyle = '#E8ECFF';
     const barW = LS.ds(3);
     const barH = LS.ds(12);

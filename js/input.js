@@ -134,6 +134,7 @@ class Input {
         if (ui.isPointInRect(x, y, pb.resume.x, pb.resume.y, pb.resume.w, pb.resume.h)) return 'pause_resume';
         if (ui.isPointInRect(x, y, pb.restart.x, pb.restart.y, pb.restart.w, pb.restart.h)) return 'pause_restart';
         if (ui.isPointInRect(x, y, pb.home.x, pb.home.y, pb.home.w, pb.home.h)) return 'pause_home';
+        if (pb.bgmToggle && ui.isPointInRect(x, y, pb.bgmToggle.x, pb.bgmToggle.y, pb.bgmToggle.w, pb.bgmToggle.h)) return 'bgm_toggle';
       }
       return null;
     }
@@ -279,6 +280,9 @@ class Input {
         break;
       case 'pause_home':
         if (this._onPauseHome) this._onPauseHome();
+        break;
+      case 'bgm_toggle':
+        GameGlobal.AudioManager.setBGMMuted(!GameGlobal.AudioManager.bgmMuted);
         break;
       case 'gameover_restart':
         if (this._onGameOverRestart) this._onGameOverRestart();
