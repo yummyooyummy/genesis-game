@@ -41,7 +41,6 @@ ctx.scale(dpr, dpr);
 const LayoutScale = require('./js/layoutScale');
 const LS = LayoutScale;
 LayoutScale.init(screenWidth, screenHeight);
-console.log(`[LayoutScale] screen=${screenWidth}x${screenHeight}, scaleX=${LayoutScale.scaleX.toFixed(3)}, scaleY=${LayoutScale.scaleY.toFixed(3)}, scaleMin=${LayoutScale.scaleMin.toFixed(3)}`);
 
 const AudioManager = require('./js/audioManager');
 GameGlobal.AudioManager = new AudioManager();
@@ -108,8 +107,6 @@ let sessionStartMaxLevel = 1;
 let sessionMaxCombo = 0;
 let sessionMergeCount = 0;
 let lastGameResult = null; // { isNewRecord, newlyUnlockedLevel } 供结束界面用
-console.log('[存档] 读取成功');
-console.log('[存档] 最高分', savedData.maxScore, '最高等级', savedData.maxLevel);
 
 // 合成后流程状态机（pause → absorb → coreBurst → recovery）
 let mergeFlowState = null;   // null | 'pause' | 'absorb' | 'coreBurst' | 'recovery'
@@ -469,7 +466,6 @@ function updateMergeFlow() {
         }
       } else {
         gameState = 'gameover';
-        console.log('[状态] 切换到 gameOver');
         input.isGameOver = true;
         _saveOnGameOver();
         gameoverOpenFrame = 0;
@@ -596,7 +592,6 @@ function _saveOnGameOver() {
     isNewRecord: result.isNewRecord,
     newlyUnlockedLevel: sessionMaxLevel > sessionStartMaxLevel ? sessionMaxLevel : null,
   };
-  console.log('[存档] 更新完成', JSON.stringify(lastGameResult));
 }
 
 /**
@@ -1258,16 +1253,13 @@ function handleHome() {
   outroFrame = 0;
   input.isIntro = true;
   toast.clear();
-  console.log('[状态] 切换到 outro (from ' + outroSource + ')');
 }
 
 function handleStart() {
   handleRestart({ withIntro: true });
-  console.log('[状态] menu → intro');
 }
 
 function handleShare() {
-  console.log('[分享] 占位 — 待接入微信分享');
 }
 
 function handlePause() {
@@ -1279,7 +1271,6 @@ function handlePause() {
   pauseCloseAction = null;
   ItemCooldown.onPause(Date.now());
   GameGlobal.AudioManager.pauseBGMByGame();
-  console.log('[状态] 切换到 paused');
 }
 
 function handleResume() {
@@ -1688,7 +1679,6 @@ function gameLoop() {
       input.isIntro = false;
       board.queueInitialSplits();
       introFrame = 0;
-      console.log('[状态] intro → playing');
     }
 
     // 异常保险
@@ -1783,7 +1773,6 @@ function gameLoop() {
     ) {
       board.queuedSplits = 0;
       gameState = 'gameover';
-      console.log('[状态] 切换到 gameOver');
       input.isGameOver = true;
       _saveOnGameOver();
       gameoverOpenFrame = 0;
@@ -1977,7 +1966,6 @@ function gameLoop() {
       if (action === 'restart') {
         handleRestart();
       } else {
-        console.log('[状态] 从 paused 恢复到 playing');
       }
     }
   } else if (gameState === 'gameover') {
@@ -2047,7 +2035,6 @@ function gameLoop() {
       outroSource = null;
       particles.clear();
       GameGlobal.ShockwaveManager.reset();
-      console.log('[状态] outro → menu');
     }
 
     // 异常超时保险
@@ -2069,6 +2056,5 @@ function gameLoop() {
 // ─── 启动游戏 ───
 
 ItemIcons.preload().then(() => {
-  console.log('[ItemIcons] 预加载完成');
   requestAnimationFrame(gameLoop);
 });

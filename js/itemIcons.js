@@ -17,7 +17,6 @@ const ItemIcons = {
       for (const [key, url] of Object.entries(urls)) {
         const img = wx.createImage();
         img.onload = () => {
-          console.log(`[ItemIcons] ${key} loaded:`, img.width, 'x', img.height);
           this[key] = img;
           loadCount++;
           if (loadCount === total) {
