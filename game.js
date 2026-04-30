@@ -102,7 +102,6 @@ const DEBUG_ITEMS = true;
 
 // ─── 存档 + 单局追踪 ───
 
-playerData.clearPlayerData(); // TODO: 调试用，上线前删除
 const savedData = playerData.loadPlayerData();
 let sessionMaxLevel = 1;
 let sessionStartMaxLevel = 1;
