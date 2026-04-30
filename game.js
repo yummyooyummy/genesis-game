@@ -1177,11 +1177,11 @@ function drawGameOverScreen(progress) {
       ctx.fillText(zhName, textLeft + lvWidth, titleY);
       ctx.restore();
 
-      // 底部小字"[中文名] · 本局新发现"（整卡水平居中，baseline 距卡内底部 14px）
-      ui.drawText(ctx, zhName + ' · 本局新发现', cardX + cardW / 2, cardY + cardH - LS.ds(14), {
+      // 底部小字"[中文名] · 本局新发现"（与 kicker/主标题左对齐，baseline 距卡内底部 14px）
+      ui.drawText(ctx, zhName + ' · 本局新发现', textLeft, cardY + cardH - LS.ds(14), {
         fontSize: LS.df(11),
         color: UI_CONFIG.color.textMuted,
-        align: 'center',
+        align: 'left',
         baseline: 'alphabetic',
       });
 
