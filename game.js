@@ -84,6 +84,7 @@ let pauseOpenFrame = 0;
 let pauseClosing = false;
 let pauseCloseFrame = 0;
 let pauseCloseAction = null; // 'resume' | 'restart' | 'home'
+let pauseBlurCache = null;
 
 // 游戏结束界面动效
 let gameoverOpenFrame = 0;
@@ -1249,6 +1250,7 @@ function handleHome() {
   pauseClosing = false;
   pauseCloseFrame = 0;
   pauseCloseAction = null;
+  pauseBlurCache = null;
   gameoverClosing = false;
   gameoverCloseFrame = 0;
   gameoverCloseAction = null;
@@ -1297,10 +1299,18 @@ function handleResume() {
 function drawPauseDialog(progress, isClosing) {
   if (progress <= 0) return;
 
-  // 蒙层 alpha（bgOverlay 原值 × progress）
+  // 模糊背景快照
+  if (pauseBlurCache) {
+    ctx.save();
+    ctx.globalAlpha = progress;
+    ctx.drawImage(pauseBlurCache, 0, 0, screenWidth, screenHeight);
+    ctx.restore();
+  }
+
+  // 暗化蒙层
   ctx.save();
   ctx.globalAlpha = progress;
-  ctx.fillStyle = UI_CONFIG.color.bgOverlay;
+  ctx.fillStyle = 'rgba(10,14,39,0.75)';
   ctx.fillRect(0, 0, screenWidth, screenHeight);
   ctx.restore();
 
@@ -1479,6 +1489,7 @@ function handleRestart({ withIntro = false } = {}) {
   openingAbsorbPending = true;
   openingAbsorbActive = false;
   pauseDialogButtons = null;
+  pauseBlurCache = null;
   // 重置动效状态
   pauseOpenFrame = 0;
   pauseClosing = false;
@@ -1816,42 +1827,48 @@ function gameLoop() {
 
     ctx.restore();
   } else if (gameState === 'paused') {
-    // 暂停状态：渲染 playing 画面（静态，不跑 update）+ 叠加暂停弹窗
-    ctx.save();
+    // 首帧：画完 playing 画面后截取模糊快照
+    if (!pauseBlurCache) {
+      ctx.save();
 
-    renderer.clear();
-    renderer.drawTracks(centerX, centerY, boardRadius);
-    renderer.drawConnectionLines(board);
-    renderer.drawSlots(board, items);
-    renderer.drawSelectionHighlight(board);
-    renderer.drawCore(centerX, centerY, board.core.level, board.getCorePulseRatio(), board.timedSplitWarningProgress, board.getCoreLevelUpScale());
-    renderer.drawFlyingElements(board);
+      renderer.clear();
+      renderer.drawTracks(centerX, centerY, boardRadius);
+      renderer.drawConnectionLines(board);
+      renderer.drawSlots(board, items);
+      renderer.drawSelectionHighlight(board);
+      renderer.drawCore(centerX, centerY, board.core.level, board.getCorePulseRatio(), board.timedSplitWarningProgress, board.getCoreLevelUpScale());
+      renderer.drawFlyingElements(board);
 
-    if (mergeFlowState === 'absorb' && mergeFlowAbsorbSlot) {
-      const absPos = board.getSlotPosition(mergeFlowAbsorbSlot);
-      const t = mergeFlowAbsorbProgress;
-      const ease = 1 - Math.pow(1 - t, 3);
-      const ax = absPos.x + (centerX - absPos.x) * ease;
-      const ay = absPos.y + (centerY - absPos.y) * ease;
-      const level = mergeFlowAbsorbSlot.level;
-      const radius = board.getElementRadius(level) * (1 - ease * 0.4);
-      renderer._drawElement(ax, ay, level, radius);
+      if (mergeFlowState === 'absorb' && mergeFlowAbsorbSlot) {
+        const absPos = board.getSlotPosition(mergeFlowAbsorbSlot);
+        const t = mergeFlowAbsorbProgress;
+        const ease = 1 - Math.pow(1 - t, 3);
+        const ax = absPos.x + (centerX - absPos.x) * ease;
+        const ay = absPos.y + (centerY - absPos.y) * ease;
+        const level = mergeFlowAbsorbSlot.level;
+        const radius = board.getElementRadius(level) * (1 - ease * 0.4);
+        renderer._drawElement(ax, ay, level, radius);
+      }
+
+      renderer.drawMergeAnimations(board);
+      renderer.drawMagnetAnimation(items, board);
+      particles.draw(ctx);
+      scoreText.render(ctx);
+      renderer.drawItemUseBurst(items);
+      renderer.drawDrops(items);
+      const storedMax2 = playerData.loadPlayerData().maxScore;
+      const displayMax2 = Math.max(storedMax2, score.total);
+      renderer.drawScoreUI(score.total, displayMax2);
+      renderer.drawItemBar(items);
+      renderer.drawCoreLevelUI(board.core.level);
+      renderer.drawPauseButton();
+
+      ctx.restore();
+
+      pauseBlurCache = ui.boxBlurCanvas(canvas, 3, 2);
     }
 
-    renderer.drawMergeAnimations(board);
-    renderer.drawMagnetAnimation(items, board);
-    particles.draw(ctx);
-    scoreText.render(ctx);
-    renderer.drawItemUseBurst(items);
-    renderer.drawDrops(items);
-    const storedMax2 = playerData.loadPlayerData().maxScore;
-    const displayMax2 = Math.max(storedMax2, score.total);
-    renderer.drawScoreUI(score.total, displayMax2);
-    renderer.drawItemBar(items);
-    renderer.drawCoreLevelUI(board.core.level);
-    renderer.drawPauseButton();
-
-    ctx.restore();
+    // 后续帧：跳过 playing 重画，直接用缓存
 
     // 暂停弹窗动效
     let pauseProgress;
@@ -1866,6 +1883,7 @@ function gameLoop() {
 
     // 关闭动画结束
     if (pauseClosing && pauseCloseFrame >= 9) {
+      pauseBlurCache = null;
       const action = pauseCloseAction;
       gameState = 'playing';
       input.isPaused = false;

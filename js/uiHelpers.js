@@ -347,6 +347,83 @@ function isPointInRect(px, py, x, y, w, h) {
   return px >= x && px <= x + w && py >= y && py <= y + h;
 }
 
+// ─── 盒式模糊（降采样 1/4 + 滑动窗口） ──────────────────
+
+function _blurH(src, dst, w, h, r) {
+  const diam = r + r + 1;
+  const inv = 1 / diam;
+  for (let y = 0; y < h; y++) {
+    const row = y * w * 4;
+    let rSum = 0, gSum = 0, bSum = 0;
+    for (let i = -r; i <= r; i++) {
+      const idx = row + Math.max(0, Math.min(i, w - 1)) * 4;
+      rSum += src[idx]; gSum += src[idx + 1]; bSum += src[idx + 2];
+    }
+    for (let x = 0; x < w; x++) {
+      const oi = row + x * 4;
+      dst[oi]     = (rSum * inv + 0.5) | 0;
+      dst[oi + 1] = (gSum * inv + 0.5) | 0;
+      dst[oi + 2] = (bSum * inv + 0.5) | 0;
+      dst[oi + 3] = 255;
+      const addIdx = row + Math.min(x + r + 1, w - 1) * 4;
+      const subIdx = row + Math.max(x - r, 0) * 4;
+      rSum += src[addIdx]     - src[subIdx];
+      gSum += src[addIdx + 1] - src[subIdx + 1];
+      bSum += src[addIdx + 2] - src[subIdx + 2];
+    }
+  }
+}
+
+function _blurV(src, dst, w, h, r) {
+  const diam = r + r + 1;
+  const inv = 1 / diam;
+  const stride = w * 4;
+  for (let x = 0; x < w; x++) {
+    const col = x * 4;
+    let rSum = 0, gSum = 0, bSum = 0;
+    for (let i = -r; i <= r; i++) {
+      const idx = col + Math.max(0, Math.min(i, h - 1)) * stride;
+      rSum += src[idx]; gSum += src[idx + 1]; bSum += src[idx + 2];
+    }
+    for (let y = 0; y < h; y++) {
+      const oi = col + y * stride;
+      dst[oi]     = (rSum * inv + 0.5) | 0;
+      dst[oi + 1] = (gSum * inv + 0.5) | 0;
+      dst[oi + 2] = (bSum * inv + 0.5) | 0;
+      dst[oi + 3] = 255;
+      const addIdx = col + Math.min(y + r + 1, h - 1) * stride;
+      const subIdx = col + Math.max(y - r, 0) * stride;
+      rSum += src[addIdx]     - src[subIdx];
+      gSum += src[addIdx + 1] - src[subIdx + 1];
+      bSum += src[addIdx + 2] - src[subIdx + 2];
+    }
+  }
+}
+
+function boxBlurCanvas(srcCanvas, radius, iterations) {
+  const sw = Math.ceil(srcCanvas.width / 4);
+  const sh = Math.ceil(srcCanvas.height / 4);
+  const offCanvas = wx.createCanvas();
+  offCanvas.width = sw;
+  offCanvas.height = sh;
+  const offCtx = offCanvas.getContext('2d');
+  offCtx.drawImage(srcCanvas, 0, 0, srcCanvas.width, srcCanvas.height, 0, 0, sw, sh);
+
+  const imgData = offCtx.getImageData(0, 0, sw, sh);
+  const len = sw * sh * 4;
+  let src = new Uint8ClampedArray(imgData.data);
+  let dst = new Uint8ClampedArray(len);
+
+  for (let iter = 0; iter < iterations; iter++) {
+    _blurH(src, dst, sw, sh, radius);
+    _blurV(dst, src, sw, sh, radius);
+  }
+
+  imgData.data.set(src);
+  offCtx.putImageData(imgData, 0, 0);
+  return offCanvas;
+}
+
 module.exports = {
   drawGlassCard,
   drawGoldCard,
@@ -356,4 +433,5 @@ module.exports = {
   measureText,
   isPointInRect,
   getButtonScale,
+  boxBlurCanvas,
 };
