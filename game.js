@@ -97,7 +97,7 @@ let outroFrame = 0;
 let outroSource = null;  // 'paused' | 'gameover'
 
 // 调试开关 — 上线前改为 false
-const DEBUG_ITEMS = true;
+const DEBUG_ITEMS = false;
 
 // ─── 存档 + 单局追踪 ───
 
