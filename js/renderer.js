@@ -903,63 +903,6 @@ class Renderer {
   }
 
   /**
-   * 绘制游戏结束界面
-   * @param {number} coreLevel
-   * @param {number} score
-   */
-  drawGameOver(coreLevel, score) {
-    const { ctx } = this;
-
-    // 半透明遮罩
-    ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
-    ctx.fillRect(0, 0, this.width, this.height);
-
-    const cx = this.width / 2;
-    const cy = this.height / 2;
-
-    // 标题
-    ctx.fillStyle = '#FFD700';
-    ctx.font = 'bold 32px Arial';
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    ctx.fillText('游戏结束', cx, cy - 80);
-
-    // 核心等级
-    const colors = getElementColors(coreLevel);
-    ctx.fillStyle = colors.primary;
-    ctx.font = 'bold 24px Arial';
-    ctx.fillText(
-      `核心等级: Lv.${coreLevel} ${getLevelNameEn(coreLevel)}`,
-      cx, cy - 20
-    );
-
-    // 最终得分
-    ctx.fillStyle = '#fff';
-    ctx.font = '20px Arial';
-    ctx.fillText(`最终得分: ${score}`, cx, cy + 30);
-
-    // 再来一局按钮
-    const btnWidth = 180;
-    const btnHeight = 50;
-    const btnX = cx - btnWidth / 2;
-    const btnY = cy + 70;
-
-    // 按钮背景
-    ctx.fillStyle = '#9B8FE2';
-    ctx.beginPath();
-    this._roundRect(btnX, btnY, btnWidth, btnHeight, 12);
-    ctx.fill();
-
-    // 按钮文字
-    ctx.fillStyle = '#fff';
-    ctx.font = 'bold 20px Arial';
-    ctx.fillText('再来一局', cx, btnY + btnHeight / 2);
-
-    // 保存按钮区域用于点击检测
-    this.restartBtn = { x: btnX, y: btnY, width: btnWidth, height: btnHeight };
-  }
-
-  /**
    * 绘制道具使用期间的屏幕边缘脉冲（清空=暖金、升级=绿松）。
    * 强度随 frame 呈抛物线 0 → 1 → 0。
    * @param {import('./items').Items} items
@@ -1098,37 +1041,6 @@ class Renderer {
 
       ctx.restore();
     }
-  }
-
-
-
-  /**
-   * 绘制圆角矩形
-   */
-  _roundRect(x, y, w, h, r) {
-    const { ctx } = this;
-    ctx.moveTo(x + r, y);
-    ctx.lineTo(x + w - r, y);
-    ctx.arcTo(x + w, y, x + w, y + r, r);
-    ctx.lineTo(x + w, y + h - r);
-    ctx.arcTo(x + w, y + h, x + w - r, y + h, r);
-    ctx.lineTo(x + r, y + h);
-    ctx.arcTo(x, y + h, x, y + h - r, r);
-    ctx.lineTo(x, y + r);
-    ctx.arcTo(x, y, x + r, y, r);
-  }
-
-  /**
-   * 检查是否点击了重新开始按钮
-   * @param {number} x
-   * @param {number} y
-   * @returns {boolean}
-   */
-  isRestartBtnHit(x, y) {
-    if (!this.restartBtn) return false;
-    const btn = this.restartBtn;
-    return x >= btn.x && x <= btn.x + btn.width &&
-           y >= btn.y && y <= btn.y + btn.height;
   }
 }
 
